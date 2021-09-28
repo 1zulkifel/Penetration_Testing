@@ -1,0 +1,1989 @@
+The file Base.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Base for cache objects
+ *
+ * Classes to be used with {@see SimplePie_Cache::register()} are expected
+ * to implement this interface.
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ */
+interface SimplePie_Cache_Base
+{
+	/**
+	 * Feed cache type
+	 *
+	 * @var string
+	 */
+	const TYPE_FEED = 'spc';
+
+	/**
+	 * Image cache type
+	 *
+	 * @var string
+	 */
+	const TYPE_IMAGE = 'spi';
+
+	/**
+	 * Create a new cache object
+	 *
+	 * @param string $location Location string (from SimplePie::$cache_location)
+	 * @param string $name Unique ID for the cache
+	 * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+	 */
+	public function __construct($location, $name, $type);
+
+	/**
+	 * Save data to the cache
+	 *
+	 * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+	 * @return bool Successfulness
+	 */
+	public function save($data);
+
+	/**
+	 * Retrieve the data saved to the cache
+	 *
+	 * @return array Data for SimplePie::$data
+	 */
+	public function load();
+
+	/**
+	 * Retrieve the last modified time for the cache
+	 *
+	 * @return int Timestamp
+	 */
+	public function mtime();
+
+	/**
+	 * Set the last modified time to the current time
+	 *
+	 * @return bool Success status
+	 */
+	public function touch();
+
+	/**
+	 * Remove the cache
+	 *
+	 * @return bool Success status
+	 */
+	public function unlink();
+}
+
+The file DB.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Base class for database-based caches
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ */
+abstract class SimplePie_Cache_DB implements SimplePie_Cache_Base
+{
+	/**
+	 * Helper for database conversion
+	 *
+	 * Converts a given {@see SimplePie} object into data to be stored
+	 *
+	 * @param SimplePie $data
+	 * @return array First item is the serialized data for storage, second item is the unique ID for this item
+	 */
+	protected static function prepare_simplepie_object_for_cache($data)
+	{
+		$items = $data->get_items();
+		$items_by_id = array();
+
+		if (!empty($items))
+		{
+			foreach ($items as $item)
+			{
+				$items_by_id[$item->get_id()] = $item;
+			}
+
+			if (count($items_by_id) !== count($items))
+			{
+				$items_by_id = array();
+				foreach ($items as $item)
+				{
+					$items_by_id[$item->get_id(true)] = $item;
+				}
+			}
+
+			if (isset($data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['feed'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['feed'][0];
+			}
+			elseif (isset($data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['feed'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['feed'][0];
+			}
+			elseif (isset($data->data['child'][SIMPLEPIE_NAMESPACE_RDF]['RDF'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_RDF]['RDF'][0];
+			}
+			elseif (isset($data->data['child'][SIMPLEPIE_NAMESPACE_RSS_20]['rss'][0]['child'][SIMPLEPIE_NAMESPACE_RSS_20]['channel'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_RSS_20]['rss'][0]['child'][SIMPLEPIE_NAMESPACE_RSS_20]['channel'][0];
+			}
+			else
+			{
+				$channel = null;
+			}
+
+			if ($channel !== null)
+			{
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['entry']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['entry']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['entry']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['entry']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_10]['item']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_10]['item']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_090]['item']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_090]['item']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_20]['item']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_20]['item']);
+				}
+			}
+			if (isset($data->data['items']))
+			{
+				unset($data->data['items']);
+			}
+			if (isset($data->data['ordered_items']))
+			{
+				unset($data->data['ordered_items']);
+			}
+		}
+		return array(serialize($data->data), $items_by_id);
+	}
+}
+
+The file File.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Caches data to the filesystem
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ */
+class SimplePie_Cache_File implements SimplePie_Cache_Base
+{
+	/**
+	 * Location string
+	 *
+	 * @see SimplePie::$cache_location
+	 * @var string
+	 */
+	protected $location;
+
+	/**
+	 * Filename
+	 *
+	 * @var string
+	 */
+	protected $filename;
+
+	/**
+	 * File extension
+	 *
+	 * @var string
+	 */
+	protected $extension;
+
+	/**
+	 * File path
+	 *
+	 * @var string
+	 */
+	protected $name;
+
+	/**
+	 * Create a new cache object
+	 *
+	 * @param string $location Location string (from SimplePie::$cache_location)
+	 * @param string $name Unique ID for the cache
+	 * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+	 */
+	public function __construct($location, $name, $type)
+	{
+		$this->location = $location;
+		$this->filename = $name;
+		$this->extension = $type;
+		$this->name = "$this->location/$this->filename.$this->extension";
+	}
+
+	/**
+	 * Save data to the cache
+	 *
+	 * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+	 * @return bool Successfulness
+	 */
+	public function save($data)
+	{
+		if (file_exists($this->name) && is_writable($this->name) || file_exists($this->location) && is_writable($this->location))
+		{
+			if ($data instanceof SimplePie)
+			{
+				$data = $data->data;
+			}
+
+			$data = serialize($data);
+			return (bool) file_put_contents($this->name, $data);
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the data saved to the cache
+	 *
+	 * @return array Data for SimplePie::$data
+	 */
+	public function load()
+	{
+		if (file_exists($this->name) && is_readable($this->name))
+		{
+			return unserialize(file_get_contents($this->name));
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the last modified time for the cache
+	 *
+	 * @return int Timestamp
+	 */
+	public function mtime()
+	{
+		return @filemtime($this->name);
+	}
+
+	/**
+	 * Set the last modified time to the current time
+	 *
+	 * @return bool Success status
+	 */
+	public function touch()
+	{
+		return @touch($this->name);
+	}
+
+	/**
+	 * Remove the cache
+	 *
+	 * @return bool Success status
+	 */
+	public function unlink()
+	{
+		if (file_exists($this->name))
+		{
+			return unlink($this->name);
+		}
+		return false;
+	}
+}
+
+The file Memcache.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Caches data to memcache
+ *
+ * Registered for URLs with the "memcache" protocol
+ *
+ * For example, `memcache://localhost:11211/?timeout=3600&prefix=sp_` will
+ * connect to memcache on `localhost` on port 11211. All tables will be
+ * prefixed with `sp_` and data will expire after 3600 seconds
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ * @uses Memcache
+ */
+class SimplePie_Cache_Memcache implements SimplePie_Cache_Base
+{
+	/**
+	 * Memcache instance
+	 *
+	 * @var Memcache
+	 */
+	protected $cache;
+
+	/**
+	 * Options
+	 *
+	 * @var array
+	 */
+	protected $options;
+
+	/**
+	 * Cache name
+	 *
+	 * @var string
+	 */
+	protected $name;
+
+	/**
+	 * Create a new cache object
+	 *
+	 * @param string $location Location string (from SimplePie::$cache_location)
+	 * @param string $name Unique ID for the cache
+	 * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+	 */
+	public function __construct($location, $name, $type)
+	{
+		$this->options = array(
+			'host' => '127.0.0.1',
+			'port' => 11211,
+			'extras' => array(
+				'timeout' => 3600, // one hour
+				'prefix' => 'simplepie_',
+			),
+		);
+		$this->options = SimplePie_Misc::array_merge_recursive($this->options, SimplePie_Cache::parse_URL($location));
+
+		$this->name = $this->options['extras']['prefix'] . md5("$name:$type");
+
+		$this->cache = new Memcache();
+		$this->cache->addServer($this->options['host'], (int) $this->options['port']);
+	}
+
+	/**
+	 * Save data to the cache
+	 *
+	 * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+	 * @return bool Successfulness
+	 */
+	public function save($data)
+	{
+		if ($data instanceof SimplePie)
+		{
+			$data = $data->data;
+		}
+		return $this->cache->set($this->name, serialize($data), MEMCACHE_COMPRESSED, (int) $this->options['extras']['timeout']);
+	}
+
+	/**
+	 * Retrieve the data saved to the cache
+	 *
+	 * @return array Data for SimplePie::$data
+	 */
+	public function load()
+	{
+		$data = $this->cache->get($this->name);
+
+		if ($data !== false)
+		{
+			return unserialize($data);
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the last modified time for the cache
+	 *
+	 * @return int Timestamp
+	 */
+	public function mtime()
+	{
+		$data = $this->cache->get($this->name);
+
+		if ($data !== false)
+		{
+			// essentially ignore the mtime because Memcache expires on its own
+			return time();
+		}
+
+		return false;
+	}
+
+	/**
+	 * Set the last modified time to the current time
+	 *
+	 * @return bool Success status
+	 */
+	public function touch()
+	{
+		$data = $this->cache->get($this->name);
+
+		if ($data !== false)
+		{
+			return $this->cache->set($this->name, $data, MEMCACHE_COMPRESSED, (int) $this->options['extras']['timeout']);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Remove the cache
+	 *
+	 * @return bool Success status
+	 */
+	public function unlink()
+	{
+		return $this->cache->delete($this->name, 0);
+	}
+}
+
+The file Memcached.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Caches data to memcached
+ *
+ * Registered for URLs with the "memcached" protocol
+ *
+ * For example, `memcached://localhost:11211/?timeout=3600&prefix=sp_` will
+ * connect to memcached on `localhost` on port 11211. All tables will be
+ * prefixed with `sp_` and data will expire after 3600 seconds
+ *
+ * @package    SimplePie
+ * @subpackage Caching
+ * @author     Paul L. McNeely
+ * @uses       Memcached
+ */
+class SimplePie_Cache_Memcached implements SimplePie_Cache_Base
+{
+    /**
+     * Memcached instance
+     * @var Memcached
+     */
+    protected $cache;
+
+    /**
+     * Options
+     * @var array
+     */
+    protected $options;
+
+    /**
+     * Cache name
+     * @var string
+     */
+    protected $name;
+
+    /**
+     * Create a new cache object
+     * @param string $location Location string (from SimplePie::$cache_location)
+     * @param string $name     Unique ID for the cache
+     * @param string $type     Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+     */
+    public function __construct($location, $name, $type) {
+        $this->options = array(
+            'host'   => '127.0.0.1',
+            'port'   => 11211,
+            'extras' => array(
+                'timeout' => 3600, // one hour
+                'prefix'  => 'simplepie_',
+            ),
+        );
+        $this->options = SimplePie_Misc::array_merge_recursive($this->options, SimplePie_Cache::parse_URL($location));
+
+        $this->name = $this->options['extras']['prefix'] . md5("$name:$type");
+
+        $this->cache = new Memcached();
+        $this->cache->addServer($this->options['host'], (int)$this->options['port']);
+    }
+
+    /**
+     * Save data to the cache
+     * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+     * @return bool Successfulness
+     */
+    public function save($data) {
+        if ($data instanceof SimplePie) {
+            $data = $data->data;
+        }
+
+        return $this->setData(serialize($data));
+    }
+
+    /**
+     * Retrieve the data saved to the cache
+     * @return array Data for SimplePie::$data
+     */
+    public function load() {
+        $data = $this->cache->get($this->name);
+
+        if ($data !== false) {
+            return unserialize($data);
+        }
+        return false;
+    }
+
+    /**
+     * Retrieve the last modified time for the cache
+     * @return int Timestamp
+     */
+    public function mtime() {
+        $data = $this->cache->get($this->name . '_mtime');
+        return (int) $data;
+    }
+
+    /**
+     * Set the last modified time to the current time
+     * @return bool Success status
+     */
+    public function touch() {
+        $data = $this->cache->get($this->name);
+        return $this->setData($data);
+    }
+
+    /**
+     * Remove the cache
+     * @return bool Success status
+     */
+    public function unlink() {
+        return $this->cache->delete($this->name, 0);
+    }
+
+    /**
+     * Set the last modified time and data to Memcached
+     * @return bool Success status
+     */
+    private function setData($data) {
+
+        if ($data !== false) {
+            $this->cache->set($this->name . '_mtime', time(), (int)$this->options['extras']['timeout']);
+            return $this->cache->set($this->name, $data, (int)$this->options['extras']['timeout']);
+        }
+
+        return false;
+    }
+}
+
+The file my-directory-list.txt contains:
+The file Base.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Base for cache objects
+ *
+ * Classes to be used with {@see SimplePie_Cache::register()} are expected
+ * to implement this interface.
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ */
+interface SimplePie_Cache_Base
+{
+	/**
+	 * Feed cache type
+	 *
+	 * @var string
+	 */
+	const TYPE_FEED = 'spc';
+
+	/**
+	 * Image cache type
+	 *
+	 * @var string
+	 */
+	const TYPE_IMAGE = 'spi';
+
+	/**
+	 * Create a new cache object
+	 *
+	 * @param string $location Location string (from SimplePie::$cache_location)
+	 * @param string $name Unique ID for the cache
+	 * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+	 */
+	public function __construct($location, $name, $type);
+
+	/**
+	 * Save data to the cache
+	 *
+	 * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+	 * @return bool Successfulness
+	 */
+	public function save($data);
+
+	/**
+	 * Retrieve the data saved to the cache
+	 *
+	 * @return array Data for SimplePie::$data
+	 */
+	public function load();
+
+	/**
+	 * Retrieve the last modified time for the cache
+	 *
+	 * @return int Timestamp
+	 */
+	public function mtime();
+
+	/**
+	 * Set the last modified time to the current time
+	 *
+	 * @return bool Success status
+	 */
+	public function touch();
+
+	/**
+	 * Remove the cache
+	 *
+	 * @return bool Success status
+	 */
+	public function unlink();
+}
+
+The file DB.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Base class for database-based caches
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ */
+abstract class SimplePie_Cache_DB implements SimplePie_Cache_Base
+{
+	/**
+	 * Helper for database conversion
+	 *
+	 * Converts a given {@see SimplePie} object into data to be stored
+	 *
+	 * @param SimplePie $data
+	 * @return array First item is the serialized data for storage, second item is the unique ID for this item
+	 */
+	protected static function prepare_simplepie_object_for_cache($data)
+	{
+		$items = $data->get_items();
+		$items_by_id = array();
+
+		if (!empty($items))
+		{
+			foreach ($items as $item)
+			{
+				$items_by_id[$item->get_id()] = $item;
+			}
+
+			if (count($items_by_id) !== count($items))
+			{
+				$items_by_id = array();
+				foreach ($items as $item)
+				{
+					$items_by_id[$item->get_id(true)] = $item;
+				}
+			}
+
+			if (isset($data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['feed'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['feed'][0];
+			}
+			elseif (isset($data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['feed'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['feed'][0];
+			}
+			elseif (isset($data->data['child'][SIMPLEPIE_NAMESPACE_RDF]['RDF'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_RDF]['RDF'][0];
+			}
+			elseif (isset($data->data['child'][SIMPLEPIE_NAMESPACE_RSS_20]['rss'][0]['child'][SIMPLEPIE_NAMESPACE_RSS_20]['channel'][0]))
+			{
+				$channel =& $data->data['child'][SIMPLEPIE_NAMESPACE_RSS_20]['rss'][0]['child'][SIMPLEPIE_NAMESPACE_RSS_20]['channel'][0];
+			}
+			else
+			{
+				$channel = null;
+			}
+
+			if ($channel !== null)
+			{
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['entry']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['entry']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['entry']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['entry']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_10]['item']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_10]['item']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_090]['item']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_090]['item']);
+				}
+				if (isset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_20]['item']))
+				{
+					unset($channel['child'][SIMPLEPIE_NAMESPACE_RSS_20]['item']);
+				}
+			}
+			if (isset($data->data['items']))
+			{
+				unset($data->data['items']);
+			}
+			if (isset($data->data['ordered_items']))
+			{
+				unset($data->data['ordered_items']);
+			}
+		}
+		return array(serialize($data->data), $items_by_id);
+	}
+}
+
+The file File.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Caches data to the filesystem
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ */
+class SimplePie_Cache_File implements SimplePie_Cache_Base
+{
+	/**
+	 * Location string
+	 *
+	 * @see SimplePie::$cache_location
+	 * @var string
+	 */
+	protected $location;
+
+	/**
+	 * Filename
+	 *
+	 * @var string
+	 */
+	protected $filename;
+
+	/**
+	 * File extension
+	 *
+	 * @var string
+	 */
+	protected $extension;
+
+	/**
+	 * File path
+	 *
+	 * @var string
+	 */
+	protected $name;
+
+	/**
+	 * Create a new cache object
+	 *
+	 * @param string $location Location string (from SimplePie::$cache_location)
+	 * @param string $name Unique ID for the cache
+	 * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+	 */
+	public function __construct($location, $name, $type)
+	{
+		$this->location = $location;
+		$this->filename = $name;
+		$this->extension = $type;
+		$this->name = "$this->location/$this->filename.$this->extension";
+	}
+
+	/**
+	 * Save data to the cache
+	 *
+	 * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+	 * @return bool Successfulness
+	 */
+	public function save($data)
+	{
+		if (file_exists($this->name) && is_writable($this->name) || file_exists($this->location) && is_writable($this->location))
+		{
+			if ($data instanceof SimplePie)
+			{
+				$data = $data->data;
+			}
+
+			$data = serialize($data);
+			return (bool) file_put_contents($this->name, $data);
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the data saved to the cache
+	 *
+	 * @return array Data for SimplePie::$data
+	 */
+	public function load()
+	{
+		if (file_exists($this->name) && is_readable($this->name))
+		{
+			return unserialize(file_get_contents($this->name));
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the last modified time for the cache
+	 *
+	 * @return int Timestamp
+	 */
+	public function mtime()
+	{
+		return @filemtime($this->name);
+	}
+
+	/**
+	 * Set the last modified time to the current time
+	 *
+	 * @return bool Success status
+	 */
+	public function touch()
+	{
+		return @touch($this->name);
+	}
+
+	/**
+	 * Remove the cache
+	 *
+	 * @return bool Success status
+	 */
+	public function unlink()
+	{
+		if (file_exists($this->name))
+		{
+			return unlink($this->name);
+		}
+		return false;
+	}
+}
+
+The file Memcache.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Caches data to memcache
+ *
+ * Registered for URLs with the "memcache" protocol
+ *
+ * For example, `memcache://localhost:11211/?timeout=3600&prefix=sp_` will
+ * connect to memcache on `localhost` on port 11211. All tables will be
+ * prefixed with `sp_` and data will expire after 3600 seconds
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ * @uses Memcache
+ */
+class SimplePie_Cache_Memcache implements SimplePie_Cache_Base
+{
+	/**
+	 * Memcache instance
+	 *
+	 * @var Memcache
+	 */
+	protected $cache;
+
+	/**
+	 * Options
+	 *
+	 * @var array
+	 */
+	protected $options;
+
+	/**
+	 * Cache name
+	 *
+	 * @var string
+	 */
+	protected $name;
+
+	/**
+	 * Create a new cache object
+	 *
+	 * @param string $location Location string (from SimplePie::$cache_location)
+	 * @param string $name Unique ID for the cache
+	 * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+	 */
+	public function __construct($location, $name, $type)
+	{
+		$this->options = array(
+			'host' => '127.0.0.1',
+			'port' => 11211,
+			'extras' => array(
+				'timeout' => 3600, // one hour
+				'prefix' => 'simplepie_',
+			),
+		);
+		$this->options = SimplePie_Misc::array_merge_recursive($this->options, SimplePie_Cache::parse_URL($location));
+
+		$this->name = $this->options['extras']['prefix'] . md5("$name:$type");
+
+		$this->cache = new Memcache();
+		$this->cache->addServer($this->options['host'], (int) $this->options['port']);
+	}
+
+	/**
+	 * Save data to the cache
+	 *
+	 * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+	 * @return bool Successfulness
+	 */
+	public function save($data)
+	{
+		if ($data instanceof SimplePie)
+		{
+			$data = $data->data;
+		}
+		return $this->cache->set($this->name, serialize($data), MEMCACHE_COMPRESSED, (int) $this->options['extras']['timeout']);
+	}
+
+	/**
+	 * Retrieve the data saved to the cache
+	 *
+	 * @return array Data for SimplePie::$data
+	 */
+	public function load()
+	{
+		$data = $this->cache->get($this->name);
+
+		if ($data !== false)
+		{
+			return unserialize($data);
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the last modified time for the cache
+	 *
+	 * @return int Timestamp
+	 */
+	public function mtime()
+	{
+		$data = $this->cache->get($this->name);
+
+		if ($data !== false)
+		{
+			// essentially ignore the mtime because Memcache expires on its own
+			return time();
+		}
+
+		return false;
+	}
+
+	/**
+	 * Set the last modified time to the current time
+	 *
+	 * @return bool Success status
+	 */
+	public function touch()
+	{
+		$data = $this->cache->get($this->name);
+
+		if ($data !== false)
+		{
+			return $this->cache->set($this->name, $data, MEMCACHE_COMPRESSED, (int) $this->options['extras']['timeout']);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Remove the cache
+	 *
+	 * @return bool Success status
+	 */
+	public function unlink()
+	{
+		return $this->cache->delete($this->name, 0);
+	}
+}
+
+The file Memcached.php contains:
+
+The file MySQL.php contains:
+<?php
+/**
+ * SimplePie
+ *
+ * A PHP-Based RSS and Atom Feed Framework.
+ * Takes the hard work out of managing a complete RSS/Atom solution.
+ *
+ * Copyright (c) 2004-2016, Ryan Parman, Sam Sneddon, Ryan McCue, and contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 	* Redistributions of source code must retain the above copyright notice, this list of
+ * 	  conditions and the following disclaimer.
+ *
+ * 	* Redistributions in binary form must reproduce the above copyright notice, this list
+ * 	  of conditions and the following disclaimer in the documentation and/or other materials
+ * 	  provided with the distribution.
+ *
+ * 	* Neither the name of the SimplePie Team nor the names of its contributors may be used
+ * 	  to endorse or promote products derived from this software without specific prior
+ * 	  written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS
+ * AND CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package SimplePie
+ * @copyright 2004-2016 Ryan Parman, Sam Sneddon, Ryan McCue
+ * @author Ryan Parman
+ * @author Sam Sneddon
+ * @author Ryan McCue
+ * @link http://simplepie.org/ SimplePie
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ */
+
+/**
+ * Caches data to a MySQL database
+ *
+ * Registered for URLs with the "mysql" protocol
+ *
+ * For example, `mysql://root:password@localhost:3306/mydb?prefix=sp_` will
+ * connect to the `mydb` database on `localhost` on port 3306, with the user
+ * `root` and the password `password`. All tables will be prefixed with `sp_`
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ */
+class SimplePie_Cache_MySQL extends SimplePie_Cache_DB
+{
+	/**
+	 * PDO instance
+	 *
+	 * @var PDO
+	 */
+	protected $mysql;
+
+	/**
+	 * Options
+	 *
+	 * @var array
+	 */
+	protected $options;
+
+	/**
+	 * Cache ID
+	 *
+	 * @var string
+	 */
+	protected $id;
+
+	/**
+	 * Create a new cache object
+	 *
+	 * @param string $location Location string (from SimplePie::$cache_location)
+	 * @param string $name Unique ID for the cache
+	 * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+	 */
+	public function __construct($location, $name, $type)
+	{
+		$this->options = array(
+			'user' => null,
+			'pass' => null,
+			'host' => '127.0.0.1',
+			'port' => '3306',
+			'path' => '',
+			'extras' => array(
+				'prefix' => '',
+				'cache_purge_time' => 2592000
+			),
+		);
+
+		$this->options = SimplePie_Misc::array_merge_recursive($this->options, SimplePie_Cache::parse_URL($location));
+
+		// Path is prefixed with a "/"
+		$this->options['dbname'] = substr($this->options['path'], 1);
+
+		try
+		{
+			$this->mysql = new PDO("mysql:dbname={$this->options['dbname']};host={$this->options['host']};port={$this->options['port']}", $this->options['user'], $this->options['pass'], array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
+		}
+		catch (PDOException $e)
+		{
+			$this->mysql = null;
+			return;
+		}
+
+		$this->id = $name . $type;
+
+		if (!$query = $this->mysql->query('SHOW TABLES'))
+		{
+			$this->mysql = null;
+			return;
+		}
+
+		$db = array();
+		while ($row = $query->fetchColumn())
+		{
+			$db[] = $row;
+		}
+
+		if (!in_array($this->options['extras']['prefix'] . 'cache_data', $db))
+		{
+			$query = $this->mysql->exec('CREATE TABLE `' . $this->options['extras']['prefix'] . 'cache_data` (`id` TEXT CHARACTER SET utf8 NOT NULL, `items` SMALLINT NOT NULL DEFAULT 0, `data` BLOB NOT NULL, `mtime` INT UNSIGNED NOT NULL, UNIQUE (`id`(125)))');
+			if ($query === false)
+			{
+				trigger_error("Can't create " . $this->options['extras']['prefix'] . "cache_data table, check permissions", E_USER_WARNING);
+				$this->mysql = null;
+				return;
+			}
+		}
+
+		if (!in_array($this->options['extras']['prefix'] . 'items', $db))
+		{
+			$query = $this->mysql->exec('CREATE TABLE `' . $this->options['extras']['prefix'] . 'items` (`feed_id` TEXT CHARACTER SET utf8 NOT NULL, `id` TEXT CHARACTER SET utf8 NOT NULL, `data` MEDIUMBLOB NOT NULL, `posted` INT UNSIGNED NOT NULL, INDEX `feed_id` (`feed_id`(125)))');
+			if ($query === false)
+			{
+				trigger_error("Can't create " . $this->options['extras']['prefix'] . "items table, check permissions", E_USER_WARNING);
+				$this->mysql = null;
+				return;
+			}
+		}
+	}
+
+	/**
+	 * Save data to the cache
+	 *
+	 * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+	 * @return bool Successfulness
+	 */
+	public function save($data)
+	{
+		if ($this->mysql === null)
+		{
+			return false;
+		}
+
+		$query = $this->mysql->prepare('DELETE i, cd FROM `' . $this->options['extras']['prefix'] . 'cache_data` cd, ' .
+			'`' . $this->options['extras']['prefix'] . 'items` i ' .
+			'WHERE cd.id = i.feed_id ' .
+			'AND cd.mtime < (unix_timestamp() - :purge_time)');
+		$query->bindValue(':purge_time', $this->options['extras']['cache_purge_time']);
+
+		if (!$query->execute())
+		{
+			return false;
+		}
+
+		if ($data instanceof SimplePie)
+		{
+			$data = clone $data;
+
+			$prepared = self::prepare_simplepie_object_for_cache($data);
+
+			$query = $this->mysql->prepare('SELECT COUNT(*) FROM `' . $this->options['extras']['prefix'] . 'cache_data` WHERE `id` = :feed');
+			$query->bindValue(':feed', $this->id);
+			if ($query->execute())
+			{
+				if ($query->fetchColumn() > 0)
+				{
+					$items = count($prepared[1]);
+					if ($items)
+					{
+						$sql = 'UPDATE `' . $this->options['extras']['prefix'] . 'cache_data` SET `items` = :items, `data` = :data, `mtime` = :time WHERE `id` = :feed';
+						$query = $this->mysql->prepare($sql);
+						$query->bindValue(':items', $items);
+					}
+					else
+					{
+						$sql = 'UPDATE `' . $this->options['extras']['prefix'] . 'cache_data` SET `data` = :data, `mtime` = :time WHERE `id` = :feed';
+						$query = $this->mysql->prepare($sql);
+					}
+
+					$query->bindValue(':data', $prepared[0]);
+					$query->bindValue(':time', time());
+					$query->bindValue(':feed', $this->id);
+					if (!$query->execute())
+					{
+						return false;
+					}
+				}
+				else
+				{
+					$query = $this->mysql->prepare('INSERT INTO `' . $this->options['extras']['prefix'] . 'cache_data` (`id`, `items`, `data`, `mtime`) VALUES(:feed, :count, :data, :time)');
+					$query->bindValue(':feed', $this->id);
+					$query->bindValue(':count', count($prepared[1]));
+					$query->bindValue(':data', $prepared[0]);
+					$query->bindValue(':time', time());
+					if (!$query->execute())
+					{
+						return false;
+					}
+				}
+
+				$ids = array_keys($prepared[1]);
+				if (!empty($ids))
+				{
+					foreach ($ids as $id)
+					{
+						$database_ids[] = $this->mysql->quote($id);
+					}
+
+					$query = $this->mysql->prepare('SELECT `id` FROM `' . $this->options['extras']['prefix'] . 'items` WHERE `id` = ' . implode(' OR `id` = ', $database_ids) . ' AND `feed_id` = :feed');
+					$query->bindValue(':feed', $this->id);
+
+					if ($query->execute())
+					{
+						$existing_ids = array();
+						while ($row = $query->fetchColumn())
+						{
+							$existing_ids[] = $row;
+						}
+
+						$new_ids = array_diff($ids, $existing_ids);
+
+						foreach ($new_ids as $new_id)
+						{
+							if (!($date = $prepared[1][$new_id]->get_date('U')))
+							{
+								$date = time();
+							}
+
+							$query = $this->mysql->prepare('INSERT INTO `' . $this->options['extras']['prefix'] . 'items` (`feed_id`, `id`, `data`, `posted`) VALUES(:feed, :id, :data, :date)');
+							$query->bindValue(':feed', $this->id);
+							$query->bindValue(':id', $new_id);
+							$query->bindValue(':data', serialize($prepared[1][$new_id]->data));
+							$query->bindValue(':date', $date);
+							if (!$query->execute())
+							{
+								return false;
+							}
+						}
+						return true;
+					}
+				}
+				else
+				{
+					return true;
+				}
+			}
+		}
+		else
+		{
+			$query = $this->mysql->prepare('SELECT `id` FROM `' . $this->options['extras']['prefix'] . 'cache_data` WHERE `id` = :feed');
+			$query->bindValue(':feed', $this->id);
+			if ($query->execute())
+			{
+				if ($query->rowCount() > 0)
+				{
+					$query = $this->mysql->prepare('UPDATE `' . $this->options['extras']['prefix'] . 'cache_data` SET `items` = 0, `data` = :data, `mtime` = :time WHERE `id` = :feed');
+					$query->bindValue(':data', serialize($data));
+					$query->bindValue(':time', time());
+					$query->bindValue(':feed', $this->id);
+					if ($this->execute())
+					{
+						return true;
+					}
+				}
+				else
+				{
+					$query = $this->mysql->prepare('INSERT INTO `' . $this->options['extras']['prefix'] . 'cache_data` (`id`, `items`, `data`, `mtime`) VALUES(:id, 0, :data, :time)');
+					$query->bindValue(':id', $this->id);
+					$query->bindValue(':data', serialize($data));
+					$query->bindValue(':time', time());
+					if ($query->execute())
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the data saved to the cache
+	 *
+	 * @return array Data for SimplePie::$data
+	 */
+	public function load()
+	{
+		if ($this->mysql === null)
+		{
+			return false;
+		}
+
+		$query = $this->mysql->prepare('SELECT `items`, `data` FROM `' . $this->options['extras']['prefix'] . 'cache_data` WHERE `id` = :id');
+		$query->bindValue(':id', $this->id);
+		if ($query->execute() && ($row = $query->fetch()))
+		{
+			$data = unserialize($row[1]);
+
+			if (isset($this->options['items'][0]))
+			{
+				$items = (int) $this->options['items'][0];
+			}
+			else
+			{
+				$items = (int) $row[0];
+			}
+
+			if ($items !== 0)
+			{
+				if (isset($data['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['feed'][0]))
+				{
+					$feed =& $data['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['feed'][0];
+				}
+				elseif (isset($data['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['feed'][0]))
+				{
+					$feed =& $data['child'][SIMPLEPIE_NAMESPACE_ATOM_03]['feed'][0];
+				}
+				elseif (isset($data['child'][SIMPLEPIE_NAMESPACE_RDF]['RDF'][0]))
+				{
+					$feed =& $data['child'][SIMPLEPIE_NAMESPACE_RDF]['RDF'][0];
+				}
+				elseif (isset($data['child'][SIMPLEPIE_NAMESPACE_RSS_20]['rss'][0]))
+				{
+					$feed =& $data['child'][SIMPLEPIE_NAMESPACE_RSS_20]['rss'][0];
+				}
+				else
+				{
+					$feed = null;
+				}
+
+				if ($feed !== null)
+				{
+					$sql = 'SELECT `data` FROM `' . $this->options['extras']['prefix'] . 'items` WHERE `feed_id` = :feed ORDER BY `posted` DESC';
+					if ($items > 0)
+					{
+						$sql .= ' LIMIT ' . $items;
+					}
+
+					$query = $this->mysql->prepare($sql);
+					$query->bindValue(':feed', $this->id);
+					if ($query->execute())
+					{
+						while ($row = $query->fetchColumn())
+						{
+							$feed['child'][SIMPLEPIE_NAMESPACE_ATOM_10]['entry'][] = unserialize($row);
+						}
+					}
+					else
+					{
+						return false;
+					}
+				}
+			}
+			return $data;
+		}
+		return false;
+	}
+
+	/**
+	 * Retrieve the last modified time for the cache
+	 *
+	 * @return int Timestamp
+	 */
+	public function mtime()
+	{
+		if ($this->mysql === null)
+		{
+			return false;
+		}
+
+		$query = $this->mysql->prepare('SELECT `mtime` FROM `' . $this->options['extras']['prefix'] . 'cache_data` WHERE `id` = :id');
+		$query->bindValue(':id', $this->id);
+		if ($query->execute() && ($time = $query->fetchColumn()))
+		{
+			return $time;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Set the last modified time to the current time
+	 *
+	 * @return bool Success status
+	 */
+	public function touch()
+	{
+		if ($this->mysql === null)
+		{
+			return false;
+		}
+
+		$query = $this->mysql->prepare('UPDATE `' . $this->options['extras']['prefix'] . 'cache_data` SET `mtime` = :time WHERE `id` = :id');
+		$query->bindValue(':time', time());
+		$query->bindValue(':id', $this->id);
+
+		return $query->execute() && $query->rowCount() > 0;
+	}
+
+	/**
+	 * Remove the cache
+	 *
+	 * @return bool Success status
+	 */
+	public function unlink()
+	{
+		if ($this->mysql === null)
+		{
+			return false;
+		}
+
+		$query = $this->mysql->prepare('DELETE FROM `' . $this->options['extras']['prefix'] . 'cache_data` WHERE `id` = :id');
+		$query->bindValue(':id', $this->id);
+		$query2 = $this->mysql->prepare('DELETE FROM `' . $this->options['extras']['prefix'] . 'items` WHERE `feed_id` = :id');
+		$query2->bindValue(':id', $this->id);
+
+		return $query->execute() && $query2->execute();
+	}
+}
+
+The file Redis.php contains:
+<?php
+
+/**
+ * SimplePie Redis Cache Extension
+ *
+ * @package SimplePie
+ * @author Jan Kozak <galvani78@gmail.com>
+ * @link http://galvani.cz/
+ * @license http://www.opensource.org/licenses/bsd-license.php BSD License
+ * @version 0.2.9
+ */
+
+
+/**
+ * Caches data to redis
+ *
+ * Registered for URLs with the "redis" protocol
+ *
+ * For example, `redis://localhost:6379/?timeout=3600&prefix=sp_&dbIndex=0` will
+ * connect to redis on `localhost` on port 6379. All tables will be
+ * prefixed with `simple_primary-` and data will expire after 3600 seconds
+ *
+ * @package SimplePie
+ * @subpackage Caching
+ * @uses Redis
+ */
+class SimplePie_Cache_Redis implements SimplePie_Cache_Base {
+    /**
+     * Redis instance
+     *
+     * @var \Redis
+     */
+    protected $cache;
+
+    /**
+     * Options
+     *
+     * @var array
+     */
+    protected $options;
+
+    /**
+     * Cache name
+     *
+     * @var string
+     */
+    protected $name;
+
+    /**
+     * Cache Data
+     *
+     * @var type
+     */
+    protected $data;
+
+    /**
+     * Create a new cache object
+     *
+     * @param string $location Location string (from SimplePie::$cache_location)
+     * @param string $name Unique ID for the cache
+     * @param string $type Either TYPE_FEED for SimplePie data, or TYPE_IMAGE for image data
+     */
+    public function __construct($location, $name, $options = null) {
+        //$this->cache = \flow\simple\cache\Redis::getRedisClientInstance();
+        $parsed = SimplePie_Cache::parse_URL($location);
+        $redis = new Redis();
+        $redis->connect($parsed['host'], $parsed['port']);
+        if (isset($parsed['pass'])) {
+            $redis->auth($parsed['pass']);
+        }
+        if (isset($parsed['path'])) {
+            $redis->select((int)substr($parsed['path'], 1));
+        }
+        $this->cache = $redis;
+
+        if (!is_null($options) && is_array($options)) {
+            $this->options = $options;
+        } else {
+            $this->options = array (
+                'prefix' => 'rss:simple_primary:',
+                'expire' => 0,
+            );
+        }
+
+        $this->name = $this->options['prefix'] . $name;
+    }
+
+    /**
+     * @param \Redis $cache
+     */
+    public function setRedisClient(\Redis $cache) {
+        $this->cache = $cache;
+    }
+
+    /**
+     * Save data to the cache
+     *
+     * @param array|SimplePie $data Data to store in the cache. If passed a SimplePie object, only cache the $data property
+     * @return bool Successfulness
+     */
+    public function save($data) {
+        if ($data instanceof SimplePie) {
+            $data = $data->data;
+        }
+        $response = $this->cache->set($this->name, serialize($data));
+        if ($this->options['expire']) {
+            $this->cache->expire($this->name, $this->options['expire']);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Retrieve the data saved to the cache
+     *
+     * @return array Data for SimplePie::$data
+     */
+    public function load() {
+        $data = $this->cache->get($this->name);
+
+        if ($data !== false) {
+            return unserialize($data);
+        }
+        return false;
+    }
+
+    /**
+     * Retrieve the last modified time for the cache
+     *
+     * @return int Timestamp
+     */
+    public function mtime() {
+
+        $data = $this->cache->get($this->name);
+
+        if ($data !== false) {
+            return time();
+        }
+
+        return false;
+    }
+
+    /**
+     * Set the last modified time to the current time
+     *
+     * @return bool Success status
+     */
+    public function touch() {
+
+        $data = $this->cache->get($this->name);
+
+        if ($data !== false) {
+            $return = $this->cache->set($this->name, $data);
+            if ($this->options['expire']) {
+                return $this->cache->expire($this->name, $this->ttl);
+            }
+            return $return;
+        }
+
+        return false;
+    }
+
+    /**
+     * Remove the cache
+     *
+     * @return bool Success status
+     */
+    public function unlink() {
+        return $this->cache->set($this->name, null);
+    }
+
+}
+

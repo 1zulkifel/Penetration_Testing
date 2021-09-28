@@ -1,0 +1,44 @@
+The file my-directory-list.txt contains:
+
+The file _editor.scss contains:
+.wp-block-file {
+
+	.wp-block-file__textlink {
+		text-decoration: underline;
+		text-decoration-style: solid;
+		text-decoration-thickness: 1px;
+
+		&:hover {
+			text-decoration: underline;
+			text-decoration-style: dotted;
+		}
+	}
+
+	.wp-block-file__button {
+		// Extend button style
+		@include button-style();
+		display: inline-block;
+		
+		// Remove :focus styles in the editor
+		&:focus {
+			outline-offset: inherit;
+			outline: inherit;
+		}
+	}
+}
+
+The file _style.scss contains:
+.wp-block-file {
+
+	// Undo Gutenberg hover defaults
+	a.wp-block-file__button:active,
+	a.wp-block-file__button:focus,
+	a.wp-block-file__button:hover {
+		opacity: inherit;
+	}
+
+	a.wp-block-file__button {
+		display: inline-block;
+	}
+}
+

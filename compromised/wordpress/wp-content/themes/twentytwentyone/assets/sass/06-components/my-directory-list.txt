@@ -1,0 +1,2720 @@
+The file 404.scss contains:
+.error404 main p {
+	font-size: var(--global--font-size-lg);
+	margin-bottom: calc(var(--global--spacing-vertical) * 1.6666666667);
+}
+
+The file archives.scss contains:
+.page-title {
+	font-size: var(--global--font-size-page-title);
+}
+
+h1.page-title,
+h2.page-title {
+	font-weight: var(--heading--font-weight-page-title);
+}
+
+h1.page-title {
+	line-height: var(--heading--line-height-h1);
+}
+
+.page-header {
+	border-bottom: 3px solid var(--global--color-border);
+	padding-bottom: calc(2 * var(--global--spacing-vertical));
+}
+
+.archive,
+.search,
+.blog {
+
+	.content-area {
+
+		.format-aside,
+		.format-status,
+		.format-link {
+
+			.entry-content {
+				font-size: var(--global--font-size-lg);
+			}
+		}
+
+	}
+
+	.format-image,
+	.format-gallery,
+	.format-video {
+
+		.entry-content {
+			margin-top: calc(2 * var(--global--spacing-vertical));
+		}
+	}
+
+	.entry-footer {
+
+		.cat-links,
+		.tags-links {
+			display: block;
+		}
+	}
+
+	&.logged-in {
+
+		.entry-footer {
+
+			.posted-on {
+				margin-right: calc(0.5 * var(--global--spacing-unit));
+			}
+		}
+	}
+}
+
+.archive-description {
+	margin-top: var(--global--spacing-vertical);
+	font-size: var(--global--font-size-xl);
+	line-height: var(--global--line-height-heading);
+}
+
+The file comments.scss contains:
+/**
+ * Comments Wrapper
+ */
+.comments-area {
+
+	> * {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+
+		&:first-child {
+			margin-top: 0;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	&.show-avatars {
+
+		.avatar {
+			border-radius: 50%;
+			position: absolute;
+			top: 10px;
+		}
+
+		.fn {
+			display: inline-block;
+			padding-left: 85px;
+		}
+
+		.comment-metadata {
+			padding: 8px 0 9px 85px;
+		}
+
+	}
+}
+
+/**
+ * Comment Title
+ */
+
+.comments-title,
+.comment-reply-title {
+	font-size: var(--heading--font-size-h2);
+	letter-spacing: var(--heading--letter-spacing-h2);
+}
+
+.comment-reply-title {
+	display: flex;
+	justify-content: space-between;
+
+	small {
+
+		a {
+			font-family: var(--global--font-secondary);
+			font-size: var(--global--font-size-xs);
+			font-style: normal;
+			font-weight: normal;
+			letter-spacing: normal;
+		}
+	}
+}
+
+/* Nested comment reply title*/
+.comment .comment-respond .comment-reply-title {
+	font-size: var(--global--font-size-lg);
+}
+
+/**
+ * Comment Lists
+ */
+.comment-list {
+	padding-left: 0;
+	list-style: none;
+
+	> li {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+}
+
+.comment-list .children {
+	list-style: none;
+	padding-left: 0;
+
+	> li {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+}
+
+.comment-list .depth-2,
+.comment-list .depth-3 {
+	@include media(mobile) {
+		padding-left: calc(4 * var(--global--spacing-horizontal));
+	}
+}
+
+/**
+ * Comment Meta
+ */
+.comment-meta {
+
+	.comment-author {
+		line-height: var(--global--line-height-heading);
+		margin-bottom: calc(0.25 * var(--global--spacing-unit));
+
+		@include media(mobile) {
+			margin-bottom: 0;
+			padding-right: 0;
+		}
+
+		.fn {
+			font-family: var(--global--font-secondary);
+			font-weight: normal;
+			font-size: var(--global--font-size-lg);
+			hyphens: auto;
+			word-wrap: break-word;
+			word-break: break-word;
+		}
+
+	}
+
+	.comment-metadata {
+		color: var(--global--color-primary);
+		font-size: var(--global--font-size-xs);
+		padding: 8px 0 9px 0;
+
+		.edit-link {
+			margin-left: var(--global--spacing-horizontal);
+		}
+
+	}
+
+	@include media(mobile) {
+		margin-right: inherit;
+
+		.comment-author {
+			max-width: inherit;
+		}
+	}
+}
+
+.reply {
+	font-size: var(--global--font-size-sm);
+	line-height: var(--global--line-height-heading);
+}
+
+.bypostauthor {
+	display: block;
+}
+
+.says {
+	display: none;
+}
+
+.pingback .url,
+.trackback .url {
+	font-family: var(--global--font-primary);
+}
+
+// Comment body
+.comment-body {
+	position: relative;
+	margin-bottom: calc(1.7 * var(--global--spacing-vertical));
+
+	> * {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+	.reply {
+		margin: 0;
+	}
+}
+
+.comment-content {
+	word-wrap: break-word;
+}
+
+// Pingbacks & Trackbacks
+.pingback .comment-body,
+.trackback .comment-body {
+	margin-top: var(--global--spacing-vertical);
+	margin-bottom: var(--global--spacing-vertical);
+}
+
+.comment-respond {
+	margin-top: var(--global--spacing-vertical);
+}
+
+.comment-respond > * {
+	margin-top: var(--global--spacing-unit);
+	margin-bottom: var(--global--spacing-unit);
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+
+		&.comment-form {
+			margin-bottom: var(--global--spacing-vertical);
+		}
+	}
+}
+
+.comment-author {
+	padding-top: 3px;
+
+	.url {
+		color: currentColor;
+	}
+}
+
+.comment-form {
+	display: flex;
+	flex-wrap: wrap;
+
+	> * {
+		flex-basis: 100%;
+	}
+
+	.comment-notes {
+		font-size: var(--global--font-size-sm);
+	}
+
+	.comment-form-url,
+	.comment-form-comment {
+		width: 100%;
+	}
+
+	.comment-form-author,
+	.comment-form-email {
+		flex-basis: 0;
+		flex-grow: 1;
+
+		@include media(mobile-only) {
+			flex-basis: 100%;
+		}
+	}
+
+	.comment-form-cookies-consent > label,
+	.comment-notes {
+		font-size: var(--global--font-size-xs);
+		font-weight: normal;
+	}
+}
+
+.comment-form > p {
+	margin-bottom: var(--global--spacing-unit);
+
+	&:first-of-type {
+		margin-top: 0;
+	}
+
+	&:last-of-type {
+		margin-bottom: 0;
+	}
+
+	label,
+	input[type="email"],
+	input[type="text"],
+	input[type="url"],
+	textarea {
+		display: block;
+		font-size: var(--global--font-size-sm);
+		margin-bottom: calc(.5 * var(--global--spacing-unit));
+		width: 100%;
+		font-weight: var(--form--label-weight);
+	}
+
+	&.comment-form-cookies-consent {
+		display: flex;
+	}
+
+	@include media(mobile) {
+
+		&.comment-form-author {
+			margin-right: calc(1.5 * var(--global--spacing-horizontal));
+		}
+
+		&.comment-notes,
+		&.logged-in-as {
+			display: block;
+		}
+	}
+}
+
+The file editor.scss contains:
+html {
+	font-family: var(--global--font-secondary);
+	line-height: var(--global--line-height-body);
+}
+
+body {
+	--wp--typography--line-height: var(--global--line-height-body);
+	color: var(--global--color-primary);
+	background-color: var(--global--color-background);
+	font-family: var(--global--font-secondary);
+	font-size: var(--global--font-size-base);
+	font-weight: normal;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-font-smoothing: antialiased;
+}
+
+// Links styles
+.wp-block a {
+	color: var(--wp--style--color--link, var(--global--color-primary));
+
+	&:hover {
+		text-decoration-style: dotted;
+	}
+
+	&:focus {
+		outline: 2px solid var(--wp--style--color--link, var(--global--color-primary));
+		text-decoration: none;
+	}
+}
+
+// Enforce the custom link color even if a custom background color has been set.
+// The extra specificity here is required to override the background color styles.
+.has-background {
+	// Target both current level and nested block.
+	.has-link-color a,
+	&.has-link-color a {
+		color: var(--wp--style--color--link, var(--global--color-primary));
+	}
+}
+
+button,
+a {
+	cursor: pointer;
+}
+
+The file entry.scss contains:
+.entry-title {
+
+	color: var(--entry-header--color);
+	font-size: var(--entry-header--font-size);
+	letter-spacing: var(--heading--letter-spacing-h2);
+	line-height: var(--heading--line-height-h2);
+	overflow-wrap: break-word;
+
+	a {
+		color: var(--entry-header--color-link);
+		text-underline-offset: 0.15em;
+
+		&:hover {
+			color: var(--entry-header--color-hover);
+		}
+
+		&:focus {
+			color: var(--entry-header--color-focus);
+		}
+
+		&:active {
+			color: var(--entry-header--color-link);
+		}
+	}
+}
+
+.singular .entry-title {
+	font-size: var(--global--font-size-page-title);
+}
+
+h1.entry-title {
+	line-height: var(--heading--line-height-h1);
+	font-weight: var(--heading--font-weight-page-title);
+}
+
+/**
+ * Entry Content
+ */
+
+.entry-content,
+.entry-summary {
+	font-family: var(--entry-content--font-family);
+}
+
+.entry-content {
+
+	p {
+		word-wrap: break-word;
+	}
+
+	// Overwrite iframe embeds that have inline styles.
+	> iframe[style] {
+
+		margin: var(--global--spacing-vertical) 0 !important;
+		max-width: 100% !important;
+	}
+
+	// Classic editor audio embeds.
+	.wp-audio-shortcode {
+		@extend %responsive-aligndefault-width;
+	}
+}
+
+.entry-footer {
+
+	color: var(--global--color-primary);
+	clear: both;
+	float: none;
+	font-size: var(--global--font-size-xs);
+	display: block;
+
+	> span {
+		display: inline-block;
+	}
+
+	a {
+		color: currentColor;
+
+		&:hover,
+		&:focus {
+			color: var(--global--color-primary-hover);
+		}
+
+		&:active {
+			color: currentColor;
+		}
+	}
+}
+
+// Extra specificity to override rules in _vertical-margins.scss
+.site-main > article > .entry-footer {
+	margin-top: var(--global--spacing-vertical);
+	padding-top: var(--global--spacing-unit);
+	padding-bottom: calc(3 * var(--global--spacing-vertical));
+	border-bottom: var(--separator--height) solid var(--separator--border-color);
+}
+
+body:not(.single) .site-main > article:last-of-type .entry-footer {
+	border-bottom: var(--separator--height) solid transparent;
+}
+
+.single .site-main > article > .entry-footer {
+	margin-top: calc(3.4 * var(--global--spacing-vertical));
+	margin-bottom: calc(3.4 * var(--global--spacing-vertical));
+	padding-bottom: 0;
+	padding-top: calc(0.8 * var(--global--spacing-vertical));
+	border-top: 3px solid var(--separator--border-color);
+	border-bottom: var(--separator--height) solid transparent;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	column-gap: calc(2 * var(--global--spacing-horizontal));
+
+	.post-taxonomies,
+	.full-size-link {
+		justify-content: flex-end;
+		text-align: right;
+	}
+
+	.full-size-link:first-child:last-child {
+		grid-column: span 2;
+	}
+
+	.posted-on,
+	.byline,
+	.cat-links,
+	.tags-links {
+		display: block;
+	}
+
+	@include media(mobile-only) {
+		display: block;
+
+		.full-size-link {
+			display: block;
+		}
+
+		.post-taxonomies,
+		.full-size-link {
+			text-align: left;
+		}
+	}
+}
+
+/**
+ * Post Thumbnails
+ */
+
+.post-thumbnail {
+	@extend %responsive-aligndefault-width;
+	text-align: center;
+
+	.entry-header &,
+	.singular & {
+		@extend %responsive-alignwide-width-nested;
+	}
+
+	.wp-post-image {
+		display: block;
+		width: auto;
+		max-width: 100%;
+		margin-left: auto;
+		margin-right: auto;
+		margin-top: calc(2 * var(--global--spacing-vertical));
+	}
+}
+
+/**
+ * Author
+ */
+
+.author-bio {
+	position: relative;
+	font-size: var(--global--font-size-xs);
+	max-width: var(--responsive--aligndefault-width);
+
+	.site-main > article > & {
+		margin-top: calc(2 * var(--global--spacing-vertical));
+	}
+
+	// Avatars are optional and can be turned off.
+	&.show-avatars {
+
+		.avatar {
+			display: inline-block;
+			vertical-align: top;
+			border-radius: 50%;
+		}
+
+		.author-bio-content {
+			display: inline-block;
+			padding-left: var(--global--spacing-horizontal);
+			max-width: calc(var(--responsive--aligndefault-width) - 90px);
+		}
+	}
+
+	.author-bio-content {
+
+		.author-title {
+			font-family: var(--entry-author-bio--font-family);
+			font-size: var(--entry-author-bio--font-size);
+			display: inline;
+		}
+
+		.author-description {
+			font-size: var(--global--font-size-xs);
+			margin-top: calc(0.5 * var(--global--spacing-vertical));
+			margin-bottom: calc(0.5 * var(--global--spacing-vertical));
+		}
+	}
+}
+
+The file footer-navigation.scss contains:
+
+.footer-navigation {
+	margin-top: calc(2 * var(--global--spacing-vertical));
+	margin-bottom: var(--global--spacing-vertical);
+	color: var(--footer--color-text);
+	font-size: var(--global--font-size-xs);
+	font-family: var(--footer--font-family);
+}
+
+.footer-navigation-wrapper {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	list-style: none;
+	padding-left: 0;
+
+	li {
+		display: inline;
+		// This is to prevent hover styles from overlapping when the menu wraps.
+		line-height: 3;
+
+		a {
+			padding: calc(1.25 * var(--primary-nav--padding)) var(--primary-nav--padding);
+			transition: transform 0.1s ease;
+			color: var(--footer--color-link);
+
+			&:link,
+			&:visited,
+			&:active {
+				color: var(--footer--color-link);
+			}
+
+			&:hover {
+				text-decoration: underline;
+				text-decoration-style: dotted;
+				text-decoration-skip-ink: none;
+				color: var(--footer--color-link-hover);
+			}
+
+			&:focus {
+
+				.is-dark-theme & {
+
+					.svg-icon {
+						fill: var(--wp--style--color--link, var(--global--color-background));
+					}
+				}
+
+				// Change colors when the body background is white.
+				.has-background-white & {
+
+					.svg-icon {
+						fill: var(--wp--style--color--link, var(--global--color-white));
+					}
+				}
+			}
+		}
+
+		.svg-icon {
+			vertical-align: middle;
+			fill: var(--footer--color-link);
+
+			&:hover {
+				transform: scale(1.1);
+			}
+		}
+	}
+
+	.sub-menu-toggle,
+	.menu-item-description {
+		display: none;
+	}
+}
+
+The file footer.scss contains:
+// Footer
+.site-footer {
+	padding-top: 0;
+	padding-bottom: calc(1.7 * var(--global--spacing-vertical));
+	@extend %responsive-alignwide-width;
+
+	// Increase the top vertical spacing when there is no widget area.
+	.no-widgets & {
+		margin-top: calc(6 * var(--global--spacing-vertical));
+	}
+
+	@include media(mobile-only) {
+
+		.no-widgets & {
+			margin-top: calc(3 * var(--global--spacing-vertical));
+		}
+	}
+}
+
+// Footer Branding
+.site-footer > .site-info {
+	padding-top: var(--global--spacing-vertical);
+	color: var(--footer--color-text);
+	font-family: var(--footer--font-family);
+	font-size: var(--footer--font-size);
+	line-height: var(--global--line-height-body);
+	border-top: 3px solid var(--global--color-border);
+
+	.site-name {
+		text-transform: var(--branding--title--text-transform);
+		font-size: var(--branding--title--font-size);
+	}
+
+	.powered-by {
+		margin-top: calc(0.5 * var(--global--spacing-vertical));
+	}
+
+	@include media(desktop) {
+		display: flex;
+		align-items: center;
+
+		.powered-by {
+			margin-top: initial;
+			margin-left: auto;
+		}
+	}
+
+	a {
+		color: var(--footer--color-link);
+
+		&:link,
+		&:visited,
+		&:active {
+			color: var(--footer--color-link);
+		}
+
+		&:hover {
+			color: var(--footer--color-link-hover);
+		}
+
+		&:focus {
+			color: var(--footer--color-link-hover);
+
+			.is-dark-theme & {
+				color: var(--wp--style--color--link, var(--global--color-background));
+			}
+
+			// Change colors when the body background is white.
+			.has-background-white & {
+				color: var(--wp--style--color--link, var(--global--color-white));
+			}
+		}
+	}
+}
+
+The file header.scss contains:
+// Site header
+.site-header {
+	@extend %responsive-alignwide-width;
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	row-gap: var(--global--spacing-vertical); // Add space in case the menu wraps below the site branding.
+
+	.wp-custom-logo & {
+		align-items: center;
+	}
+
+	@include media(mobile) {
+		padding-top: calc(var(--global--spacing-vertical) / 0.75); // 40px
+	}
+
+	@include media(desktop) {
+		padding-top: calc(2.4 * var(--global--spacing-vertical)); // 60px
+	}
+}
+
+// Site branding
+.site-branding {
+	color: var(--branding--color-text);
+	margin-right: 140px;
+
+	&:last-child {
+		margin-right: 0;
+		width: 100%;
+		text-align: center;
+	}
+
+	@include media(mobile) {
+		margin-right: initial;
+		margin-top: 4px; // Align the baseline of the site title with the primary menu
+	}
+}
+
+// Site title
+.site-title {
+
+	color: var(--branding--color-link);
+	font-family: var(--branding--title--font-family);
+	font-size: var(--branding--title--font-size-mobile);
+	letter-spacing: normal;
+	text-transform: var(--branding--title--text-transform);
+	line-height: var(--global--line-height-heading);
+	margin-bottom: calc(var(--global--spacing-vertical) / 6);
+
+	a {
+		color: currentColor;
+		font-weight: var(--branding--title--font-weight);
+
+		&:link,
+		&:visited,
+		&:active {
+			color: currentColor;
+		}
+
+		&:hover,
+		&:focus {
+			color: var(--branding--color-link-hover);
+		}
+
+	}
+
+	@include media(mobile) {
+		font-size: var(--branding--title--font-size);
+	}
+}
+
+// Site description
+.site-description {
+	color: currentColor;
+	font-family: var(--branding--description--font-family);
+	font-size: var(--branding--description--font-size);
+	line-height: 1.4;
+}
+
+.site-title > a {
+	text-decoration-color: var(--global--color-secondary);
+}
+
+// Site logo
+.site-logo {
+
+	margin: calc(var(--global--spacing-vertical) / 2) 0;
+
+	.site-header > & {
+		width: 100%;
+		padding-bottom: calc(var(--global--spacing-vertical) * 1.5);
+		border-bottom: 1px solid;
+		text-align: center;
+	}
+
+	.custom-logo {
+		margin-left: auto;
+		margin-right: auto;
+		max-width: var(--branding--logo--max-width-mobile);
+		max-height: var(--branding--logo--max-height-mobile);
+		height: auto;
+		display: inline-block;
+		width: auto;
+	}
+
+	@include media(mobile) {
+
+		.custom-logo {
+			max-width: var(--branding--logo--max-width);
+			max-height: var(--branding--logo--max-height);
+			height: auto;
+			width: auto;
+		}
+	}
+}
+
+@include media(mobile-only) {
+
+	.site-header {
+
+		&.has-logo {
+
+			&:not(.has-title-and-tagline) {
+
+				&.has-menu {
+
+					.site-logo {
+						position: absolute;
+						padding-top: calc(0.5 * var(--global--spacing-vertical));
+						margin-top: 0;
+						top: var(--global--admin-bar--height);
+
+						.primary-navigation-open & {
+							display: none;
+						}
+
+						img {
+							max-height: calc(var(--button--padding-vertical) - (0.25 * var(--global--spacing-unit)) + 1.7em);
+						}
+					}
+				}
+			}
+
+			&.has-title-and-tagline {
+				align-items: flex-start;
+
+				&.has-menu {
+					justify-content: space-between;
+
+					.site-branding {
+						max-width: calc(100% - 160px);
+					}
+				}
+
+				.site-branding {
+					margin-right: 0;
+				}
+
+				body:not(.primary-navigation-open) & {
+
+					&:after {
+						display: none;
+					}
+
+					.primary-navigation {
+						position: relative;
+						top: 0;
+					}
+
+					.menu-button-container {
+						position: relative;
+						padding-top: 0;
+						margin-top: calc(0px - var(--button--padding-vertical) + (0.25 * var(--global--spacing-unit)));
+
+						#primary-mobile-menu {
+							// The 4.5px here is to offset the icon size horizontallly
+							// (the icon's width is larger than the path's width and has extra space on the sides).
+							padding-left: calc(var(--global--spacing-horizontal) * 0.6 - 4.5px);
+							padding-right: calc(var(--global--spacing-horizontal) * 0.6 - 4.5px);
+							margin-right: calc(0px - var(--global--spacing-horizontal) * 0.6);
+						}
+					}
+				}
+			}
+		}
+
+		&:not(.has-logo) {
+
+			&.has-title-and-tagline {
+
+				.site-branding {
+					margin-right: 0;
+					max-width: calc(100% - 160px);
+				}
+			}
+		}
+
+		&:not(.has-menu) {
+			justify-content: center;
+		}
+	}
+}
+
+The file my-directory-list.txt contains:
+The file 404.scss contains:
+.error404 main p {
+	font-size: var(--global--font-size-lg);
+	margin-bottom: calc(var(--global--spacing-vertical) * 1.6666666667);
+}
+
+The file archives.scss contains:
+.page-title {
+	font-size: var(--global--font-size-page-title);
+}
+
+h1.page-title,
+h2.page-title {
+	font-weight: var(--heading--font-weight-page-title);
+}
+
+h1.page-title {
+	line-height: var(--heading--line-height-h1);
+}
+
+.page-header {
+	border-bottom: 3px solid var(--global--color-border);
+	padding-bottom: calc(2 * var(--global--spacing-vertical));
+}
+
+.archive,
+.search,
+.blog {
+
+	.content-area {
+
+		.format-aside,
+		.format-status,
+		.format-link {
+
+			.entry-content {
+				font-size: var(--global--font-size-lg);
+			}
+		}
+
+	}
+
+	.format-image,
+	.format-gallery,
+	.format-video {
+
+		.entry-content {
+			margin-top: calc(2 * var(--global--spacing-vertical));
+		}
+	}
+
+	.entry-footer {
+
+		.cat-links,
+		.tags-links {
+			display: block;
+		}
+	}
+
+	&.logged-in {
+
+		.entry-footer {
+
+			.posted-on {
+				margin-right: calc(0.5 * var(--global--spacing-unit));
+			}
+		}
+	}
+}
+
+.archive-description {
+	margin-top: var(--global--spacing-vertical);
+	font-size: var(--global--font-size-xl);
+	line-height: var(--global--line-height-heading);
+}
+
+The file comments.scss contains:
+/**
+ * Comments Wrapper
+ */
+.comments-area {
+
+	> * {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+
+		&:first-child {
+			margin-top: 0;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	&.show-avatars {
+
+		.avatar {
+			border-radius: 50%;
+			position: absolute;
+			top: 10px;
+		}
+
+		.fn {
+			display: inline-block;
+			padding-left: 85px;
+		}
+
+		.comment-metadata {
+			padding: 8px 0 9px 85px;
+		}
+
+	}
+}
+
+/**
+ * Comment Title
+ */
+
+.comments-title,
+.comment-reply-title {
+	font-size: var(--heading--font-size-h2);
+	letter-spacing: var(--heading--letter-spacing-h2);
+}
+
+.comment-reply-title {
+	display: flex;
+	justify-content: space-between;
+
+	small {
+
+		a {
+			font-family: var(--global--font-secondary);
+			font-size: var(--global--font-size-xs);
+			font-style: normal;
+			font-weight: normal;
+			letter-spacing: normal;
+		}
+	}
+}
+
+/* Nested comment reply title*/
+.comment .comment-respond .comment-reply-title {
+	font-size: var(--global--font-size-lg);
+}
+
+/**
+ * Comment Lists
+ */
+.comment-list {
+	padding-left: 0;
+	list-style: none;
+
+	> li {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+}
+
+.comment-list .children {
+	list-style: none;
+	padding-left: 0;
+
+	> li {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+}
+
+.comment-list .depth-2,
+.comment-list .depth-3 {
+	@include media(mobile) {
+		padding-left: calc(4 * var(--global--spacing-horizontal));
+	}
+}
+
+/**
+ * Comment Meta
+ */
+.comment-meta {
+
+	.comment-author {
+		line-height: var(--global--line-height-heading);
+		margin-bottom: calc(0.25 * var(--global--spacing-unit));
+
+		@include media(mobile) {
+			margin-bottom: 0;
+			padding-right: 0;
+		}
+
+		.fn {
+			font-family: var(--global--font-secondary);
+			font-weight: normal;
+			font-size: var(--global--font-size-lg);
+			hyphens: auto;
+			word-wrap: break-word;
+			word-break: break-word;
+		}
+
+	}
+
+	.comment-metadata {
+		color: var(--global--color-primary);
+		font-size: var(--global--font-size-xs);
+		padding: 8px 0 9px 0;
+
+		.edit-link {
+			margin-left: var(--global--spacing-horizontal);
+		}
+
+	}
+
+	@include media(mobile) {
+		margin-right: inherit;
+
+		.comment-author {
+			max-width: inherit;
+		}
+	}
+}
+
+.reply {
+	font-size: var(--global--font-size-sm);
+	line-height: var(--global--line-height-heading);
+}
+
+.bypostauthor {
+	display: block;
+}
+
+.says {
+	display: none;
+}
+
+.pingback .url,
+.trackback .url {
+	font-family: var(--global--font-primary);
+}
+
+// Comment body
+.comment-body {
+	position: relative;
+	margin-bottom: calc(1.7 * var(--global--spacing-vertical));
+
+	> * {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+	.reply {
+		margin: 0;
+	}
+}
+
+.comment-content {
+	word-wrap: break-word;
+}
+
+// Pingbacks & Trackbacks
+.pingback .comment-body,
+.trackback .comment-body {
+	margin-top: var(--global--spacing-vertical);
+	margin-bottom: var(--global--spacing-vertical);
+}
+
+.comment-respond {
+	margin-top: var(--global--spacing-vertical);
+}
+
+.comment-respond > * {
+	margin-top: var(--global--spacing-unit);
+	margin-bottom: var(--global--spacing-unit);
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+
+		&.comment-form {
+			margin-bottom: var(--global--spacing-vertical);
+		}
+	}
+}
+
+.comment-author {
+	padding-top: 3px;
+
+	.url {
+		color: currentColor;
+	}
+}
+
+.comment-form {
+	display: flex;
+	flex-wrap: wrap;
+
+	> * {
+		flex-basis: 100%;
+	}
+
+	.comment-notes {
+		font-size: var(--global--font-size-sm);
+	}
+
+	.comment-form-url,
+	.comment-form-comment {
+		width: 100%;
+	}
+
+	.comment-form-author,
+	.comment-form-email {
+		flex-basis: 0;
+		flex-grow: 1;
+
+		@include media(mobile-only) {
+			flex-basis: 100%;
+		}
+	}
+
+	.comment-form-cookies-consent > label,
+	.comment-notes {
+		font-size: var(--global--font-size-xs);
+		font-weight: normal;
+	}
+}
+
+.comment-form > p {
+	margin-bottom: var(--global--spacing-unit);
+
+	&:first-of-type {
+		margin-top: 0;
+	}
+
+	&:last-of-type {
+		margin-bottom: 0;
+	}
+
+	label,
+	input[type="email"],
+	input[type="text"],
+	input[type="url"],
+	textarea {
+		display: block;
+		font-size: var(--global--font-size-sm);
+		margin-bottom: calc(.5 * var(--global--spacing-unit));
+		width: 100%;
+		font-weight: var(--form--label-weight);
+	}
+
+	&.comment-form-cookies-consent {
+		display: flex;
+	}
+
+	@include media(mobile) {
+
+		&.comment-form-author {
+			margin-right: calc(1.5 * var(--global--spacing-horizontal));
+		}
+
+		&.comment-notes,
+		&.logged-in-as {
+			display: block;
+		}
+	}
+}
+
+The file editor.scss contains:
+html {
+	font-family: var(--global--font-secondary);
+	line-height: var(--global--line-height-body);
+}
+
+body {
+	--wp--typography--line-height: var(--global--line-height-body);
+	color: var(--global--color-primary);
+	background-color: var(--global--color-background);
+	font-family: var(--global--font-secondary);
+	font-size: var(--global--font-size-base);
+	font-weight: normal;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-font-smoothing: antialiased;
+}
+
+// Links styles
+.wp-block a {
+	color: var(--wp--style--color--link, var(--global--color-primary));
+
+	&:hover {
+		text-decoration-style: dotted;
+	}
+
+	&:focus {
+		outline: 2px solid var(--wp--style--color--link, var(--global--color-primary));
+		text-decoration: none;
+	}
+}
+
+// Enforce the custom link color even if a custom background color has been set.
+// The extra specificity here is required to override the background color styles.
+.has-background {
+	// Target both current level and nested block.
+	.has-link-color a,
+	&.has-link-color a {
+		color: var(--wp--style--color--link, var(--global--color-primary));
+	}
+}
+
+button,
+a {
+	cursor: pointer;
+}
+
+The file entry.scss contains:
+.entry-title {
+
+	color: var(--entry-header--color);
+	font-size: var(--entry-header--font-size);
+	letter-spacing: var(--heading--letter-spacing-h2);
+	line-height: var(--heading--line-height-h2);
+	overflow-wrap: break-word;
+
+	a {
+		color: var(--entry-header--color-link);
+		text-underline-offset: 0.15em;
+
+		&:hover {
+			color: var(--entry-header--color-hover);
+		}
+
+		&:focus {
+			color: var(--entry-header--color-focus);
+		}
+
+		&:active {
+			color: var(--entry-header--color-link);
+		}
+	}
+}
+
+.singular .entry-title {
+	font-size: var(--global--font-size-page-title);
+}
+
+h1.entry-title {
+	line-height: var(--heading--line-height-h1);
+	font-weight: var(--heading--font-weight-page-title);
+}
+
+/**
+ * Entry Content
+ */
+
+.entry-content,
+.entry-summary {
+	font-family: var(--entry-content--font-family);
+}
+
+.entry-content {
+
+	p {
+		word-wrap: break-word;
+	}
+
+	// Overwrite iframe embeds that have inline styles.
+	> iframe[style] {
+
+		margin: var(--global--spacing-vertical) 0 !important;
+		max-width: 100% !important;
+	}
+
+	// Classic editor audio embeds.
+	.wp-audio-shortcode {
+		@extend %responsive-aligndefault-width;
+	}
+}
+
+.entry-footer {
+
+	color: var(--global--color-primary);
+	clear: both;
+	float: none;
+	font-size: var(--global--font-size-xs);
+	display: block;
+
+	> span {
+		display: inline-block;
+	}
+
+	a {
+		color: currentColor;
+
+		&:hover,
+		&:focus {
+			color: var(--global--color-primary-hover);
+		}
+
+		&:active {
+			color: currentColor;
+		}
+	}
+}
+
+// Extra specificity to override rules in _vertical-margins.scss
+.site-main > article > .entry-footer {
+	margin-top: var(--global--spacing-vertical);
+	padding-top: var(--global--spacing-unit);
+	padding-bottom: calc(3 * var(--global--spacing-vertical));
+	border-bottom: var(--separator--height) solid var(--separator--border-color);
+}
+
+body:not(.single) .site-main > article:last-of-type .entry-footer {
+	border-bottom: var(--separator--height) solid transparent;
+}
+
+.single .site-main > article > .entry-footer {
+	margin-top: calc(3.4 * var(--global--spacing-vertical));
+	margin-bottom: calc(3.4 * var(--global--spacing-vertical));
+	padding-bottom: 0;
+	padding-top: calc(0.8 * var(--global--spacing-vertical));
+	border-top: 3px solid var(--separator--border-color);
+	border-bottom: var(--separator--height) solid transparent;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	column-gap: calc(2 * var(--global--spacing-horizontal));
+
+	.post-taxonomies,
+	.full-size-link {
+		justify-content: flex-end;
+		text-align: right;
+	}
+
+	.full-size-link:first-child:last-child {
+		grid-column: span 2;
+	}
+
+	.posted-on,
+	.byline,
+	.cat-links,
+	.tags-links {
+		display: block;
+	}
+
+	@include media(mobile-only) {
+		display: block;
+
+		.full-size-link {
+			display: block;
+		}
+
+		.post-taxonomies,
+		.full-size-link {
+			text-align: left;
+		}
+	}
+}
+
+/**
+ * Post Thumbnails
+ */
+
+.post-thumbnail {
+	@extend %responsive-aligndefault-width;
+	text-align: center;
+
+	.entry-header &,
+	.singular & {
+		@extend %responsive-alignwide-width-nested;
+	}
+
+	.wp-post-image {
+		display: block;
+		width: auto;
+		max-width: 100%;
+		margin-left: auto;
+		margin-right: auto;
+		margin-top: calc(2 * var(--global--spacing-vertical));
+	}
+}
+
+/**
+ * Author
+ */
+
+.author-bio {
+	position: relative;
+	font-size: var(--global--font-size-xs);
+	max-width: var(--responsive--aligndefault-width);
+
+	.site-main > article > & {
+		margin-top: calc(2 * var(--global--spacing-vertical));
+	}
+
+	// Avatars are optional and can be turned off.
+	&.show-avatars {
+
+		.avatar {
+			display: inline-block;
+			vertical-align: top;
+			border-radius: 50%;
+		}
+
+		.author-bio-content {
+			display: inline-block;
+			padding-left: var(--global--spacing-horizontal);
+			max-width: calc(var(--responsive--aligndefault-width) - 90px);
+		}
+	}
+
+	.author-bio-content {
+
+		.author-title {
+			font-family: var(--entry-author-bio--font-family);
+			font-size: var(--entry-author-bio--font-size);
+			display: inline;
+		}
+
+		.author-description {
+			font-size: var(--global--font-size-xs);
+			margin-top: calc(0.5 * var(--global--spacing-vertical));
+			margin-bottom: calc(0.5 * var(--global--spacing-vertical));
+		}
+	}
+}
+
+The file footer-navigation.scss contains:
+
+.footer-navigation {
+	margin-top: calc(2 * var(--global--spacing-vertical));
+	margin-bottom: var(--global--spacing-vertical);
+	color: var(--footer--color-text);
+	font-size: var(--global--font-size-xs);
+	font-family: var(--footer--font-family);
+}
+
+.footer-navigation-wrapper {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	list-style: none;
+	padding-left: 0;
+
+	li {
+		display: inline;
+		// This is to prevent hover styles from overlapping when the menu wraps.
+		line-height: 3;
+
+		a {
+			padding: calc(1.25 * var(--primary-nav--padding)) var(--primary-nav--padding);
+			transition: transform 0.1s ease;
+			color: var(--footer--color-link);
+
+			&:link,
+			&:visited,
+			&:active {
+				color: var(--footer--color-link);
+			}
+
+			&:hover {
+				text-decoration: underline;
+				text-decoration-style: dotted;
+				text-decoration-skip-ink: none;
+				color: var(--footer--color-link-hover);
+			}
+
+			&:focus {
+
+				.is-dark-theme & {
+
+					.svg-icon {
+						fill: var(--wp--style--color--link, var(--global--color-background));
+					}
+				}
+
+				// Change colors when the body background is white.
+				.has-background-white & {
+
+					.svg-icon {
+						fill: var(--wp--style--color--link, var(--global--color-white));
+					}
+				}
+			}
+		}
+
+		.svg-icon {
+			vertical-align: middle;
+			fill: var(--footer--color-link);
+
+			&:hover {
+				transform: scale(1.1);
+			}
+		}
+	}
+
+	.sub-menu-toggle,
+	.menu-item-description {
+		display: none;
+	}
+}
+
+The file footer.scss contains:
+// Footer
+.site-footer {
+	padding-top: 0;
+	padding-bottom: calc(1.7 * var(--global--spacing-vertical));
+	@extend %responsive-alignwide-width;
+
+	// Increase the top vertical spacing when there is no widget area.
+	.no-widgets & {
+		margin-top: calc(6 * var(--global--spacing-vertical));
+	}
+
+	@include media(mobile-only) {
+
+		.no-widgets & {
+			margin-top: calc(3 * var(--global--spacing-vertical));
+		}
+	}
+}
+
+// Footer Branding
+.site-footer > .site-info {
+	padding-top: var(--global--spacing-vertical);
+	color: var(--footer--color-text);
+	font-family: var(--footer--font-family);
+	font-size: var(--footer--font-size);
+	line-height: var(--global--line-height-body);
+	border-top: 3px solid var(--global--color-border);
+
+	.site-name {
+		text-transform: var(--branding--title--text-transform);
+		font-size: var(--branding--title--font-size);
+	}
+
+	.powered-by {
+		margin-top: calc(0.5 * var(--global--spacing-vertical));
+	}
+
+	@include media(desktop) {
+		display: flex;
+		align-items: center;
+
+		.powered-by {
+			margin-top: initial;
+			margin-left: auto;
+		}
+	}
+
+	a {
+		color: var(--footer--color-link);
+
+		&:link,
+		&:visited,
+		&:active {
+			color: var(--footer--color-link);
+		}
+
+		&:hover {
+			color: var(--footer--color-link-hover);
+		}
+
+		&:focus {
+			color: var(--footer--color-link-hover);
+
+			.is-dark-theme & {
+				color: var(--wp--style--color--link, var(--global--color-background));
+			}
+
+			// Change colors when the body background is white.
+			.has-background-white & {
+				color: var(--wp--style--color--link, var(--global--color-white));
+			}
+		}
+	}
+}
+
+The file header.scss contains:
+
+The file navigation.scss contains:
+
+// Navigation
+
+// Mobile menu toggles
+.menu-button-container {
+	display: none;
+	justify-content: space-between;
+	position: absolute;
+	right: 0;
+	padding-top: calc(0.5 * var(--global--spacing-vertical));
+	padding-bottom: calc(0.25 * var(--global--spacing-vertical));
+
+	@include media(mobile-only) {
+		display: flex;
+	}
+
+	// Override specificity from default button styles.
+	#primary-mobile-menu {
+		display: flex;
+		margin-left: auto;
+		padding: calc(var(--button--padding-vertical) - (0.25 * var(--global--spacing-unit))) calc(0.5 * var(--button--padding-horizontal));
+		font-size: var(--primary-nav--font-size-button);
+		font-weight: var(--primary-nav--font-weight-button);
+		background-color: transparent;
+		border: none;
+		color: var(--primary-nav--color-link);
+
+		.dropdown-icon {
+			display: flex;
+			align-items: center;
+
+			.svg-icon {
+				margin-left: calc(0.25 * var(--global--spacing-unit));
+			}
+
+			// Menu icon is off-center vertically to prevent blurry pixels.
+			&.open .svg-icon {
+				position: relative;
+				top: -1px;
+			}
+
+			&.close {
+				display: none;
+			}
+		}
+
+		&[aria-expanded*="true"] {
+
+			.dropdown-icon {
+
+				&.open {
+					display: none;
+				}
+
+				&.close {
+					display: flex;
+
+					.has-logo.has-title-and-tagline & {
+						animation-name: twentytwentyone-close-button-transition;
+						animation-duration: 0.3s;
+					}
+				}
+			}
+		}
+	}
+
+	// When the menu is open, hide the close button and show the hide button.
+	.primary-navigation-open & {
+		width: 100%;
+		z-index: 500;
+		background-color: var(--global--color-background);
+
+		#primary-mobile-menu {
+			position: static;
+		}
+	}
+}
+
+.primary-navigation {
+	position: absolute;
+	top: var(--global--admin-bar--height);
+	right: 0;
+	color: var(--primary-nav--color-text);
+	font-size: var(--primary-nav--font-size);
+	line-height: 1.15;
+	margin-top: 0;
+	margin-bottom: 0;
+
+	// Mobile menu closed
+	> .primary-menu-container {
+		position: fixed;
+		visibility: hidden;
+		opacity: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		// Height of the menu-button-container using font size, line height, and total padding, plus 5px so the focus of the first item is visible.
+		padding-top: calc(var(--button--line-height) * var(--primary-nav--font-size-button) + 42px + 5px);
+		padding-left: var(--global--spacing-unit);
+		padding-right: var(--global--spacing-unit);
+		padding-bottom: var(--global--spacing-horizontal);
+		background-color: var(--global--color-background);
+		transition: all .15s ease-in-out;
+		transform: translateY(var(--global--spacing-vertical));
+
+		@include media(mobile-only) {
+			height: 100vh;
+			z-index: 499;
+			overflow-x: hidden;
+			overflow-y: auto;
+			border: 2px solid transparent;
+
+			.has-logo.has-title-and-tagline & {
+				position: fixed;
+				transform: translateY(0) translateX(100%);
+			}
+
+			.admin-bar .has-logo.has-title-and-tagline & {
+				top: var(--global--admin-bar--height);
+			}
+
+			.admin-bar & {
+				height: calc(100vh - var(--global--admin-bar--height));
+			}
+
+			&:focus {
+				border: 2px solid var(--global--color-primary);
+			}
+		}
+	}
+
+	// Mobile menu open
+	.primary-navigation-open & {
+
+		@include media(mobile-only) {
+			width: 100%;
+			position: fixed;
+			z-index: 2; // To be greater than the cover block and embeds.
+		}
+
+		> .primary-menu-container {
+			position: absolute;
+			visibility: visible;
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.primary-navigation-open .has-logo.has-title-and-tagline & {
+		@include media(mobile-only) {
+
+			> .primary-menu-container {
+				transform: translateX(0) translateY(0);
+			}
+		}
+	}
+
+	@include media(mobile) {
+		position: relative;
+		margin-left: auto;
+
+		// Hide Mobile menu on desktop
+		> .primary-menu-container {
+			visibility: visible;
+			opacity: 1;
+			position: relative;
+			padding: 0;
+			background-color: transparent;
+			overflow: initial;
+			transform: none;
+		}
+
+		// Hide mobile menu toggle
+		#toggle-menu {
+			display: none;
+		}
+
+		// Hide sub-sub-menus
+		> .primary-menu-container ul > li .sub-menu-toggle[aria-expanded="false"] ~ ul {
+			display: none;
+		}
+
+		// Don't adjust position when logged-in
+		.admin-bar & {
+			top: initial;
+
+			> .primary-menu-container {
+				top: initial;
+			}
+		}
+	}
+
+	// Menu list wrapper
+	> div > .menu-wrapper {
+		display: flex;
+		justify-content: flex-start;
+		flex-wrap: wrap;
+		list-style: none;
+		margin: 0;
+		max-width: none;
+		padding-left: 0;
+		position: relative;
+
+		@include media(mobile-only) {
+			padding-bottom: 100px;
+
+			ul {
+				padding-left: 0;
+			}
+		}
+
+		li {
+			display: block;
+			position: relative;
+			width: 100%;
+
+			@include media(mobile) {
+				margin: 0;
+				width: inherit;
+
+				&:last-child {
+					margin-right: 0;
+				}
+			}
+		}
+
+		// Sub-menu buttons
+		.sub-menu-toggle {
+			display: flex;
+			height: calc(2 * var(--primary-nav--padding) + 1.15em + 1px);
+			width: 44px;
+			padding: 0;
+			justify-content: center;
+			align-items: center;
+			background: transparent;
+			color: currentColor;
+			border: none;
+
+			&:focus {
+				outline: 2px solid var(--wp--style--color--link, var(--global--color-primary));
+			}
+
+			@include media(mobile-only) {
+				display: none;
+			}
+
+			.icon-plus,
+			.icon-minus {
+				height: 100%;
+				display: flex;
+				align-items: center;
+
+				svg {
+					margin-top: -1px;
+				}
+			}
+
+			.icon-minus {
+				display: none;
+			}
+
+			// When the sub-menu is open, display the minus icon
+			&[aria-expanded="true"] {
+
+				.icon-minus {
+					display: flex;
+				}
+
+				.icon-plus {
+					display: none;
+				}
+			}
+		}
+
+		// Sub-menus Flyout
+		> li > .sub-menu {
+
+			position: relative;
+
+			@include media(mobile) {
+				left: 0;
+				margin: 0;
+				min-width: max-content;
+				position: absolute;
+				top: 100%;
+				padding-top: 3px;
+				transition: all 0.5s ease;
+				z-index: 88888;
+
+				&:before,
+				&:after {
+					content: "";
+					display: block;
+					position: absolute;
+					width: 0;
+					top: -10px;
+					left: var(--global--spacing-horizontal);
+					border-style: solid;
+					border-color: var(--primary-nav--border-color) transparent;
+					border-width: 0 7px 10px 7px;
+				}
+
+				&:after {
+					top: -9px;
+					border-color: var(--global--color-background) transparent;
+				}
+
+				li {
+					background: var(--global--color-background);
+				}
+
+				&.submenu-reposition-left {
+
+					/* rtl:ignore */
+					left: 0;
+
+					/* rtl:ignore */
+					right: auto;
+
+					&:before,
+					&:after {
+
+						/* rtl:ignore */
+						left: var(--global--spacing-horizontal);
+
+						/* rtl:ignore */
+						right: auto;
+					}
+				}
+
+				&.submenu-reposition-right {
+
+					/* rtl:ignore */
+					right: 0;
+
+					/* rtl:ignore */
+					left: auto;
+
+					&:before,
+					&:after {
+
+						/* rtl:ignore */
+						left: auto;
+
+						/* rtl:ignore */
+						right: var(--global--spacing-horizontal);
+					}
+				}
+			}
+		}
+	}
+
+	// Top-level Item Link Colors
+	.primary-menu > .menu-item:hover > a {
+		color: var(--primary-nav--color-link-hover);
+	}
+
+	.primary-menu-container {
+		@include media(mobile) {
+			// Better align with the site title when the menu wraps.
+			margin-right: calc(0px - var(--primary-nav--padding));
+			margin-left: calc(0px - var(--primary-nav--padding));
+
+			// Top-level Menu Item
+			> ul > .menu-item {
+				display: flex;
+
+				> a {
+					padding-left: var(--primary-nav--padding);
+					padding-right: var(--primary-nav--padding);
+
+					+ .sub-menu-toggle {
+						margin-left: calc(5px - var(--primary-nav--padding));
+					}
+				}
+			}
+		}
+	}
+
+	// Menu Item Link
+	a {
+		display: block;
+		font-family: var(--primary-nav--font-family-mobile);
+		font-size: var(--primary-nav--font-size-mobile);
+		font-weight: var(--primary-nav--font-weight);
+		padding: var(--primary-nav--padding) 0;
+		text-decoration: none;
+
+		@include media(mobile) {
+			display: block;
+			font-family: var(--primary-nav--font-family);
+			font-size: var(--primary-nav--font-size);
+			font-weight: var(--primary-nav--font-weight);
+		}
+
+		+ svg {
+			fill: var(--primary-nav--color-text);
+		}
+
+		&:hover,
+		&:link,
+		&:visited {
+			color: var(--primary-nav--color-link-hover);
+		}
+
+		&:hover {
+			text-decoration: underline;
+			text-decoration-style: dotted;
+		}
+
+		&:focus {
+			position: relative;
+			z-index: 99999; // Ensure focus styles appear above absolute positioned elements
+			outline-offset: 0;
+			text-decoration-thickness: 2px;
+		}
+	}
+
+	.current-menu-item > a:first-child,
+	.current_page_item > a:first-child {
+		text-decoration: underline;
+		text-decoration-style: solid;
+
+		&:hover {
+			text-decoration: underline;
+			text-decoration-style: dotted;
+		}
+	}
+
+	// Sub-menu depth indicators + text styles
+	.sub-menu {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		margin-left: var(--primary-nav--padding);
+		border: 1px solid var(--primary-nav--border-color);
+
+		.sub-menu {
+			border: none;
+		}
+
+		// Sub-menu items om wide screens.
+		@include media(mobile) {
+
+			// For nested sub-menus, don't duplicate the padding
+			> .menu-item > .sub-menu {
+				padding: 0;
+			}
+		}
+
+		.menu-item {
+
+			@include media(mobile-only) {
+
+				&:last-child {
+					margin-bottom: 0;
+				}
+
+			}
+
+			> a {
+				padding: calc(1.25 * var(--primary-nav--padding)) var(--primary-nav--padding);
+				display: block;
+				font-size: var(--primary-nav--font-size-sub-menu-mobile);
+				font-style: var(--primary-nav--font-style-sub-menu-mobile);
+
+				@include media(mobile) {
+					font-size: var(--primary-nav--font-size-sub-menu);
+					font-style: var(--primary-nav--font-style);
+				}
+			}
+		}
+	}
+
+	// Show top-level sub-menu indicators above mobile-breakpoint-only
+	.menu-item-has-children {
+
+		> .svg-icon {
+			display: none;
+		}
+
+		@include media(mobile) {
+
+			> .svg-icon {
+				display: inline-block;
+				height: 100%;
+			}
+
+			.sub-menu .svg-icon {
+				display: none;
+			}
+		}
+
+	}
+
+	.menu-item-description {
+		display: block;
+		clear: both;
+		font-size: var(--global--font-size-xs);
+		text-transform: none;
+		line-height: 1.7;
+
+		> span {
+			display: inline-block;
+		}
+	}
+}
+
+// Keep the menu pinned to the top when the menu is open.
+@include media(mobile-only) {
+
+	.lock-scrolling .site {
+		position: fixed;
+		max-width: 100%;
+		width: 100%;
+	}
+}
+
+// Close button animation for when a custom logo is present.
+@keyframes twentytwentyone-close-button-transition {
+
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+The file pagination.scss contains:
+/* Next/Previous navigation */
+
+// All navigation
+.navigation {
+	color: var(--global--color-primary);
+
+	a {
+		color: var(--global--color-primary);
+		text-decoration: none;
+
+		&:hover {
+			color: var(--global--color-primary-hover);
+			text-decoration: underline;
+			text-decoration-style: dotted;
+		}
+
+		&:focus {
+			color: var(--global--color-secondary);
+		}
+
+		&:active {
+			color: var(--global--color-primary);
+		}
+	}
+
+	.nav-links {
+
+		> * {
+			min-width: 44px;
+			min-height: 44px;
+		}
+
+		.nav-next a,
+		.nav-previous a {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.dots {
+			text-align: center;
+		}
+
+		@include media(tablet) {
+			display: flex;
+			justify-content: center;
+			flex-wrap: wrap;
+
+			.nav-next,
+			.nav-previous {
+				flex: 0 1 auto;
+				margin-bottom: inherit;
+				margin-top: inherit;
+				max-width: calc(50% - (0.5 * var(--global--spacing-unit)));
+			}
+
+			.nav-next {
+				text-align: right;
+			}
+		}
+	}
+
+	.svg-icon {
+		display: inline-block;
+		fill: currentColor;
+		vertical-align: middle;
+		position: relative;
+	}
+
+	.nav-previous .svg-icon,
+	.prev .svg-icon {
+		top: -2px;
+		margin-right: calc(0.25 * var(--global--spacing-unit));
+	}
+
+	.nav-next .svg-icon,
+	.next .svg-icon {
+		top: -1px;
+		margin-left: calc(0.25 * var(--global--spacing-unit));
+	}
+}
+
+// Singular navigation
+.post-navigation {
+
+	margin: var(--global--spacing-vertical) auto;
+
+	@include media(desktop) {
+		margin: var(--global--spacing-vertical) auto;
+	}
+
+	@extend %responsive-alignwide-width;
+
+	.meta-nav {
+		line-height: var(--global--line-height-body);
+		color: var(--global--color-primary);
+	}
+
+	.post-title {
+		display: inline-block;
+		font-family: var(--global--font-primary);
+		font-size: var(--global--font-size-lg);
+		font-weight: var(--pagination--font-weight-strong);
+		line-height: var(--global--line-height-heading);
+		@include media(desktop) {
+			margin: 5px calc(24px + (0.25 * var(--global--spacing-unit))) 0;
+		}
+	}
+
+	.nav-links {
+		@include media(mobile) {
+			justify-content: space-between;
+		}
+	}
+
+	.nav-next,
+	.nav-previous {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+
+		&:first-child {
+			margin-top: 0;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+}
+
+// Index/archive navigation
+.pagination,
+.comments-pagination {
+
+	border-top: 3px solid var(--global--color-border);
+	padding-top: var(--global--spacing-vertical);
+	margin: var(--global--spacing-vertical) auto;
+
+	@include media(desktop) {
+		margin: var(--global--spacing-vertical) auto;
+	}
+
+	@extend %responsive-alignwide-width;
+
+	// Resets the top margin added to the .nav-links items below.
+	.nav-links {
+		margin-top: calc(-1 * var(--global--spacing-vertical));
+
+		a:hover {
+			color: var(--pagination--color-link-hover);
+		}
+
+		.is-dark-theme & {
+
+			a:active,
+			a:hover:active,
+			a:hover:focus {
+				color: var(--global--color-background);
+			}
+		}
+
+		.has-background-white & {
+
+			a:active,
+			a:hover:active,
+			a:hover:focus {
+				color: var(--global--color-white);
+			}
+		}
+	}
+
+	.nav-links > * {
+		color: var(--pagination--color-text);
+		font-family: var(--pagination--font-family);
+		font-size: var(--pagination--font-size);
+		font-weight: var(--pagination--font-weight);
+		margin-top: var(--global--spacing-vertical);
+		margin-left: calc(0.66 * var(--global--spacing-unit));
+		margin-right: calc(0.66 * var(--global--spacing-unit));
+
+		&.current {
+			text-decoration: underline;
+		}
+
+		&:not(.dots):not(.current):hover {
+			text-decoration-style: dotted;
+		}
+
+		&:first-child {
+			margin-left: 0;
+		}
+
+		&:last-child {
+			margin-right: 0;
+		}
+
+		&.next {
+			margin-left: auto;
+		}
+
+		&.prev {
+			margin-right: auto;
+		}
+	}
+
+	@include media(desktop-only) {
+
+		.nav-links {
+			display: flex;
+			flex-wrap: wrap;
+		}
+
+		.page-numbers {
+			display: none;
+
+			&.prev,
+			&.next {
+				display: inline-block;
+				flex: 0 1 auto;
+			}
+		}
+	}
+
+	@include media(mobile-only) {
+
+		.nav-short {
+			display: none;
+		}
+	}
+}
+
+// Comments pagination
+.comments-pagination {
+	padding-top: calc(0.66 * var(--global--spacing-vertical));
+	margin: calc(3 * var(--global--spacing-vertical)) auto;
+
+	@include media(desktop) {
+		margin: calc(3 * var(--global--spacing-vertical)) auto calc(4 * var(--global--spacing-vertical)) auto;
+	}
+
+	.nav-links > * {
+		font-size: var(--global--font-size-md);
+	}
+}
+
+The file posts-and-pages.scss contains:
+.sticky {
+	// This class is required to pass ThemeCheck.
+}
+
+.no-results.not-found > *:first-child {
+	margin-bottom: calc(3 * var(--global--spacing-vertical));
+}
+
+// Styling for wp_link_pages.
+.page-links {
+	clear: both;
+
+	.post-page-numbers {
+		display: inline-block;
+		margin-left: calc(0.66 * var(--global--spacing-unit));
+		margin-right: calc(0.66 * var(--global--spacing-unit));
+		min-width: 44px;
+		min-height: 44px;
+
+		&:first-child {
+			margin-left: 0;
+		}
+	}
+}
+
+The file search.scss contains:
+.search-no-results .page-content {
+	margin-top: calc(3 * var(--global--spacing-vertical));
+}
+
+The file single.scss contains:
+.singular .entry-header {
+	border-bottom: 3px solid var(--global--color-border);
+	padding-bottom: calc(2 * var(--global--spacing-vertical));
+	margin-bottom: calc(3 * var(--global--spacing-vertical));
+}
+
+.home .entry-header {
+	border-bottom: none;
+	padding-bottom: 0;
+	margin-bottom: 0;
+}
+
+.singular .has-post-thumbnail .entry-header {
+	border-bottom: none;
+	padding-bottom: calc(1.3 * var(--global--spacing-vertical));
+	margin-bottom: 0;
+}
+
+The file widgets.scss contains:
+.widget-area {
+	@extend %responsive-alignwide-width;
+	margin-top: calc(6 * var(--global--spacing-vertical));
+	padding-bottom: calc(var(--global--spacing-vertical) / 3);
+	color: var(--footer--color-text);
+	font-size: var(--footer--font-size);
+	font-family: var(--footer--font-family);
+
+	@include media(laptop) {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		column-gap: calc(2 * var(--global--spacing-horizontal));
+	}
+
+	@include media(wide) {
+		grid-template-columns: repeat(3, 1fr);
+	}
+
+	@include media(mobile-only) {
+		margin-top: calc(3 * var(--global--spacing-vertical));
+	}
+
+	ul {
+		list-style-type: none;
+		padding: 0;
+
+		li {
+			line-height: var(--widget--line-height-list);
+		}
+
+		&.sub-menu,
+		&.children {
+			margin-left: var(--widget--spacing-menu);
+		}
+
+		.sub-menu-toggle {
+			display: none;
+		}
+	}
+
+	a {
+		color: var(--footer--color-link);
+		text-decoration: underline;
+		text-decoration-style: solid;
+		text-decoration-color: currentColor;
+
+		&:link,
+		&:visited,
+		&:active {
+			color: var(--footer--color-link);
+		}
+
+		&:hover {
+			color: var(--footer--color-link-hover);
+			text-decoration-style: dotted;
+		}
+	}
+
+	.wp-block-social-links {
+
+		&.alignright {
+			margin-top: var(--global--spacing-vertical);
+			justify-content: flex-end;
+		}
+
+		&.alignleft {
+			margin-top: var(--global--spacing-vertical);
+		}
+	}
+
+	&:after {
+		content: "";
+		display: table;
+		clear: both;
+	}
+}
+
+.widget-title {
+	font-size: var(--global--font-size-sm);
+	font-weight: var(--widget--font-weight-title);
+	line-height: var(--widget--line-height-title);
+}
+
+// Search widget styles
+.search-form {
+	display: flex;
+	flex-wrap: wrap;
+	margin: auto;
+	max-width: var(--responsive--aligndefault-width);
+
+	> label {
+		width: 100%;
+		margin-bottom: 0;
+		font-weight: var(--form--label-weight);
+	}
+
+	.search-field {
+		flex-grow: 1;
+		max-width: inherit;
+		margin-top: calc(var(--global--spacing-vertical) / 3);
+		margin-right: calc(0.66 * var(--global--spacing-horizontal));
+	}
+
+	.search-submit {
+		margin-top: calc(var(--global--spacing-vertical) / 3);
+		margin-left: 10px;
+	}
+}
+
+.widget_search > .search-form {
+
+	.search-field {
+		margin-right: calc(-1 * var(--button--border-width));
+		-webkit-appearance: none;
+		margin-bottom: calc(0.5 * var(--global--spacing-vertical));
+	}
+
+	.search-submit {
+		margin-left: 0;
+		margin-bottom: calc(0.5 * var(--global--spacing-vertical));
+	}
+}
+
+.widget_rss a.rsswidget .rss-widget-icon {
+	display: none;
+}
+

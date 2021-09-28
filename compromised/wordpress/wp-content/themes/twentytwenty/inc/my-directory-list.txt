@@ -1,0 +1,1884 @@
+The file block-patterns.php contains:
+<?php
+/**
+ * Block Patterns
+ *
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern/
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern_category/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty
+ * @since Twenty Twenty 1.5
+ */
+
+/**
+ * Register Block Pattern Category.
+ */
+if ( function_exists( 'register_block_pattern_category' ) ) {
+
+	register_block_pattern_category(
+		'twentytwenty',
+		array( 'label' => esc_html__( 'Twenty Twenty', 'twentytwenty' ) )
+	);
+}
+
+/**
+ * Register Block Patterns.
+ */
+if ( function_exists( 'register_block_pattern' ) ) {
+
+	// Call to Action.
+	register_block_pattern(
+		'twentytwenty/call-to-action',
+		array(
+			'title'         => esc_html__( 'Call to Action', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:group {"align":"wide","style":{"color":{"background":"#ffffff"}}} -->',
+					'<div class="wp-block-group alignwide has-background" style="background-color:#ffffff"><div class="wp-block-group__inner-container"><!-- wp:group -->',
+					'<div class="wp-block-group"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'Support the Museum and Get Exclusive Offers', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"align":"center"} -->',
+					'<p class="has-text-align-center">' . esc_html__( 'Members get access to exclusive exhibits and sales. Our memberships cost $99.99 and are billed annually.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:button {"align":"center","className":"is-style-outline"} -->',
+					'<div class="wp-block-button aligncenter is-style-outline"><a class="wp-block-button__link" href="#">' . esc_html__( 'Become a Member', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div></div>',
+					'<!-- /wp:group --></div></div>',
+					'<!-- /wp:group -->',
+				)
+			),
+		)
+	);
+
+	// Double Call to Action.
+	register_block_pattern(
+		'twentytwenty/double-call-to-action',
+		array(
+			'title'         => esc_html__( 'Double Call to Action', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:columns {"align":"wide"} -->',
+					'<div class="wp-block-columns alignwide"><!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:group {"style":{"color":{"background":"#ffffff"}}} -->',
+					'<div class="wp-block-group has-background" style="background-color:#ffffff"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'The Museum', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"align":"center"} -->',
+					'<p class="has-text-align-center">' . esc_html__( 'Award-winning exhibitions featuring internationally-renowned artists.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:buttons {"align":"center"} -->',
+					'<div class="wp-block-buttons aligncenter"><!-- wp:button {"className":"is-style-outline"} -->',
+					'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link">' . esc_html__( 'Read More', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:buttons --></div></div>',
+					'<!-- /wp:group --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:group {"style":{"color":{"background":"#ffffff"}}} -->',
+					'<div class="wp-block-group has-background" style="background-color:#ffffff"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'The Store', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"align":"center"} -->',
+					'<p class="has-text-align-center">' . esc_html__( 'An awe-inspiring collection of books, prints, and gifts from our exhibitions.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:buttons {"align":"center"} -->',
+					'<div class="wp-block-buttons aligncenter"><!-- wp:button {"className":"is-style-outline"} -->',
+					'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link">' . esc_html__( 'Shop Now', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:buttons --></div></div>',
+					'<!-- /wp:group --></div>',
+					'<!-- /wp:column --></div>',
+					'<!-- /wp:columns -->',
+				)
+			),
+		)
+	);
+
+	// Event Details.
+	register_block_pattern(
+		'twentytwenty/event-details',
+		array(
+			'title'         => esc_html__( 'Event Details', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:group {"align":"wide","backgroundColor":"primary"} -->',
+					'<div class="wp-block-group alignwide has-primary-background-color has-background"><div class="wp-block-group__inner-container"><!-- wp:columns -->',
+					'<div class="wp-block-columns"><!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:paragraph {"align":"center","textColor":"background","fontSize":"large"} -->',
+					'<p class="has-text-align-center has-background-color has-text-color has-large-font-size">' . wp_kses_post( __( '<em>Dates</em><br>Aug 1 — Dec 1', 'twentytwenty' ) ) . '</p>',
+					'<!-- /wp:paragraph --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:paragraph {"align":"center","textColor":"background","fontSize":"large"} -->',
+					'<p class="has-text-align-center has-background-color has-text-color has-large-font-size">' . wp_kses_post( __( '<em>Location</em><br>Exhibit Hall B', 'twentytwenty' ) ) . '</p>',
+					'<!-- /wp:paragraph --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:paragraph {"align":"center","textColor":"background","fontSize":"large"} -->',
+					'<p class="has-text-align-center has-background-color has-text-color has-large-font-size">' . wp_kses_post( __( '<em>Price</em><br>Included', 'twentytwenty' ) ) . '</p>',
+					'<!-- /wp:paragraph --></div>',
+					'<!-- /wp:column --></div>',
+					'<!-- /wp:columns --></div></div>',
+					'<!-- /wp:group -->',
+				)
+			),
+		)
+	);
+
+	// Featured Content.
+	register_block_pattern(
+		'twentytwenty/featured-content',
+		array(
+			'title'         => esc_html__( 'Featured Content', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:columns {"align":"wide"} -->',
+					'<div class="wp-block-columns alignwide"><!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:image {"sizeSlug":"full"} -->',
+					'<figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/2020-three-quarters-1.png" alt="' . esc_attr__( 'Abstract Rectangles', 'twentytwenty' ) . '"/></figure>',
+					'<!-- /wp:image -->',
+					'<!-- wp:heading -->',
+					'<h2>' . esc_html__( 'Works and Days', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"fontSize":"larger"} -->',
+					'<p class="has-larger-font-size">' . esc_html__( 'August 1 — December 1', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:button {"align":"left","className":"is-style-outline"} -->',
+					'<div class="wp-block-button alignleft is-style-outline"><a class="wp-block-button__link" href="#">' . esc_html__( 'Read More', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:image {sizeSlug":"full"} -->',
+					'<figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/2020-three-quarters-2.png" alt="' . esc_attr__( 'Abstract Rectangles', 'twentytwenty' ) . '"/></figure>',
+					'<!-- /wp:image -->',
+					'<!-- wp:heading -->',
+					'<h2>' . esc_html__( 'The Life I Deserve', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"fontSize":"larger"} -->',
+					'<p class="has-larger-font-size">' . esc_html__( 'August 1 — December 1', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:button {"align":"left","className":"is-style-outline"} -->',
+					'<div class="wp-block-button alignleft is-style-outline"><a class="wp-block-button__link" href="#">' . esc_html__( 'Read More', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:column --></div>',
+					'<!-- /wp:columns -->',
+				)
+			),
+		)
+	);
+
+	// Introduction.
+	register_block_pattern(
+		'twentytwenty/introduction',
+		array(
+			'title'         => esc_html__( 'Introduction', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'The Premier Destination for Modern Art in Sweden', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"dropCap":true} -->',
+					'<p class="has-drop-cap">' . esc_html__( 'With seven floors of striking architecture, UMoMA shows exhibitions of international contemporary art, sometimes along with art historical retrospectives. Existential, political, and philosophical issues are intrinsic to our program. As visitor, you are invited to guided tours artist talks, lectures, film screenings, and other events with free admission.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+				)
+			),
+		)
+	);
+}
+
+The file custom-css.php contains:
+<?php
+/**
+ * Twenty Twenty Custom CSS
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty
+ * @since Twenty Twenty 1.0
+ */
+
+if ( ! function_exists( 'twentytwenty_generate_css' ) ) {
+
+	/**
+	 * Generate CSS.
+	 *
+	 * @param string $selector The CSS selector.
+	 * @param string $style The CSS style.
+	 * @param string $value The CSS value.
+	 * @param string $prefix The CSS prefix.
+	 * @param string $suffix The CSS suffix.
+	 * @param bool   $echo Echo the styles.
+	 */
+	function twentytwenty_generate_css( $selector, $style, $value, $prefix = '', $suffix = '', $echo = true ) {
+
+		$return = '';
+
+		/*
+		 * Bail early if we have no $selector elements or properties and $value.
+		 */
+		if ( ! $value || ! $selector ) {
+
+			return;
+		}
+
+		$return = sprintf( '%s { %s: %s; }', $selector, $style, $prefix . $value . $suffix );
+
+		if ( $echo ) {
+
+			echo $return; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- We need to double check this, but for now, we want to pass PHPCS ;)
+
+		}
+
+		return $return;
+
+	}
+}
+
+if ( ! function_exists( 'twentytwenty_get_customizer_css' ) ) {
+
+	/**
+	 * Get CSS Built from Customizer Options.
+	 * Build CSS reflecting colors, fonts and other options set in the Customizer, and return them for output.
+	 *
+	 * @param string $type Whether to return CSS for the "front-end", "block-editor" or "classic-editor".
+	 */
+	function twentytwenty_get_customizer_css( $type = 'front-end' ) {
+
+		// Get variables.
+		$body              = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'text' ) );
+		$body_default      = '#000000';
+		$secondary         = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'secondary' ) );
+		$secondary_default = '#6d6d6d';
+		$borders           = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'borders' ) );
+		$borders_default   = '#dcd7ca';
+		$accent            = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'accent' ) );
+		$accent_default    = '#cd2653';
+
+		// Header.
+		$header_footer_background         = sanitize_hex_color( twentytwenty_get_color_for_area( 'header-footer', 'background' ) );
+		$header_footer_background_default = '#ffffff';
+
+		// Cover.
+		$cover         = sanitize_hex_color( get_theme_mod( 'cover_template_overlay_text_color' ) );
+		$cover_default = '#ffffff';
+
+		// Background.
+		$background         = sanitize_hex_color_no_hash( get_theme_mod( 'background_color' ) );
+		$background_default = 'f5efe0';
+
+		ob_start();
+
+		/**
+		 * Note – Styles are applied in this order:
+		 * 1. Element specific
+		 * 2. Helper classes
+		 *
+		 * This enables all helper classes to overwrite base element styles,
+		 * meaning that any color classes applied in the block editor will
+		 * have a higher priority than the base element styles.
+		*/
+
+		// Front-End Styles.
+		if ( 'front-end' === $type ) {
+
+			// Auto-calculated colors.
+			$elements_definitions = twentytwenty_get_elements_array();
+			foreach ( $elements_definitions as $context => $props ) {
+				foreach ( $props as $key => $definitions ) {
+					foreach ( $definitions as $property => $elements ) {
+						/*
+						 * If we don't have an elements array or it is empty
+						 * then skip this iteration early;
+						 */
+						if ( ! is_array( $elements ) || empty( $elements ) ) {
+							continue;
+						}
+						$val = twentytwenty_get_color_for_area( $context, $key );
+						if ( $val ) {
+							twentytwenty_generate_css( implode( ',', $elements ), $property, $val );
+						}
+					}
+				}
+			}
+
+			if ( $cover && $cover !== $cover_default ) {
+				twentytwenty_generate_css( '.overlay-header .header-inner', 'color', $cover );
+				twentytwenty_generate_css( '.cover-header .entry-header *', 'color', $cover );
+			}
+
+			// Block Editor Styles.
+		} elseif ( 'block-editor' === $type ) {
+
+			// Colors.
+			// Accent color.
+			if ( $accent && $accent !== $accent_default ) {
+				twentytwenty_generate_css( '.has-accent-color, .editor-styles-wrapper .editor-block-list__layout a, .editor-styles-wrapper .has-drop-cap:not(:focus)::first-letter, .editor-styles-wrapper .wp-block-button.is-style-outline .wp-block-button__link, .editor-styles-wrapper .wp-block-pullquote::before, .editor-styles-wrapper .wp-block-file .wp-block-file__textlink', 'color', $accent );
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-quote', 'border-color', $accent, '' );
+				twentytwenty_generate_css( '.has-accent-background-color, .editor-styles-wrapper .wp-block-button__link, .editor-styles-wrapper .wp-block-file__button', 'background-color', $accent );
+			}
+
+			// Background color.
+			if ( $background && $background !== $background_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper', 'background-color', '#' . $background );
+				twentytwenty_generate_css( '.has-background.has-primary-background-color:not(.has-text-color),.has-background.has-primary-background-color *:not(.has-text-color),.has-background.has-accent-background-color:not(.has-text-color),.has-background.has-accent-background-color *:not(.has-text-color)', 'color', '#' . $background );
+			}
+
+			// Borders color.
+			if ( $borders && $borders !== $borders_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-code, .editor-styles-wrapper pre, .editor-styles-wrapper .wp-block-preformatted pre, .editor-styles-wrapper .wp-block-verse pre, .editor-styles-wrapper fieldset, .editor-styles-wrapper .wp-block-table, .editor-styles-wrapper .wp-block-table *, .editor-styles-wrapper .wp-block-table.is-style-stripes, .editor-styles-wrapper .wp-block-latest-posts.is-grid li', 'border-color', $borders );
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-table caption, .editor-styles-wrapper .wp-block-table.is-style-stripes tbody tr:nth-child(odd)', 'background-color', $borders );
+			}
+
+			// Text color.
+			if ( $body && $body !== $body_default ) {
+				twentytwenty_generate_css( 'body .editor-styles-wrapper, .editor-post-title__block .editor-post-title__input, .editor-post-title__block .editor-post-title__input:focus', 'color', $body );
+			}
+
+			// Secondary color.
+			if ( $secondary && $secondary !== $secondary_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper figcaption, .editor-styles-wrapper cite, .editor-styles-wrapper .wp-block-quote__citation, .editor-styles-wrapper .wp-block-quote cite, .editor-styles-wrapper .wp-block-quote footer, .editor-styles-wrapper .wp-block-pullquote__citation, .editor-styles-wrapper .wp-block-pullquote cite, .editor-styles-wrapper .wp-block-pullquote footer, .editor-styles-wrapper ul.wp-block-archives li, .editor-styles-wrapper ul.wp-block-categories li, .editor-styles-wrapper ul.wp-block-latest-posts li, .editor-styles-wrapper ul.wp-block-categories__list li, .editor-styles-wrapper .wp-block-latest-comments time, .editor-styles-wrapper .wp-block-latest-posts time', 'color', $secondary );
+			}
+
+			// Header Footer Background Color.
+			if ( $header_footer_background && $header_footer_background !== $header_footer_background_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-pullquote::before', 'background-color', $header_footer_background );
+			}
+		} elseif ( 'classic-editor' === $type ) {
+
+			// Colors.
+			// Accent color.
+			if ( $accent && $accent !== $accent_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content a, body#tinymce.wp-editor.content a:focus, body#tinymce.wp-editor.content a:hover', 'color', $accent );
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content blockquote, body#tinymce.wp-editor.content .wp-block-quote', 'border-color', $accent, '', ' !important' );
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content button, body#tinymce.wp-editor.content .faux-button, body#tinymce.wp-editor.content .wp-block-button__link, body#tinymce.wp-editor.content .wp-block-file__button, body#tinymce.wp-editor.content input[type=\'button\'], body#tinymce.wp-editor.content input[type=\'reset\'], body#tinymce.wp-editor.content input[type=\'submit\']', 'background-color', $accent );
+			}
+
+			// Background color.
+			if ( $background && $background !== $background_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content', 'background-color', '#' . $background );
+			}
+
+			// Text color.
+			if ( $body && $body !== $body_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content', 'color', $body );
+			}
+
+			// Secondary color.
+			if ( $secondary && $secondary !== $secondary_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content hr:not(.is-style-dots), body#tinymce.wp-editor.content cite, body#tinymce.wp-editor.content figcaption, body#tinymce.wp-editor.content .wp-caption-text, body#tinymce.wp-editor.content .wp-caption-dd, body#tinymce.wp-editor.content .gallery-caption', 'color', $secondary );
+			}
+
+			// Borders color.
+			if ( $borders && $borders !== $borders_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content pre, body#tinymce.wp-editor.content hr, body#tinymce.wp-editor.content fieldset,body#tinymce.wp-editor.content input, body#tinymce.wp-editor.content textarea', 'border-color', $borders );
+			}
+		}
+
+		// Return the results.
+		return ob_get_clean();
+
+	}
+}
+
+The file my-directory-list.txt contains:
+The file block-patterns.php contains:
+<?php
+/**
+ * Block Patterns
+ *
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern/
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern_category/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty
+ * @since Twenty Twenty 1.5
+ */
+
+/**
+ * Register Block Pattern Category.
+ */
+if ( function_exists( 'register_block_pattern_category' ) ) {
+
+	register_block_pattern_category(
+		'twentytwenty',
+		array( 'label' => esc_html__( 'Twenty Twenty', 'twentytwenty' ) )
+	);
+}
+
+/**
+ * Register Block Patterns.
+ */
+if ( function_exists( 'register_block_pattern' ) ) {
+
+	// Call to Action.
+	register_block_pattern(
+		'twentytwenty/call-to-action',
+		array(
+			'title'         => esc_html__( 'Call to Action', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:group {"align":"wide","style":{"color":{"background":"#ffffff"}}} -->',
+					'<div class="wp-block-group alignwide has-background" style="background-color:#ffffff"><div class="wp-block-group__inner-container"><!-- wp:group -->',
+					'<div class="wp-block-group"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'Support the Museum and Get Exclusive Offers', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"align":"center"} -->',
+					'<p class="has-text-align-center">' . esc_html__( 'Members get access to exclusive exhibits and sales. Our memberships cost $99.99 and are billed annually.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:button {"align":"center","className":"is-style-outline"} -->',
+					'<div class="wp-block-button aligncenter is-style-outline"><a class="wp-block-button__link" href="#">' . esc_html__( 'Become a Member', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div></div>',
+					'<!-- /wp:group --></div></div>',
+					'<!-- /wp:group -->',
+				)
+			),
+		)
+	);
+
+	// Double Call to Action.
+	register_block_pattern(
+		'twentytwenty/double-call-to-action',
+		array(
+			'title'         => esc_html__( 'Double Call to Action', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:columns {"align":"wide"} -->',
+					'<div class="wp-block-columns alignwide"><!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:group {"style":{"color":{"background":"#ffffff"}}} -->',
+					'<div class="wp-block-group has-background" style="background-color:#ffffff"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'The Museum', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"align":"center"} -->',
+					'<p class="has-text-align-center">' . esc_html__( 'Award-winning exhibitions featuring internationally-renowned artists.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:buttons {"align":"center"} -->',
+					'<div class="wp-block-buttons aligncenter"><!-- wp:button {"className":"is-style-outline"} -->',
+					'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link">' . esc_html__( 'Read More', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:buttons --></div></div>',
+					'<!-- /wp:group --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:group {"style":{"color":{"background":"#ffffff"}}} -->',
+					'<div class="wp-block-group has-background" style="background-color:#ffffff"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'The Store', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"align":"center"} -->',
+					'<p class="has-text-align-center">' . esc_html__( 'An awe-inspiring collection of books, prints, and gifts from our exhibitions.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:buttons {"align":"center"} -->',
+					'<div class="wp-block-buttons aligncenter"><!-- wp:button {"className":"is-style-outline"} -->',
+					'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link">' . esc_html__( 'Shop Now', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:buttons --></div></div>',
+					'<!-- /wp:group --></div>',
+					'<!-- /wp:column --></div>',
+					'<!-- /wp:columns -->',
+				)
+			),
+		)
+	);
+
+	// Event Details.
+	register_block_pattern(
+		'twentytwenty/event-details',
+		array(
+			'title'         => esc_html__( 'Event Details', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:group {"align":"wide","backgroundColor":"primary"} -->',
+					'<div class="wp-block-group alignwide has-primary-background-color has-background"><div class="wp-block-group__inner-container"><!-- wp:columns -->',
+					'<div class="wp-block-columns"><!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:paragraph {"align":"center","textColor":"background","fontSize":"large"} -->',
+					'<p class="has-text-align-center has-background-color has-text-color has-large-font-size">' . wp_kses_post( __( '<em>Dates</em><br>Aug 1 — Dec 1', 'twentytwenty' ) ) . '</p>',
+					'<!-- /wp:paragraph --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:paragraph {"align":"center","textColor":"background","fontSize":"large"} -->',
+					'<p class="has-text-align-center has-background-color has-text-color has-large-font-size">' . wp_kses_post( __( '<em>Location</em><br>Exhibit Hall B', 'twentytwenty' ) ) . '</p>',
+					'<!-- /wp:paragraph --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:paragraph {"align":"center","textColor":"background","fontSize":"large"} -->',
+					'<p class="has-text-align-center has-background-color has-text-color has-large-font-size">' . wp_kses_post( __( '<em>Price</em><br>Included', 'twentytwenty' ) ) . '</p>',
+					'<!-- /wp:paragraph --></div>',
+					'<!-- /wp:column --></div>',
+					'<!-- /wp:columns --></div></div>',
+					'<!-- /wp:group -->',
+				)
+			),
+		)
+	);
+
+	// Featured Content.
+	register_block_pattern(
+		'twentytwenty/featured-content',
+		array(
+			'title'         => esc_html__( 'Featured Content', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:columns {"align":"wide"} -->',
+					'<div class="wp-block-columns alignwide"><!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:image {"sizeSlug":"full"} -->',
+					'<figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/2020-three-quarters-1.png" alt="' . esc_attr__( 'Abstract Rectangles', 'twentytwenty' ) . '"/></figure>',
+					'<!-- /wp:image -->',
+					'<!-- wp:heading -->',
+					'<h2>' . esc_html__( 'Works and Days', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"fontSize":"larger"} -->',
+					'<p class="has-larger-font-size">' . esc_html__( 'August 1 — December 1', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:button {"align":"left","className":"is-style-outline"} -->',
+					'<div class="wp-block-button alignleft is-style-outline"><a class="wp-block-button__link" href="#">' . esc_html__( 'Read More', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:column -->',
+					'<!-- wp:column -->',
+					'<div class="wp-block-column"><!-- wp:image {sizeSlug":"full"} -->',
+					'<figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/2020-three-quarters-2.png" alt="' . esc_attr__( 'Abstract Rectangles', 'twentytwenty' ) . '"/></figure>',
+					'<!-- /wp:image -->',
+					'<!-- wp:heading -->',
+					'<h2>' . esc_html__( 'The Life I Deserve', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"fontSize":"larger"} -->',
+					'<p class="has-larger-font-size">' . esc_html__( 'August 1 — December 1', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+					'<!-- wp:button {"align":"left","className":"is-style-outline"} -->',
+					'<div class="wp-block-button alignleft is-style-outline"><a class="wp-block-button__link" href="#">' . esc_html__( 'Read More', 'twentytwenty' ) . '</a></div>',
+					'<!-- /wp:button --></div>',
+					'<!-- /wp:column --></div>',
+					'<!-- /wp:columns -->',
+				)
+			),
+		)
+	);
+
+	// Introduction.
+	register_block_pattern(
+		'twentytwenty/introduction',
+		array(
+			'title'         => esc_html__( 'Introduction', 'twentytwenty' ),
+			'categories'    => array( 'twentytwenty' ),
+			'viewportWidth' => 1400,
+			'content'       => implode(
+				'',
+				array(
+					'<!-- wp:heading {"align":"center"} -->',
+					'<h2 class="has-text-align-center">' . esc_html__( 'The Premier Destination for Modern Art in Sweden', 'twentytwenty' ) . '</h2>',
+					'<!-- /wp:heading -->',
+					'<!-- wp:paragraph {"dropCap":true} -->',
+					'<p class="has-drop-cap">' . esc_html__( 'With seven floors of striking architecture, UMoMA shows exhibitions of international contemporary art, sometimes along with art historical retrospectives. Existential, political, and philosophical issues are intrinsic to our program. As visitor, you are invited to guided tours artist talks, lectures, film screenings, and other events with free admission.', 'twentytwenty' ) . '</p>',
+					'<!-- /wp:paragraph -->',
+				)
+			),
+		)
+	);
+}
+
+The file custom-css.php contains:
+<?php
+/**
+ * Twenty Twenty Custom CSS
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty
+ * @since Twenty Twenty 1.0
+ */
+
+if ( ! function_exists( 'twentytwenty_generate_css' ) ) {
+
+	/**
+	 * Generate CSS.
+	 *
+	 * @param string $selector The CSS selector.
+	 * @param string $style The CSS style.
+	 * @param string $value The CSS value.
+	 * @param string $prefix The CSS prefix.
+	 * @param string $suffix The CSS suffix.
+	 * @param bool   $echo Echo the styles.
+	 */
+	function twentytwenty_generate_css( $selector, $style, $value, $prefix = '', $suffix = '', $echo = true ) {
+
+		$return = '';
+
+		/*
+		 * Bail early if we have no $selector elements or properties and $value.
+		 */
+		if ( ! $value || ! $selector ) {
+
+			return;
+		}
+
+		$return = sprintf( '%s { %s: %s; }', $selector, $style, $prefix . $value . $suffix );
+
+		if ( $echo ) {
+
+			echo $return; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- We need to double check this, but for now, we want to pass PHPCS ;)
+
+		}
+
+		return $return;
+
+	}
+}
+
+if ( ! function_exists( 'twentytwenty_get_customizer_css' ) ) {
+
+	/**
+	 * Get CSS Built from Customizer Options.
+	 * Build CSS reflecting colors, fonts and other options set in the Customizer, and return them for output.
+	 *
+	 * @param string $type Whether to return CSS for the "front-end", "block-editor" or "classic-editor".
+	 */
+	function twentytwenty_get_customizer_css( $type = 'front-end' ) {
+
+		// Get variables.
+		$body              = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'text' ) );
+		$body_default      = '#000000';
+		$secondary         = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'secondary' ) );
+		$secondary_default = '#6d6d6d';
+		$borders           = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'borders' ) );
+		$borders_default   = '#dcd7ca';
+		$accent            = sanitize_hex_color( twentytwenty_get_color_for_area( 'content', 'accent' ) );
+		$accent_default    = '#cd2653';
+
+		// Header.
+		$header_footer_background         = sanitize_hex_color( twentytwenty_get_color_for_area( 'header-footer', 'background' ) );
+		$header_footer_background_default = '#ffffff';
+
+		// Cover.
+		$cover         = sanitize_hex_color( get_theme_mod( 'cover_template_overlay_text_color' ) );
+		$cover_default = '#ffffff';
+
+		// Background.
+		$background         = sanitize_hex_color_no_hash( get_theme_mod( 'background_color' ) );
+		$background_default = 'f5efe0';
+
+		ob_start();
+
+		/**
+		 * Note – Styles are applied in this order:
+		 * 1. Element specific
+		 * 2. Helper classes
+		 *
+		 * This enables all helper classes to overwrite base element styles,
+		 * meaning that any color classes applied in the block editor will
+		 * have a higher priority than the base element styles.
+		*/
+
+		// Front-End Styles.
+		if ( 'front-end' === $type ) {
+
+			// Auto-calculated colors.
+			$elements_definitions = twentytwenty_get_elements_array();
+			foreach ( $elements_definitions as $context => $props ) {
+				foreach ( $props as $key => $definitions ) {
+					foreach ( $definitions as $property => $elements ) {
+						/*
+						 * If we don't have an elements array or it is empty
+						 * then skip this iteration early;
+						 */
+						if ( ! is_array( $elements ) || empty( $elements ) ) {
+							continue;
+						}
+						$val = twentytwenty_get_color_for_area( $context, $key );
+						if ( $val ) {
+							twentytwenty_generate_css( implode( ',', $elements ), $property, $val );
+						}
+					}
+				}
+			}
+
+			if ( $cover && $cover !== $cover_default ) {
+				twentytwenty_generate_css( '.overlay-header .header-inner', 'color', $cover );
+				twentytwenty_generate_css( '.cover-header .entry-header *', 'color', $cover );
+			}
+
+			// Block Editor Styles.
+		} elseif ( 'block-editor' === $type ) {
+
+			// Colors.
+			// Accent color.
+			if ( $accent && $accent !== $accent_default ) {
+				twentytwenty_generate_css( '.has-accent-color, .editor-styles-wrapper .editor-block-list__layout a, .editor-styles-wrapper .has-drop-cap:not(:focus)::first-letter, .editor-styles-wrapper .wp-block-button.is-style-outline .wp-block-button__link, .editor-styles-wrapper .wp-block-pullquote::before, .editor-styles-wrapper .wp-block-file .wp-block-file__textlink', 'color', $accent );
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-quote', 'border-color', $accent, '' );
+				twentytwenty_generate_css( '.has-accent-background-color, .editor-styles-wrapper .wp-block-button__link, .editor-styles-wrapper .wp-block-file__button', 'background-color', $accent );
+			}
+
+			// Background color.
+			if ( $background && $background !== $background_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper', 'background-color', '#' . $background );
+				twentytwenty_generate_css( '.has-background.has-primary-background-color:not(.has-text-color),.has-background.has-primary-background-color *:not(.has-text-color),.has-background.has-accent-background-color:not(.has-text-color),.has-background.has-accent-background-color *:not(.has-text-color)', 'color', '#' . $background );
+			}
+
+			// Borders color.
+			if ( $borders && $borders !== $borders_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-code, .editor-styles-wrapper pre, .editor-styles-wrapper .wp-block-preformatted pre, .editor-styles-wrapper .wp-block-verse pre, .editor-styles-wrapper fieldset, .editor-styles-wrapper .wp-block-table, .editor-styles-wrapper .wp-block-table *, .editor-styles-wrapper .wp-block-table.is-style-stripes, .editor-styles-wrapper .wp-block-latest-posts.is-grid li', 'border-color', $borders );
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-table caption, .editor-styles-wrapper .wp-block-table.is-style-stripes tbody tr:nth-child(odd)', 'background-color', $borders );
+			}
+
+			// Text color.
+			if ( $body && $body !== $body_default ) {
+				twentytwenty_generate_css( 'body .editor-styles-wrapper, .editor-post-title__block .editor-post-title__input, .editor-post-title__block .editor-post-title__input:focus', 'color', $body );
+			}
+
+			// Secondary color.
+			if ( $secondary && $secondary !== $secondary_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper figcaption, .editor-styles-wrapper cite, .editor-styles-wrapper .wp-block-quote__citation, .editor-styles-wrapper .wp-block-quote cite, .editor-styles-wrapper .wp-block-quote footer, .editor-styles-wrapper .wp-block-pullquote__citation, .editor-styles-wrapper .wp-block-pullquote cite, .editor-styles-wrapper .wp-block-pullquote footer, .editor-styles-wrapper ul.wp-block-archives li, .editor-styles-wrapper ul.wp-block-categories li, .editor-styles-wrapper ul.wp-block-latest-posts li, .editor-styles-wrapper ul.wp-block-categories__list li, .editor-styles-wrapper .wp-block-latest-comments time, .editor-styles-wrapper .wp-block-latest-posts time', 'color', $secondary );
+			}
+
+			// Header Footer Background Color.
+			if ( $header_footer_background && $header_footer_background !== $header_footer_background_default ) {
+				twentytwenty_generate_css( '.editor-styles-wrapper .wp-block-pullquote::before', 'background-color', $header_footer_background );
+			}
+		} elseif ( 'classic-editor' === $type ) {
+
+			// Colors.
+			// Accent color.
+			if ( $accent && $accent !== $accent_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content a, body#tinymce.wp-editor.content a:focus, body#tinymce.wp-editor.content a:hover', 'color', $accent );
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content blockquote, body#tinymce.wp-editor.content .wp-block-quote', 'border-color', $accent, '', ' !important' );
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content button, body#tinymce.wp-editor.content .faux-button, body#tinymce.wp-editor.content .wp-block-button__link, body#tinymce.wp-editor.content .wp-block-file__button, body#tinymce.wp-editor.content input[type=\'button\'], body#tinymce.wp-editor.content input[type=\'reset\'], body#tinymce.wp-editor.content input[type=\'submit\']', 'background-color', $accent );
+			}
+
+			// Background color.
+			if ( $background && $background !== $background_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content', 'background-color', '#' . $background );
+			}
+
+			// Text color.
+			if ( $body && $body !== $body_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content', 'color', $body );
+			}
+
+			// Secondary color.
+			if ( $secondary && $secondary !== $secondary_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content hr:not(.is-style-dots), body#tinymce.wp-editor.content cite, body#tinymce.wp-editor.content figcaption, body#tinymce.wp-editor.content .wp-caption-text, body#tinymce.wp-editor.content .wp-caption-dd, body#tinymce.wp-editor.content .gallery-caption', 'color', $secondary );
+			}
+
+			// Borders color.
+			if ( $borders && $borders !== $borders_default ) {
+				twentytwenty_generate_css( 'body#tinymce.wp-editor.content pre, body#tinymce.wp-editor.content hr, body#tinymce.wp-editor.content fieldset,body#tinymce.wp-editor.content input, body#tinymce.wp-editor.content textarea', 'border-color', $borders );
+			}
+		}
+
+		// Return the results.
+		return ob_get_clean();
+
+	}
+}
+
+The file starter-content.php contains:
+<?php
+/**
+ * Twenty Twenty Starter Content
+ *
+ * @link https://make.wordpress.org/core/2016/11/30/starter-content-for-themes-in-4-7/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty
+ * @since Twenty Twenty 1.0
+ */
+
+/**
+ * Function to return the array of starter content for the theme.
+ *
+ * Passes it through the `twentytwenty_starter_content` filter before returning.
+ *
+ * @since Twenty Twenty 1.0
+ *
+ * @return array A filtered array of args for the starter_content.
+ */
+function twentytwenty_get_starter_content() {
+
+	// Define and register starter content to showcase the theme on new sites.
+	$starter_content = array(
+		'widgets'     => array(
+			// Place one core-defined widgets in the first footer widget area.
+			'sidebar-1' => array(
+				'text_about',
+			),
+			// Place one core-defined widgets in the second footer widget area.
+			'sidebar-2' => array(
+				'text_business_info',
+			),
+		),
+
+		// Create the custom image attachments used as post thumbnails for pages.
+		'attachments' => array(
+			'image-opening' => array(
+				'post_title' => _x( 'The New UMoMA Opens its Doors', 'Theme starter content', 'twentytwenty' ),
+				'file'       => 'assets/images/2020-landscape-1.png', // URL relative to the template directory.
+			),
+		),
+
+		// Specify the core-defined pages to create and add custom thumbnails to some of them.
+		'posts'       => array(
+			'front' => array(
+				'post_type'    => 'page',
+				'post_title'   => __( 'The New UMoMA Opens its Doors', 'twentytwenty' ),
+				// Use the above featured image with the predefined about page.
+				'thumbnail'    => '{{image-opening}}',
+				'post_content' => implode(
+					'',
+					array(
+						'<!-- wp:group {"align":"wide"} -->',
+						'<div class="wp-block-group alignwide"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+						'<h2 class="has-text-align-center">' . __( 'The premier destination for modern art in Northern Sweden. Open from 10 AM to 6 PM every day during the summer months.', 'twentytwenty' ) . '</h2>',
+						'<!-- /wp:heading --></div></div>',
+						'<!-- /wp:group -->',
+						'<!-- wp:columns {"align":"wide"} -->',
+						'<div class="wp-block-columns alignwide"><!-- wp:column -->',
+						'<div class="wp-block-column"><!-- wp:group -->',
+						'<div class="wp-block-group"><div class="wp-block-group__inner-container">',
+						'<!-- wp:image {"align":"full","id":37,"sizeSlug":"full"} -->',
+						'<figure class="wp-block-image alignfull size-full"><img src="' . get_theme_file_uri() . '/assets/images/2020-three-quarters-1.png" alt="" class="wp-image-37"/></figure>',
+						'<!-- /wp:image -->',
+						'<!-- wp:heading {"level":3} -->',
+						'<h3>' . __( 'Works and Days', 'twentytwenty' ) . '</h3>',
+						'<!-- /wp:heading -->',
+						'<!-- wp:paragraph -->',
+						'<p>' . __( 'August 1 -- December 1', 'twentytwenty' ) . '</p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:button {"className":"is-style-outline"} -->',
+						'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="https://make.wordpress.org/core/2019/09/27/block-editor-theme-related-updates-in-wordpress-5-3/">' . __( 'Read More', 'twentytwenty' ) . '</a></div>',
+						'<!-- /wp:button --></div></div>',
+						'<!-- /wp:group -->',
+						'<!-- wp:group -->',
+						'<div class="wp-block-group"><div class="wp-block-group__inner-container">',
+						'<!-- wp:image {"align":"full","id":37,"sizeSlug":"full"} -->',
+						'<figure class="wp-block-image alignfull size-full"><img src="' . get_theme_file_uri() . '/assets/images/2020-three-quarters-3.png" alt="" class="wp-image-37"/></figure>',
+						'<!-- /wp:image -->',
+						'<!-- wp:heading {"level":3} -->',
+						'<h3>' . __( 'Theatre of Operations', 'twentytwenty' ) . '</h3>',
+						'<!-- /wp:heading -->',
+						'<!-- wp:paragraph -->',
+						'<p>' . __( 'October 1 -- December 1', 'twentytwenty' ) . '</p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:button {"className":"is-style-outline"} -->',
+						'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="https://make.wordpress.org/core/2019/09/27/block-editor-theme-related-updates-in-wordpress-5-3/">' . __( 'Read More', 'twentytwenty' ) . '</a></div>',
+						'<!-- /wp:button --></div></div>',
+						'<!-- /wp:group --></div>',
+						'<!-- /wp:column -->',
+						'<!-- wp:column -->',
+						'<div class="wp-block-column"><!-- wp:group -->',
+						'<div class="wp-block-group"><div class="wp-block-group__inner-container">',
+						'<!-- wp:image {"align":"full","id":37,"sizeSlug":"full"} -->',
+						'<figure class="wp-block-image alignfull size-full"><img src="' . get_theme_file_uri() . '/assets/images/2020-three-quarters-2.png" alt="" class="wp-image-37"/></figure>',
+						'<!-- /wp:image -->',
+						'<!-- wp:heading {"level":3} -->',
+						'<h3>' . __( 'The Life I Deserve', 'twentytwenty' ) . '</h3>',
+						'<!-- /wp:heading -->',
+						'<!-- wp:paragraph -->',
+						'<p>' . __( 'August 1 -- December 1', 'twentytwenty' ) . '</p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:button {"className":"is-style-outline"} -->',
+						'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="https://make.wordpress.org/core/2019/09/27/block-editor-theme-related-updates-in-wordpress-5-3/">' . __( 'Read More', 'twentytwenty' ) . '</a></div>',
+						'<!-- /wp:button --></div></div>',
+						'<!-- /wp:group -->',
+						'<!-- wp:group -->',
+						'<div class="wp-block-group"><div class="wp-block-group__inner-container">',
+						'<!-- wp:image {"align":"full","id":37,"sizeSlug":"full"} -->',
+						'<figure class="wp-block-image alignfull size-full"><img src="' . get_theme_file_uri() . '/assets/images/2020-three-quarters-4.png" alt="" class="wp-image-37"/></figure>',
+						'<!-- /wp:image -->',
+						'<!-- wp:heading {"level":3} -->',
+						'<h3>' . __( 'From Signac to Matisse', 'twentytwenty' ) . '</h3>',
+						'<!-- /wp:heading -->',
+						'<!-- wp:paragraph -->',
+						'<p>' . __( 'October 1 -- December 1', 'twentytwenty' ) . '</p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:button {"className":"is-style-outline"} -->',
+						'<div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="https://make.wordpress.org/core/2019/09/27/block-editor-theme-related-updates-in-wordpress-5-3/">' . __( 'Read More', 'twentytwenty' ) . '</a></div>',
+						'<!-- /wp:button --></div></div>',
+						'<!-- /wp:group --></div>',
+						'<!-- /wp:column --></div>',
+						'<!-- /wp:columns -->',
+						'<!-- wp:image {"align":"full","id":37,"sizeSlug":"full"} -->',
+						'<figure class="wp-block-image alignfull size-full"><img src="' . get_theme_file_uri() . '/assets/images/2020-landscape-2.png" alt="" class="wp-image-37"/></figure>',
+						'<!-- /wp:image -->',
+						'<!-- wp:group {"align":"wide"} -->',
+						'<div class="wp-block-group alignwide"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center","textColor":"accent"} -->',
+						'<h2 class="has-accent-color has-text-align-center">' . __( '&#8220;Cyborgs, as the philosopher Donna Haraway established, are not reverent. They do not remember the cosmos.&#8221;', 'twentytwenty' ) . '</h2>',
+						'<!-- /wp:heading --></div></div>',
+						'<!-- /wp:group -->',
+						'<!-- wp:paragraph {"dropCap":true} -->',
+						'<p class="has-drop-cap">' . __( 'With seven floors of striking architecture, UMoMA shows exhibitions of international contemporary art, sometimes along with art historical retrospectives. Existential, political and philosophical issues are intrinsic to our programme. As visitor you are invited to guided tours artist talks, lectures, film screenings and other events with free admission', 'twentytwenty' ) . '</p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:paragraph -->',
+						'<p>' . __( 'The exhibitions are produced by UMoMA in collaboration with artists and museums around the world and they often attract international attention. UMoMA has received a Special Commendation from the European Museum of the Year, and was among the top candidates for the Swedish Museum of the Year Award as well as for the Council of Europe Museum Prize.', 'twentytwenty' ) . '</p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:paragraph -->',
+						'<p></p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:group {"customBackgroundColor":"#ffffff","align":"wide"} -->',
+						'<div class="wp-block-group alignwide has-background" style="background-color:#ffffff"><div class="wp-block-group__inner-container"><!-- wp:group -->',
+						'<div class="wp-block-group"><div class="wp-block-group__inner-container"><!-- wp:heading {"align":"center"} -->',
+						'<h2 class="has-text-align-center">' . __( 'Become a Member and Get Exclusive Offers!', 'twentytwenty' ) . '</h2>',
+						'<!-- /wp:heading -->',
+						'<!-- wp:paragraph {"align":"center"} -->',
+						'<p class="has-text-align-center">' . __( 'Members get access to exclusive exhibits and sales. Our memberships cost $99.99 and are billed annually.', 'twentytwenty' ) . '</p>',
+						'<!-- /wp:paragraph -->',
+						'<!-- wp:button {"align":"center"} -->',
+						'<div class="wp-block-button aligncenter"><a class="wp-block-button__link" href="https://make.wordpress.org/core/2019/09/27/block-editor-theme-related-updates-in-wordpress-5-3/">' . __( 'Join the Club', 'twentytwenty' ) . '</a></div>',
+						'<!-- /wp:button --></div></div>',
+						'<!-- /wp:group --></div></div>',
+						'<!-- /wp:group -->',
+						'<!-- wp:gallery {"ids":[39,38],"align":"wide"} -->',
+						'<figure class="wp-block-gallery alignwide columns-2 is-cropped"><ul class="blocks-gallery-grid"><li class="blocks-gallery-item"><figure><img src="' . get_theme_file_uri() . '/assets/images/2020-square-2.png" alt="" data-id="39" data-full-url="' . get_theme_file_uri() . '/assets/images/2020-square-2.png" data-link="assets/images/2020-square-2/" class="wp-image-39"/></figure></li><li class="blocks-gallery-item"><figure><img src="' . get_theme_file_uri() . '/assets/images/2020-square-1.png" alt="" data-id="38" data-full-url="' . get_theme_file_uri() . '/assets/images/2020-square-1.png" data-link="' . get_theme_file_uri() . '/assets/images/2020-square-1/" class="wp-image-38"/></figure></li></ul></figure>',
+						'<!-- /wp:gallery -->',
+					)
+				),
+			),
+			'about',
+			'contact',
+			'blog',
+		),
+
+		// Default to a static front page and assign the front and posts pages.
+		'options'     => array(
+			'show_on_front'  => 'page',
+			'page_on_front'  => '{{front}}',
+			'page_for_posts' => '{{blog}}',
+		),
+
+		// Set up nav menus for each of the two areas registered in the theme.
+		'nav_menus'   => array(
+			// Assign a menu to the "primary" location.
+			'primary'  => array(
+				'name'  => __( 'Primary', 'twentytwenty' ),
+				'items' => array(
+					'link_home', // Note that the core "home" page is actually a link in case a static front page is not used.
+					'page_about',
+					'page_blog',
+					'page_contact',
+				),
+			),
+			// This replicates primary just to demonstrate the expanded menu.
+			'expanded' => array(
+				'name'  => __( 'Primary', 'twentytwenty' ),
+				'items' => array(
+					'link_home', // Note that the core "home" page is actually a link in case a static front page is not used.
+					'page_about',
+					'page_blog',
+					'page_contact',
+				),
+			),
+			// Assign a menu to the "social" location.
+			'social'   => array(
+				'name'  => __( 'Social Links Menu', 'twentytwenty' ),
+				'items' => array(
+					'link_yelp',
+					'link_facebook',
+					'link_twitter',
+					'link_instagram',
+					'link_email',
+				),
+			),
+		),
+	);
+
+	/**
+	 * Filters Twenty Twenty array of starter content.
+	 *
+	 * @since Twenty Twenty 1.0
+	 *
+	 * @param array $starter_content Array of starter content.
+	 */
+	return apply_filters( 'twentytwenty_starter_content', $starter_content );
+
+}
+
+The file svg-icons.php contains:
+<?php
+/**
+ * Twenty Twenty SVG Icon helper functions
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty
+ * @since Twenty Twenty 1.0
+ */
+
+if ( ! function_exists( 'twentytwenty_the_theme_svg' ) ) {
+	/**
+	 * Output and Get Theme SVG.
+	 * Output and get the SVG markup for an icon in the TwentyTwenty_SVG_Icons class.
+	 *
+	 * @param string $svg_name The name of the icon.
+	 * @param string $group The group the icon belongs to.
+	 * @param string $color Color code.
+	 */
+	function twentytwenty_the_theme_svg( $svg_name, $group = 'ui', $color = '' ) {
+		echo twentytwenty_get_theme_svg( $svg_name, $group, $color ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in twentytwenty_get_theme_svg().
+	}
+}
+
+if ( ! function_exists( 'twentytwenty_get_theme_svg' ) ) {
+
+	/**
+	 * Get information about the SVG icon.
+	 *
+	 * @param string $svg_name The name of the icon.
+	 * @param string $group The group the icon belongs to.
+	 * @param string $color Color code.
+	 */
+	function twentytwenty_get_theme_svg( $svg_name, $group = 'ui', $color = '' ) {
+
+		// Make sure that only our allowed tags and attributes are included.
+		$svg = wp_kses(
+			TwentyTwenty_SVG_Icons::get_svg( $svg_name, $group, $color ),
+			array(
+				'svg'     => array(
+					'class'       => true,
+					'xmlns'       => true,
+					'width'       => true,
+					'height'      => true,
+					'viewbox'     => true,
+					'aria-hidden' => true,
+					'role'        => true,
+					'focusable'   => true,
+				),
+				'path'    => array(
+					'fill'      => true,
+					'fill-rule' => true,
+					'd'         => true,
+					'transform' => true,
+				),
+				'polygon' => array(
+					'fill'      => true,
+					'fill-rule' => true,
+					'points'    => true,
+					'transform' => true,
+					'focusable' => true,
+				),
+			)
+		);
+
+		if ( ! $svg ) {
+			return false;
+		}
+		return $svg;
+	}
+}
+
+The file template-tags.php contains:
+<?php
+/**
+ * Custom template tags for this theme.
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty
+ * @since Twenty Twenty 1.0
+ */
+
+/**
+ * Table of Contents:
+ * Logo & Description
+ * Comments
+ * Post Meta
+ * Menus
+ * Classes
+ * Archives
+ * Miscellaneous
+ */
+
+/**
+ * Logo & Description
+ */
+
+/**
+ * Displays the site logo, either text or image.
+ *
+ * @param array   $args Arguments for displaying the site logo either as an image or text.
+ * @param bool    $echo Echo or return the HTML.
+ * @return string Compiled HTML based on our arguments.
+ */
+function twentytwenty_site_logo( $args = array(), $echo = true ) {
+	$logo       = get_custom_logo();
+	$site_title = get_bloginfo( 'name' );
+	$contents   = '';
+	$classname  = '';
+
+	$defaults = array(
+		'logo'        => '%1$s<span class="screen-reader-text">%2$s</span>',
+		'logo_class'  => 'site-logo',
+		'title'       => '<a href="%1$s">%2$s</a>',
+		'title_class' => 'site-title',
+		'home_wrap'   => '<h1 class="%1$s">%2$s</h1>',
+		'single_wrap' => '<div class="%1$s faux-heading">%2$s</div>',
+		'condition'   => ( is_front_page() || is_home() ) && ! is_page(),
+	);
+
+	$args = wp_parse_args( $args, $defaults );
+
+	/**
+	 * Filters the arguments for `twentytwenty_site_logo()`.
+	 *
+	 * @param array  $args     Parsed arguments.
+	 * @param array  $defaults Function's default arguments.
+	 */
+	$args = apply_filters( 'twentytwenty_site_logo_args', $args, $defaults );
+
+	if ( has_custom_logo() ) {
+		$contents  = sprintf( $args['logo'], $logo, esc_html( $site_title ) );
+		$classname = $args['logo_class'];
+	} else {
+		$contents  = sprintf( $args['title'], esc_url( get_home_url( null, '/' ) ), esc_html( $site_title ) );
+		$classname = $args['title_class'];
+	}
+
+	$wrap = $args['condition'] ? 'home_wrap' : 'single_wrap';
+
+	$html = sprintf( $args[ $wrap ], $classname, $contents );
+
+	/**
+	 * Filters the arguments for `twentytwenty_site_logo()`.
+	 *
+	 * @param string $html      Compiled HTML based on our arguments.
+	 * @param array  $args      Parsed arguments.
+	 * @param string $classname Class name based on current view, home or single.
+	 * @param string $contents  HTML for site title or logo.
+	 */
+	$html = apply_filters( 'twentytwenty_site_logo', $html, $args, $classname, $contents );
+
+	if ( ! $echo ) {
+		return $html;
+	}
+
+	echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+}
+
+/**
+ * Displays the site description.
+ *
+ * @param bool $echo Echo or return the html.
+ * @return string The HTML to display.
+ */
+function twentytwenty_site_description( $echo = true ) {
+	$description = get_bloginfo( 'description' );
+
+	if ( ! $description ) {
+		return;
+	}
+
+	$wrapper = '<div class="site-description">%s</div><!-- .site-description -->';
+
+	$html = sprintf( $wrapper, esc_html( $description ) );
+
+	/**
+	 * Filters the HTML for the site description.
+	 *
+	 * @since Twenty Twenty 1.0
+	 *
+	 * @param string $html         The HTML to display.
+	 * @param string $description  Site description via `bloginfo()`.
+	 * @param string $wrapper      The format used in case you want to reuse it in a `sprintf()`.
+	 */
+	$html = apply_filters( 'twentytwenty_site_description', $html, $description, $wrapper );
+
+	if ( ! $echo ) {
+		return $html;
+	}
+
+	echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+}
+
+/**
+ * Comments
+ */
+
+/**
+ * Checks if the specified comment is written by the author of the post commented on.
+ *
+ * @param object $comment Comment data.
+ * @return bool
+ */
+function twentytwenty_is_comment_by_post_author( $comment = null ) {
+
+	if ( is_object( $comment ) && $comment->user_id > 0 ) {
+
+		$user = get_userdata( $comment->user_id );
+		$post = get_post( $comment->comment_post_ID );
+
+		if ( ! empty( $user ) && ! empty( $post ) ) {
+
+			return $comment->user_id === $post->post_author;
+
+		}
+	}
+	return false;
+
+}
+
+/**
+ * Filters comment reply link to not JS scroll.
+ *
+ * Filter the comment reply link to add a class indicating it should not use JS slow-scroll, as it
+ * makes it scroll to the wrong position on the page.
+ *
+ * @param string $link Link to the top of the page.
+ * @return string Link to the top of the page.
+ */
+function twentytwenty_filter_comment_reply_link( $link ) {
+
+	$link = str_replace( 'class=\'', 'class=\'do-not-scroll ', $link );
+	return $link;
+
+}
+
+add_filter( 'comment_reply_link', 'twentytwenty_filter_comment_reply_link' );
+
+/**
+ * Post Meta
+ */
+
+/**
+ * Retrieves and displays the post meta.
+ *
+ * If it's a single post, outputs the post meta values specified in the Customizer settings.
+ *
+ * @param int    $post_id  The ID of the post for which the post meta should be output.
+ * @param string $location Which post meta location to output – single or preview.
+ */
+function twentytwenty_the_post_meta( $post_id = null, $location = 'single-top' ) {
+
+	echo twentytwenty_get_post_meta( $post_id, $location ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in twentytwenty_get_post_meta().
+
+}
+
+/**
+ * Filters the edit post link to add an icon and use the post meta structure.
+ *
+ * @param string $link    Anchor tag for the edit link.
+ * @param int    $post_id Post ID.
+ * @param string $text    Anchor text.
+ */
+function twentytwenty_edit_post_link( $link, $post_id, $text ) {
+	if ( is_admin() ) {
+		return $link;
+	}
+
+	$edit_url = get_edit_post_link( $post_id );
+
+	if ( ! $edit_url ) {
+		return;
+	}
+
+	$text = sprintf(
+		wp_kses(
+			/* translators: %s: Post title. Only visible to screen readers. */
+			__( 'Edit <span class="screen-reader-text">%s</span>', 'twentytwenty' ),
+			array(
+				'span' => array(
+					'class' => array(),
+				),
+			)
+		),
+		get_the_title( $post_id )
+	);
+
+	return '<div class="post-meta-wrapper post-meta-edit-link-wrapper"><ul class="post-meta"><li class="post-edit meta-wrapper"><span class="meta-icon">' . twentytwenty_get_theme_svg( 'edit' ) . '</span><span class="meta-text"><a href="' . esc_url( $edit_url ) . '">' . $text . '</a></span></li></ul><!-- .post-meta --></div><!-- .post-meta-wrapper -->';
+
+}
+
+add_filter( 'edit_post_link', 'twentytwenty_edit_post_link', 10, 3 );
+
+/**
+ * Retrieves the post meta.
+ *
+ * @param int    $post_id The ID of the post.
+ * @param string $location The location where the meta is shown.
+ */
+function twentytwenty_get_post_meta( $post_id = null, $location = 'single-top' ) {
+
+	// Require post ID.
+	if ( ! $post_id ) {
+		return;
+	}
+
+	/**
+	 * Filters post types array.
+	 *
+	 * This filter can be used to hide post meta information of post, page or custom post type
+	 * registered by child themes or plugins.
+	 *
+	 * @since Twenty Twenty 1.0
+	 *
+	 * @param array Array of post types
+	 */
+	$disallowed_post_types = apply_filters( 'twentytwenty_disallowed_post_types_for_meta_output', array( 'page' ) );
+
+	// Check whether the post type is allowed to output post meta.
+	if ( in_array( get_post_type( $post_id ), $disallowed_post_types, true ) ) {
+		return;
+	}
+
+	$post_meta_wrapper_classes = '';
+	$post_meta_classes         = '';
+
+	// Get the post meta settings for the location specified.
+	if ( 'single-top' === $location ) {
+		/**
+		 * Filters post meta info visibility.
+		 *
+		 * Use this filter to hide post meta information like Author, Post date, Comments, Is sticky status.
+		 *
+		 * @since Twenty Twenty 1.0
+		 *
+		 * @param array $args {
+		 *  @type string 'author'
+		 *  @type string 'post-date'
+		 *  @type string 'comments'
+		 *  @type string 'sticky'
+		 * }
+		 */
+		$post_meta = apply_filters(
+			'twentytwenty_post_meta_location_single_top',
+			array(
+				'author',
+				'post-date',
+				'comments',
+				'sticky',
+			)
+		);
+
+		$post_meta_wrapper_classes = ' post-meta-single post-meta-single-top';
+
+	} elseif ( 'single-bottom' === $location ) {
+
+		/**
+		 * Filters post tags visibility.
+		 *
+		 * Use this filter to hide post tags.
+		 *
+		 * @since Twenty Twenty 1.0
+		 *
+		 * @param array $args {
+		 *   @type string 'tags'
+		 * }
+		 */
+		$post_meta = apply_filters(
+			'twentytwenty_post_meta_location_single_bottom',
+			array(
+				'tags',
+			)
+		);
+
+		$post_meta_wrapper_classes = ' post-meta-single post-meta-single-bottom';
+
+	}
+
+	// If the post meta setting has the value 'empty', it's explicitly empty and the default post meta shouldn't be output.
+	if ( $post_meta && ! in_array( 'empty', $post_meta, true ) ) {
+
+		// Make sure we don't output an empty container.
+		$has_meta = false;
+
+		global $post;
+		$the_post = get_post( $post_id );
+		setup_postdata( $the_post );
+
+		ob_start();
+
+		?>
+
+		<div class="post-meta-wrapper<?php echo esc_attr( $post_meta_wrapper_classes ); ?>">
+
+			<ul class="post-meta<?php echo esc_attr( $post_meta_classes ); ?>">
+
+				<?php
+
+				/**
+				 * Fires before post meta HTML display.
+				 *
+				 * Allow output of additional post meta info to be added by child themes and plugins.
+				 *
+				 * @since Twenty Twenty 1.0
+				 * @since Twenty Twenty 1.1 Added the `$post_meta` and `$location` parameters.
+				 *
+				 * @param int    $post_id   Post ID.
+				 * @param array  $post_meta An array of post meta information.
+				 * @param string $location  The location where the meta is shown.
+				 *                          Accepts 'single-top' or 'single-bottom'.
+				 */
+				do_action( 'twentytwenty_start_of_post_meta_list', $post_id, $post_meta, $location );
+
+				// Author.
+				if ( post_type_supports( get_post_type( $post_id ), 'author' ) && in_array( 'author', $post_meta, true ) ) {
+
+					$has_meta = true;
+					?>
+					<li class="post-author meta-wrapper">
+						<span class="meta-icon">
+							<span class="screen-reader-text"><?php _e( 'Post author', 'twentytwenty' ); ?></span>
+							<?php twentytwenty_the_theme_svg( 'user' ); ?>
+						</span>
+						<span class="meta-text">
+							<?php
+							printf(
+								/* translators: %s: Author name. */
+								__( 'By %s', 'twentytwenty' ),
+								'<a href="' . esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ) . '">' . esc_html( get_the_author_meta( 'display_name' ) ) . '</a>'
+							);
+							?>
+						</span>
+					</li>
+					<?php
+
+				}
+
+				// Post date.
+				if ( in_array( 'post-date', $post_meta, true ) ) {
+
+					$has_meta = true;
+					?>
+					<li class="post-date meta-wrapper">
+						<span class="meta-icon">
+							<span class="screen-reader-text"><?php _e( 'Post date', 'twentytwenty' ); ?></span>
+							<?php twentytwenty_the_theme_svg( 'calendar' ); ?>
+						</span>
+						<span class="meta-text">
+							<a href="<?php the_permalink(); ?>"><?php the_time( get_option( 'date_format' ) ); ?></a>
+						</span>
+					</li>
+					<?php
+
+				}
+
+				// Categories.
+				if ( in_array( 'categories', $post_meta, true ) && has_category() ) {
+
+					$has_meta = true;
+					?>
+					<li class="post-categories meta-wrapper">
+						<span class="meta-icon">
+							<span class="screen-reader-text"><?php _e( 'Categories', 'twentytwenty' ); ?></span>
+							<?php twentytwenty_the_theme_svg( 'folder' ); ?>
+						</span>
+						<span class="meta-text">
+							<?php _ex( 'In', 'A string that is output before one or more categories', 'twentytwenty' ); ?> <?php the_category( ', ' ); ?>
+						</span>
+					</li>
+					<?php
+
+				}
+
+				// Tags.
+				if ( in_array( 'tags', $post_meta, true ) && has_tag() ) {
+
+					$has_meta = true;
+					?>
+					<li class="post-tags meta-wrapper">
+						<span class="meta-icon">
+							<span class="screen-reader-text"><?php _e( 'Tags', 'twentytwenty' ); ?></span>
+							<?php twentytwenty_the_theme_svg( 'tag' ); ?>
+						</span>
+						<span class="meta-text">
+							<?php the_tags( '', ', ', '' ); ?>
+						</span>
+					</li>
+					<?php
+
+				}
+
+				// Comments link.
+				if ( in_array( 'comments', $post_meta, true ) && ! post_password_required() && ( comments_open() || get_comments_number() ) ) {
+
+					$has_meta = true;
+					?>
+					<li class="post-comment-link meta-wrapper">
+						<span class="meta-icon">
+							<?php twentytwenty_the_theme_svg( 'comment' ); ?>
+						</span>
+						<span class="meta-text">
+							<?php comments_popup_link(); ?>
+						</span>
+					</li>
+					<?php
+
+				}
+
+				// Sticky.
+				if ( in_array( 'sticky', $post_meta, true ) && is_sticky() ) {
+
+					$has_meta = true;
+					?>
+					<li class="post-sticky meta-wrapper">
+						<span class="meta-icon">
+							<?php twentytwenty_the_theme_svg( 'bookmark' ); ?>
+						</span>
+						<span class="meta-text">
+							<?php _e( 'Sticky post', 'twentytwenty' ); ?>
+						</span>
+					</li>
+					<?php
+
+				}
+
+				/**
+				 * Fires after post meta HTML display.
+				 *
+				 * Allow output of additional post meta info to be added by child themes and plugins.
+				 *
+				 * @since Twenty Twenty 1.0
+				 * @since Twenty Twenty 1.1 Added the `$post_meta` and `$location` parameters.
+				 *
+				 * @param int    $post_id   Post ID.
+				 * @param array  $post_meta An array of post meta information.
+				 * @param string $location  The location where the meta is shown.
+				 *                          Accepts 'single-top' or 'single-bottom'.
+				 */
+				do_action( 'twentytwenty_end_of_post_meta_list', $post_id, $post_meta, $location );
+
+				?>
+
+			</ul><!-- .post-meta -->
+
+		</div><!-- .post-meta-wrapper -->
+
+		<?php
+
+		wp_reset_postdata();
+
+		$meta_output = ob_get_clean();
+
+		// If there is meta to output, return it.
+		if ( $has_meta && $meta_output ) {
+
+			return $meta_output;
+
+		}
+	}
+
+}
+
+/**
+ * Menus
+ */
+
+/**
+ * Filters classes of wp_list_pages items to match menu items.
+ *
+ * Filter the class applied to wp_list_pages() items with children to match the menu class, to simplify.
+ * styling of sub levels in the fallback. Only applied if the match_menu_classes argument is set.
+ *
+ * @param string[] $css_class    An array of CSS classes to be applied to each list item.
+ * @param WP_Post  $page         Page data object.
+ * @param int      $depth        Depth of page, used for padding.
+ * @param array    $args         An array of arguments.
+ * @param int      $current_page ID of the current page.
+ * @return array CSS class names.
+ */
+function twentytwenty_filter_wp_list_pages_item_classes( $css_class, $page, $depth, $args, $current_page ) {
+
+	// Only apply to wp_list_pages() calls with match_menu_classes set to true.
+	$match_menu_classes = isset( $args['match_menu_classes'] );
+
+	if ( ! $match_menu_classes ) {
+		return $css_class;
+	}
+
+	// Add current menu item class.
+	if ( in_array( 'current_page_item', $css_class, true ) ) {
+		$css_class[] = 'current-menu-item';
+	}
+
+	// Add menu item has children class.
+	if ( in_array( 'page_item_has_children', $css_class, true ) ) {
+		$css_class[] = 'menu-item-has-children';
+	}
+
+	return $css_class;
+
+}
+
+add_filter( 'page_css_class', 'twentytwenty_filter_wp_list_pages_item_classes', 10, 5 );
+
+/**
+ * Adds a Sub Nav Toggle to the Expanded Menu and Mobile Menu.
+ *
+ * @param stdClass $args  An object of wp_nav_menu() arguments.
+ * @param WP_Post  $item  Menu item data object.
+ * @param int      $depth Depth of menu item. Used for padding.
+ * @return stdClass An object of wp_nav_menu() arguments.
+ */
+function twentytwenty_add_sub_toggles_to_main_menu( $args, $item, $depth ) {
+
+	// Add sub menu toggles to the Expanded Menu with toggles.
+	if ( isset( $args->show_toggles ) && $args->show_toggles ) {
+
+		// Wrap the menu item link contents in a div, used for positioning.
+		$args->before = '<div class="ancestor-wrapper">';
+		$args->after  = '';
+
+		// Add a toggle to items with children.
+		if ( in_array( 'menu-item-has-children', $item->classes, true ) ) {
+
+			$toggle_target_string = '.menu-modal .menu-item-' . $item->ID . ' > .sub-menu';
+			$toggle_duration      = twentytwenty_toggle_duration();
+
+			// Add the sub menu toggle.
+			$args->after .= '<button class="toggle sub-menu-toggle fill-children-current-color" data-toggle-target="' . $toggle_target_string . '" data-toggle-type="slidetoggle" data-toggle-duration="' . absint( $toggle_duration ) . '" aria-expanded="false"><span class="screen-reader-text">' . __( 'Show sub menu', 'twentytwenty' ) . '</span>' . twentytwenty_get_theme_svg( 'chevron-down' ) . '</button>';
+
+		}
+
+		// Close the wrapper.
+		$args->after .= '</div><!-- .ancestor-wrapper -->';
+
+		// Add sub menu icons to the primary menu without toggles.
+	} elseif ( 'primary' === $args->theme_location ) {
+		if ( in_array( 'menu-item-has-children', $item->classes, true ) ) {
+			$args->after = '<span class="icon"></span>';
+		} else {
+			$args->after = '';
+		}
+	}
+
+	return $args;
+
+}
+
+add_filter( 'nav_menu_item_args', 'twentytwenty_add_sub_toggles_to_main_menu', 10, 3 );
+
+/**
+ * Displays SVG icons in social links menu.
+ *
+ * @param string   $item_output The menu item's starting HTML output.
+ * @param WP_Post  $item        Menu item data object.
+ * @param int      $depth       Depth of the menu. Used for padding.
+ * @param stdClass $args        An object of wp_nav_menu() arguments.
+ * @return string The menu item output with social icon.
+ */
+function twentytwenty_nav_menu_social_icons( $item_output, $item, $depth, $args ) {
+	// Change SVG icon inside social links menu if there is supported URL.
+	if ( 'social' === $args->theme_location ) {
+		$svg = TwentyTwenty_SVG_Icons::get_social_link_svg( $item->url );
+		if ( empty( $svg ) ) {
+			$svg = twentytwenty_get_theme_svg( 'link' );
+		}
+		$item_output = str_replace( $args->link_after, '</span>' . $svg, $item_output );
+	}
+
+	return $item_output;
+}
+
+add_filter( 'walker_nav_menu_start_el', 'twentytwenty_nav_menu_social_icons', 10, 4 );
+
+/**
+ * Classes
+ */
+
+/**
+ * Adds 'no-js' class.
+ *
+ * If we're missing JavaScript support, the HTML element will have a 'no-js' class.
+ */
+function twentytwenty_no_js_class() {
+
+	?>
+	<script>document.documentElement.className = document.documentElement.className.replace( 'no-js', 'js' );</script>
+	<?php
+
+}
+
+add_action( 'wp_head', 'twentytwenty_no_js_class' );
+
+/**
+ * Adds conditional body classes.
+ *
+ * @param array $classes Classes added to the body tag.
+ * @return array Classes added to the body tag.
+ */
+function twentytwenty_body_classes( $classes ) {
+
+	global $post;
+	$post_type = isset( $post ) ? $post->post_type : false;
+
+	// Check whether we're singular.
+	if ( is_singular() ) {
+		$classes[] = 'singular';
+	}
+
+	// Check whether the current page should have an overlay header.
+	if ( is_page_template( array( 'templates/template-cover.php' ) ) ) {
+		$classes[] = 'overlay-header';
+	}
+
+	// Check whether the current page has full-width content.
+	if ( is_page_template( array( 'templates/template-full-width.php' ) ) ) {
+		$classes[] = 'has-full-width-content';
+	}
+
+	// Check for enabled search.
+	if ( true === get_theme_mod( 'enable_header_search', true ) ) {
+		$classes[] = 'enable-search-modal';
+	}
+
+	// Check for post thumbnail.
+	if ( is_singular() && has_post_thumbnail() ) {
+		$classes[] = 'has-post-thumbnail';
+	} elseif ( is_singular() ) {
+		$classes[] = 'missing-post-thumbnail';
+	}
+
+	// Check whether we're in the customizer preview.
+	if ( is_customize_preview() ) {
+		$classes[] = 'customizer-preview';
+	}
+
+	// Check if posts have single pagination.
+	if ( is_single() && ( get_next_post() || get_previous_post() ) ) {
+		$classes[] = 'has-single-pagination';
+	} else {
+		$classes[] = 'has-no-pagination';
+	}
+
+	// Check if we're showing comments.
+	if ( $post && ( ( 'post' === $post_type || comments_open() || get_comments_number() ) && ! post_password_required() ) ) {
+		$classes[] = 'showing-comments';
+	} else {
+		$classes[] = 'not-showing-comments';
+	}
+
+	// Check if avatars are visible.
+	$classes[] = get_option( 'show_avatars' ) ? 'show-avatars' : 'hide-avatars';
+
+	// Slim page template class names (class = name - file suffix).
+	if ( is_page_template() ) {
+		$classes[] = basename( get_page_template_slug(), '.php' );
+	}
+
+	// Check for the elements output in the top part of the footer.
+	$has_footer_menu = has_nav_menu( 'footer' );
+	$has_social_menu = has_nav_menu( 'social' );
+	$has_sidebar_1   = is_active_sidebar( 'sidebar-1' );
+	$has_sidebar_2   = is_active_sidebar( 'sidebar-2' );
+
+	// Add a class indicating whether those elements are output.
+	if ( $has_footer_menu || $has_social_menu || $has_sidebar_1 || $has_sidebar_2 ) {
+		$classes[] = 'footer-top-visible';
+	} else {
+		$classes[] = 'footer-top-hidden';
+	}
+
+	// Get header/footer background color.
+	$header_footer_background = get_theme_mod( 'header_footer_background_color', '#ffffff' );
+	$header_footer_background = strtolower( '#' . ltrim( $header_footer_background, '#' ) );
+
+	// Get content background color.
+	$background_color = get_theme_mod( 'background_color', 'f5efe0' );
+	$background_color = strtolower( '#' . ltrim( $background_color, '#' ) );
+
+	// Add extra class if main background and header/footer background are the same color.
+	if ( $background_color === $header_footer_background ) {
+		$classes[] = 'reduced-spacing';
+	}
+
+	return $classes;
+
+}
+
+add_filter( 'body_class', 'twentytwenty_body_classes' );
+
+/**
+ * Archives
+ */
+
+/**
+ * Filters the archive title and styles the word before the first colon.
+ *
+ * @param string $title Current archive title.
+ * @return string Current archive title.
+ */
+function twentytwenty_get_the_archive_title( $title ) {
+
+	$regex = apply_filters(
+		'twentytwenty_get_the_archive_title_regex',
+		array(
+			'pattern'     => '/(\A[^\:]+\:)/',
+			'replacement' => '<span class="color-accent">$1</span>',
+		)
+	);
+
+	if ( empty( $regex ) ) {
+
+		return $title;
+
+	}
+
+	return preg_replace( $regex['pattern'], $regex['replacement'], $title );
+
+}
+
+add_filter( 'get_the_archive_title', 'twentytwenty_get_the_archive_title' );
+
+/**
+ * Miscellaneous
+ */
+
+/**
+ * Toggles animation duration in milliseconds.
+ *
+ * @return int Duration in milliseconds
+ */
+function twentytwenty_toggle_duration() {
+	/**
+	 * Filters the animation duration/speed used usually for submenu toggles.
+	 *
+	 * @since Twenty Twenty 1.0
+	 *
+	 * @param int $duration Duration in milliseconds.
+	 */
+	$duration = apply_filters( 'twentytwenty_toggle_duration', 250 );
+
+	return $duration;
+}
+
+/**
+ * Gets unique ID.
+ *
+ * This is a PHP implementation of Underscore's uniqueId method. A static variable
+ * contains an integer that is incremented with each call. This number is returned
+ * with the optional prefix. As such the returned value is not universally unique,
+ * but it is unique across the life of the PHP process.
+ *
+ * @see wp_unique_id() Themes requiring WordPress 5.0.3 and greater should use this instead.
+ *
+ * @param string $prefix Prefix for the returned ID.
+ * @return string Unique ID.
+ */
+function twentytwenty_unique_id( $prefix = '' ) {
+	static $id_counter = 0;
+	if ( function_exists( 'wp_unique_id' ) ) {
+		return wp_unique_id( $prefix );
+	}
+	return $prefix . (string) ++$id_counter;
+}
+

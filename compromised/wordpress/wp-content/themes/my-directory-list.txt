@@ -1,0 +1,6 @@
+The file index.php contains:
+<?php
+// Silence is golden.
+
+The file my-directory-list.txt contains:
+

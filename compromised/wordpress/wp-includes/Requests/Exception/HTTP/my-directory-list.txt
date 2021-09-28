@@ -1,0 +1,1490 @@
+The file 304.php contains:
+<?php
+/**
+ * Exception for 304 Not Modified responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 304 Not Modified responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_304 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 304;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Not Modified';
+}
+The file 305.php contains:
+<?php
+/**
+ * Exception for 305 Use Proxy responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 305 Use Proxy responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_305 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 305;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Use Proxy';
+}
+
+The file 306.php contains:
+<?php
+/**
+ * Exception for 306 Switch Proxy responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 306 Switch Proxy responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_306 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 306;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Switch Proxy';
+}
+
+The file 400.php contains:
+<?php
+/**
+ * Exception for 400 Bad Request responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 400 Bad Request responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_400 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 400;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Bad Request';
+}
+The file 401.php contains:
+<?php
+/**
+ * Exception for 401 Unauthorized responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 401 Unauthorized responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_401 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 401;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Unauthorized';
+}
+The file 402.php contains:
+<?php
+/**
+ * Exception for 402 Payment Required responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 402 Payment Required responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_402 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 402;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Payment Required';
+}
+The file 403.php contains:
+<?php
+/**
+ * Exception for 403 Forbidden responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 403 Forbidden responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_403 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 403;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Forbidden';
+}
+The file 404.php contains:
+<?php
+/**
+ * Exception for 404 Not Found responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 404 Not Found responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_404 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 404;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Not Found';
+}
+The file 405.php contains:
+<?php
+/**
+ * Exception for 405 Method Not Allowed responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 405 Method Not Allowed responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_405 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 405;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Method Not Allowed';
+}
+The file 406.php contains:
+<?php
+/**
+ * Exception for 406 Not Acceptable responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 406 Not Acceptable responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_406 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 406;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Not Acceptable';
+}
+The file 407.php contains:
+<?php
+/**
+ * Exception for 407 Proxy Authentication Required responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 407 Proxy Authentication Required responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_407 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 407;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Proxy Authentication Required';
+}
+The file 408.php contains:
+<?php
+/**
+ * Exception for 408 Request Timeout responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 408 Request Timeout responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_408 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 408;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Request Timeout';
+}
+The file 409.php contains:
+<?php
+/**
+ * Exception for 409 Conflict responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 409 Conflict responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_409 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 409;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Conflict';
+}
+The file 410.php contains:
+<?php
+/**
+ * Exception for 410 Gone responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 410 Gone responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_410 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 410;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Gone';
+}
+The file 411.php contains:
+<?php
+/**
+ * Exception for 411 Length Required responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 411 Length Required responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_411 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 411;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Length Required';
+}
+The file 412.php contains:
+<?php
+/**
+ * Exception for 412 Precondition Failed responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 412 Precondition Failed responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_412 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 412;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Precondition Failed';
+}
+The file 413.php contains:
+<?php
+/**
+ * Exception for 413 Request Entity Too Large responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 413 Request Entity Too Large responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_413 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 413;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Request Entity Too Large';
+}
+The file 414.php contains:
+<?php
+/**
+ * Exception for 414 Request-URI Too Large responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 414 Request-URI Too Large responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_414 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 414;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Request-URI Too Large';
+}
+The file 415.php contains:
+<?php
+/**
+ * Exception for 415 Unsupported Media Type responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 415 Unsupported Media Type responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_415 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 415;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Unsupported Media Type';
+}
+The file 416.php contains:
+<?php
+/**
+ * Exception for 416 Requested Range Not Satisfiable responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 416 Requested Range Not Satisfiable responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_416 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 416;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Requested Range Not Satisfiable';
+}
+The file 417.php contains:
+<?php
+/**
+ * Exception for 417 Expectation Failed responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 417 Expectation Failed responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_417 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 417;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Expectation Failed';
+}
+The file 418.php contains:
+<?php
+/**
+ * Exception for 418 I'm A Teapot responses
+ *
+ * @see https://tools.ietf.org/html/rfc2324
+ * @package Requests
+ */
+
+/**
+ * Exception for 418 I'm A Teapot responses
+ *
+ * @see https://tools.ietf.org/html/rfc2324
+ * @package Requests
+ */
+class Requests_Exception_HTTP_418 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 418;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = "I'm A Teapot";
+}
+The file 428.php contains:
+<?php
+/**
+ * Exception for 428 Precondition Required responses
+ *
+ * @see https://tools.ietf.org/html/rfc6585
+ * @package Requests
+ */
+
+/**
+ * Exception for 428 Precondition Required responses
+ *
+ * @see https://tools.ietf.org/html/rfc6585
+ * @package Requests
+ */
+class Requests_Exception_HTTP_428 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 428;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Precondition Required';
+}
+The file 429.php contains:
+<?php
+/**
+ * Exception for 429 Too Many Requests responses
+ *
+ * @see https://tools.ietf.org/html/draft-nottingham-http-new-status-04
+ * @package Requests
+ */
+
+/**
+ * Exception for 429 Too Many Requests responses
+ *
+ * @see https://tools.ietf.org/html/draft-nottingham-http-new-status-04
+ * @package Requests
+ */
+class Requests_Exception_HTTP_429 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 429;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Too Many Requests';
+}
+The file 431.php contains:
+<?php
+/**
+ * Exception for 431 Request Header Fields Too Large responses
+ *
+ * @see https://tools.ietf.org/html/rfc6585
+ * @package Requests
+ */
+
+/**
+ * Exception for 431 Request Header Fields Too Large responses
+ *
+ * @see https://tools.ietf.org/html/rfc6585
+ * @package Requests
+ */
+class Requests_Exception_HTTP_431 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 431;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Request Header Fields Too Large';
+}
+The file 500.php contains:
+<?php
+/**
+ * Exception for 500 Internal Server Error responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 500 Internal Server Error responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_500 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 500;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Internal Server Error';
+}
+The file 501.php contains:
+<?php
+/**
+ * Exception for 501 Not Implemented responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 501 Not Implemented responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_501 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 501;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Not Implemented';
+}
+The file 502.php contains:
+<?php
+/**
+ * Exception for 502 Bad Gateway responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 502 Bad Gateway responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_502 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 502;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Bad Gateway';
+}
+The file 503.php contains:
+<?php
+/**
+ * Exception for 503 Service Unavailable responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 503 Service Unavailable responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_503 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 503;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Service Unavailable';
+}
+The file 504.php contains:
+<?php
+/**
+ * Exception for 504 Gateway Timeout responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 504 Gateway Timeout responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_504 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 504;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Gateway Timeout';
+}
+The file 505.php contains:
+<?php
+/**
+ * Exception for 505 HTTP Version Not Supported responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 505 HTTP Version Not Supported responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_505 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 505;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'HTTP Version Not Supported';
+}
+The file 511.php contains:
+<?php
+/**
+ * Exception for 511 Network Authentication Required responses
+ *
+ * @see https://tools.ietf.org/html/rfc6585
+ * @package Requests
+ */
+
+/**
+ * Exception for 511 Network Authentication Required responses
+ *
+ * @see https://tools.ietf.org/html/rfc6585
+ * @package Requests
+ */
+class Requests_Exception_HTTP_511 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 511;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Network Authentication Required';
+}
+The file my-directory-list.txt contains:
+The file 304.php contains:
+<?php
+/**
+ * Exception for 304 Not Modified responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 304 Not Modified responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_304 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 304;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Not Modified';
+}
+The file 305.php contains:
+<?php
+/**
+ * Exception for 305 Use Proxy responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 305 Use Proxy responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_305 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 305;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Use Proxy';
+}
+
+The file 306.php contains:
+<?php
+/**
+ * Exception for 306 Switch Proxy responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 306 Switch Proxy responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_306 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 306;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Switch Proxy';
+}
+
+The file 400.php contains:
+<?php
+/**
+ * Exception for 400 Bad Request responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 400 Bad Request responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_400 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 400;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Bad Request';
+}
+The file 401.php contains:
+<?php
+/**
+ * Exception for 401 Unauthorized responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 401 Unauthorized responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_401 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 401;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Unauthorized';
+}
+The file 402.php contains:
+<?php
+/**
+ * Exception for 402 Payment Required responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 402 Payment Required responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_402 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 402;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Payment Required';
+}
+The file 403.php contains:
+<?php
+/**
+ * Exception for 403 Forbidden responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 403 Forbidden responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_403 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 403;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Forbidden';
+}
+The file 404.php contains:
+<?php
+/**
+ * Exception for 404 Not Found responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 404 Not Found responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_404 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 404;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Not Found';
+}
+The file 405.php contains:
+<?php
+/**
+ * Exception for 405 Method Not Allowed responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 405 Method Not Allowed responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_405 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 405;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Method Not Allowed';
+}
+The file 406.php contains:
+<?php
+/**
+ * Exception for 406 Not Acceptable responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 406 Not Acceptable responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_406 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 406;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Not Acceptable';
+}
+The file 407.php contains:
+<?php
+/**
+ * Exception for 407 Proxy Authentication Required responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 407 Proxy Authentication Required responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_407 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 407;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Proxy Authentication Required';
+}
+The file 408.php contains:
+<?php
+/**
+ * Exception for 408 Request Timeout responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 408 Request Timeout responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_408 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 408;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Request Timeout';
+}
+The file 409.php contains:
+<?php
+/**
+ * Exception for 409 Conflict responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 409 Conflict responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_409 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 409;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Conflict';
+}
+The file 410.php contains:
+<?php
+/**
+ * Exception for 410 Gone responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 410 Gone responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_410 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 410;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Gone';
+}
+The file 411.php contains:
+<?php
+/**
+ * Exception for 411 Length Required responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 411 Length Required responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_411 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 411;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Length Required';
+}
+The file 412.php contains:
+<?php
+/**
+ * Exception for 412 Precondition Failed responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 412 Precondition Failed responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_412 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 412;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Precondition Failed';
+}
+The file 413.php contains:
+<?php
+/**
+ * Exception for 413 Request Entity Too Large responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 413 Request Entity Too Large responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_413 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 413;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Request Entity Too Large';
+}
+The file 414.php contains:
+<?php
+/**
+ * Exception for 414 Request-URI Too Large responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 414 Request-URI Too Large responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_414 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 414;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Request-URI Too Large';
+}
+The file 415.php contains:
+<?php
+/**
+ * Exception for 415 Unsupported Media Type responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for 415 Unsupported Media Type responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_415 extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer
+	 */
+	protected $code = 415;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Unsupported Media Type';
+}
+The file 416.php contains:
+
+The file Unknown.php contains:
+<?php
+/**
+ * Exception for unknown status responses
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for unknown status responses
+ *
+ * @package Requests
+ */
+class Requests_Exception_HTTP_Unknown extends Requests_Exception_HTTP {
+	/**
+	 * HTTP status code
+	 *
+	 * @var integer|bool Code if available, false if an error occurred
+	 */
+	protected $code = 0;
+
+	/**
+	 * Reason phrase
+	 *
+	 * @var string
+	 */
+	protected $reason = 'Unknown';
+
+	/**
+	 * Create a new exception
+	 *
+	 * If `$data` is an instance of {@see Requests_Response}, uses the status
+	 * code from it. Otherwise, sets as 0
+	 *
+	 * @param string|null $reason Reason phrase
+	 * @param mixed $data Associated data
+	 */
+	public function __construct($reason = null, $data = null) {
+		if ($data instanceof Requests_Response) {
+			$this->code = $data->status_code;
+		}
+
+		parent::__construct($reason, $data);
+	}
+}

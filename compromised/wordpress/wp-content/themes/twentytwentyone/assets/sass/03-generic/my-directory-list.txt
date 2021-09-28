@@ -1,0 +1,851 @@
+The file breakpoints.scss contains:
+/**
+ * Responsive Styles
+ */
+
+/**
+ * Required Variables
+ */
+
+$default_width: 610px;
+$max_content_width: 1240px;
+$breakpoint_sm: 482px;
+$breakpoint_md: 592px;
+$breakpoint_lg: 652px;
+$breakpoint_xl: 822px;
+$breakpoint_xxl: 1024px;
+
+// Responsive breakpoints mixin
+@mixin media( $res ) {
+
+	@if mobile-only == $res {
+		@media only screen and (max-width: #{$breakpoint_sm - 1}) {
+			@content;
+		}
+	}
+
+	@if mobile == $res {
+		@media only screen and (min-width: #{$breakpoint_sm}) {
+			@content;
+		}
+	}
+
+	@if tablet-only == $res {
+		@media only screen and (max-width: #{$breakpoint_md - 1}) {
+			@content;
+		}
+	}
+
+	@if tablet == $res {
+		@media only screen and (min-width: #{$breakpoint_md}) {
+			@content;
+		}
+	}
+
+	@if laptop-only == $res {
+		@media only screen and (max-width: #{$breakpoint_lg - 1}) {
+			@content;
+		}
+	}
+
+	@if laptop == $res {
+		@media only screen and (min-width: #{$breakpoint_lg}) {
+			@content;
+		}
+	}
+
+	@if desktop-only == $res {
+		@media only screen and (max-width: #{$breakpoint_xl - 1}) {
+			@content;
+		}
+	}
+
+	@if desktop == $res {
+		@media only screen and (min-width: #{$breakpoint_xl}) {
+			@content;
+		}
+	}
+
+	@if wide-only == $res {
+		@media only screen and (max-width: #{$breakpoint_xxl - 1}) {
+			@content;
+		}
+	}
+
+	@if wide == $res {
+		@media only screen and (min-width: #{$breakpoint_xxl}) {
+			@content;
+		}
+	}
+}
+
+/**
+ * Root Media Query Variables
+ */
+:root {
+	--responsive--spacing-horizontal: calc(2 * var(--global--spacing-horizontal) * 0.6);
+	--responsive--aligndefault-width: calc(100vw - var(--responsive--spacing-horizontal));
+	--responsive--alignwide-width: calc(100vw - var(--responsive--spacing-horizontal));
+	--responsive--alignfull-width: 100%;
+	--responsive--alignright-margin: var(--global--spacing-horizontal);
+	--responsive--alignleft-margin: var(--global--spacing-horizontal);
+}
+
+@include media(mobile) {
+
+	:root {
+		--responsive--aligndefault-width: min(calc(100vw - 4 * var(--global--spacing-horizontal)), #{$default_width});
+		--responsive--alignwide-width: calc(100vw - 4 * var(--global--spacing-horizontal));
+		--responsive--alignright-margin: calc(0.5 * (100vw - var(--responsive--aligndefault-width)));
+		--responsive--alignleft-margin: calc(0.5 * (100vw - var(--responsive--aligndefault-width)));
+	}
+}
+
+@include media(desktop) {
+
+	:root {
+		--responsive--aligndefault-width: min(calc(100vw - 8 * var(--global--spacing-horizontal)), #{$default_width});
+		--responsive--alignwide-width: min(calc(100vw - 8 * var(--global--spacing-horizontal)), #{$max_content_width});
+	}
+}
+
+/**
+ * Extends
+ */
+%responsive-aligndefault-width {
+	max-width: var(--responsive--aligndefault-width);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+%responsive-alignwide-width {
+	max-width: var(--responsive--alignwide-width);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+%responsive-alignfull-width-mobile {
+	max-width: var(--responsive--alignfull-width);
+	width: var(--responsive--alignfull-width);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+@include media(mobile) {
+	%responsive-alignfull-width {
+		max-width: var(--responsive--alignfull-width);
+		width: auto;
+		margin-left: auto;
+		margin-right: auto;
+	}
+}
+
+%responsive-alignwide-width-nested {
+	margin-left: auto;
+	margin-right: auto;
+	width: var(--responsive--alignwide-width);
+	max-width: var(--responsive--alignfull-width);
+}
+
+%responsive-alignfull-width-nested {
+	margin-left: auto;
+	margin-right: auto;
+	width: calc(var(--responsive--alignfull-width) - calc(2 * var(--responsive--spacing-horizontal)));
+	max-width: var(--responsive--alignfull-width);
+}
+
+@include media(desktop) {
+	%responsive-alignfull-width-nested {
+		margin-left: auto;
+		margin-right: auto;
+		width: calc(var(--responsive--alignfull-width) - calc(4 * var(--responsive--spacing-horizontal)));
+		max-width: var(--responsive--alignfull-width);
+	}
+}
+
+
+%responsive-alignleft-mobile {
+
+	/*rtl:ignore*/
+	margin-left: 0;
+
+	/*rtl:ignore*/
+	margin-right: var(--responsive--spacing-horizontal);
+}
+
+@include media(mobile) {
+	%responsive-alignleft {
+
+		/*rtl:ignore*/
+		margin-left: var(--responsive--alignleft-margin);
+
+		/*rtl:ignore*/
+		margin-right: var(--global--spacing-horizontal);
+	}
+}
+
+%responsive-alignright-mobile {
+
+	/*rtl:ignore*/
+	margin-left: var(--responsive--spacing-horizontal);
+
+	/*rtl:ignore*/
+	margin-right: 0;
+}
+
+@include media(mobile) {
+	%responsive-alignright {
+
+		/*rtl:ignore*/
+		margin-left: var(--global--spacing-horizontal);
+
+		/*rtl:ignore*/
+		margin-right: var(--responsive--alignright-margin);
+	}
+}
+
+// Output
+.default-max-width {
+	@extend %responsive-aligndefault-width;
+}
+
+.wide-max-width {
+	@extend %responsive-alignwide-width;
+}
+
+.full-max-width {
+	@extend %responsive-alignfull-width;
+}
+
+The file clearings.scss contains:
+.clear:before,
+.clear:after,
+.entry-content:before,
+.entry-content:after,
+.comment-content:before,
+.comment-content:after,
+.site-header:before,
+.site-header:after,
+.site-content:before,
+.site-content:after,
+.site-footer:before,
+.site-footer:after {
+	content: "";
+	display: table;
+	table-layout: fixed;
+}
+
+.clear:after,
+.entry-content:after,
+.comment-content:after,
+.site-header:after,
+.site-content:after,
+.site-footer:after {
+	clear: both;
+}
+
+The file my-directory-list.txt contains:
+
+The file normalize.scss contains:
+/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
+
+/* Document
+   ========================================================================== */
+
+/**
+ * 1. Correct the line height in all browsers.
+ * 2. Prevent adjustments of font size after orientation changes in iOS.
+ */
+
+html {
+	line-height: 1.15; /* 1 */
+	-webkit-text-size-adjust: 100%; /* 2 */
+}
+
+/* Sections
+   ========================================================================== */
+
+/**
+ * Remove the margin in all browsers.
+ */
+
+body {
+	margin: 0;
+}
+
+/**
+ * Render the `main` element consistently in IE.
+ */
+
+main {
+	display: block;
+}
+
+/**
+ * Correct the font size and margin on `h1` elements within `section` and
+ * `article` contexts in Chrome, Firefox, and Safari.
+ */
+
+h1 {
+	font-size: 2em;
+	margin: 0.67em 0;
+}
+
+/* Grouping content
+   ========================================================================== */
+
+/**
+ * 1. Add the correct box sizing in Firefox.
+ * 2. Show the overflow in Edge and IE.
+ */
+
+hr {
+	box-sizing: content-box; /* 1 */
+	height: 0; /* 1 */
+	overflow: visible; /* 2 */
+}
+
+/**
+ * 1. Correct the inheritance and scaling of font size in all browsers.
+ * 2. Correct the odd `em` font sizing in all browsers.
+ */
+
+pre {
+	font-family: monospace; /* 1 */
+	font-size: 1em; /* 2 */
+}
+
+/* Text-level semantics
+   ========================================================================== */
+
+/**
+ * Remove the gray background on active links in IE 10.
+ */
+
+a {
+	background-color: transparent;
+	text-decoration-thickness: 1px;
+}
+
+/**
+ * 1. Remove the bottom border in Chrome 57-
+ * 2. Add the correct text decoration in Chrome, Edge, IE, Opera, and Safari.
+ */
+
+abbr[title] {
+	border-bottom: none; /* 1 */
+	text-decoration: underline; /* 2 */
+	text-decoration-style: dotted; /* 2 */
+}
+
+/**
+ * Add the correct font weight in Chrome, Edge, and Safari.
+ */
+
+b,
+strong {
+	font-weight: bolder;
+}
+
+/**
+ * 1. Correct the inheritance and scaling of font size in all browsers.
+ * 2. Correct the odd `em` font sizing in all browsers.
+ */
+
+code,
+kbd,
+samp {
+	font-family: monospace; /* 1 */
+	font-size: 1em; /* 2 */
+}
+
+/**
+ * Add the correct font size in all browsers.
+ */
+
+small {
+	font-size: 80%;
+}
+
+/**
+ * Prevent `sub` and `sup` elements from affecting the line height in
+ * all browsers.
+ */
+
+sub,
+sup {
+	font-size: 75%;
+	line-height: 0;
+	position: relative;
+	vertical-align: baseline;
+}
+
+sub {
+	bottom: -0.25em;
+}
+
+sup {
+	top: -0.5em;
+}
+
+/* Embedded content
+   ========================================================================== */
+
+/**
+ * Remove the border on images inside links in IE 10.
+ */
+
+img {
+	border-style: none;
+}
+
+/* Forms
+   ========================================================================== */
+
+/**
+ * 1. Change the font styles in all browsers.
+ * 2. Remove the margin in Firefox and Safari.
+ */
+
+button,
+input,
+optgroup,
+select,
+textarea {
+	font-family: inherit; /* 1 */
+	font-size: 100%; /* 1 */
+	line-height: 1.15; /* 1 */
+	margin: 0; /* 2 */
+}
+
+/**
+ * Show the overflow in IE.
+ * 1. Show the overflow in Edge.
+ */
+
+button,
+input { /* 1 */
+	overflow: visible;
+}
+
+/**
+ * Remove the inheritance of text transform in Edge, Firefox, and IE.
+ * 1. Remove the inheritance of text transform in Firefox.
+ */
+
+button,
+select { /* 1 */
+	text-transform: none;
+}
+
+/**
+ * Correct the inability to style clickable types in iOS and Safari.
+ */
+
+button,
+[type="button"],
+[type="reset"],
+[type="submit"] {
+	-webkit-appearance: button;
+}
+
+/**
+ * Remove the inner border and padding in Firefox.
+ */
+
+button::-moz-focus-inner,
+[type="button"]::-moz-focus-inner,
+[type="reset"]::-moz-focus-inner,
+[type="submit"]::-moz-focus-inner {
+	border-style: none;
+	padding: 0;
+}
+
+/**
+ * Restore the focus styles unset by the previous rule.
+ */
+
+button:-moz-focusring,
+[type="button"]:-moz-focusring,
+[type="reset"]:-moz-focusring,
+[type="submit"]:-moz-focusring {
+	outline: 1px dotted ButtonText;
+}
+
+/**
+ * Correct the padding in Firefox.
+ */
+
+fieldset {
+	padding: 0.35em 0.75em 0.625em;
+}
+
+/**
+ * 1. Correct the text wrapping in Edge and IE.
+ * 2. Correct the color inheritance from `fieldset` elements in IE.
+ * 3. Remove the padding so developers are not caught out when they zero out
+ *    `fieldset` elements in all browsers.
+ */
+
+legend {
+	box-sizing: border-box; /* 1 */
+	color: inherit; /* 2 */
+	display: table; /* 1 */
+	max-width: 100%; /* 1 */
+	padding: 0; /* 3 */
+	white-space: normal; /* 1 */
+}
+
+/**
+ * Add the correct vertical alignment in Chrome, Firefox, and Opera.
+ */
+
+progress {
+	vertical-align: baseline;
+}
+
+/**
+ * Remove the default vertical scrollbar in IE 10+.
+ */
+
+textarea {
+	overflow: auto;
+}
+
+/**
+ * 1. Add the correct box sizing in IE 10.
+ * 2. Remove the padding in IE 10.
+ */
+
+[type="checkbox"],
+[type="radio"] {
+	box-sizing: border-box; /* 1 */
+	padding: 0; /* 2 */
+}
+
+/**
+ * Correct the cursor style of increment and decrement buttons in Chrome.
+ */
+
+[type="number"]::-webkit-inner-spin-button,
+[type="number"]::-webkit-outer-spin-button {
+	height: auto;
+}
+
+/**
+ * 1. Correct the odd appearance in Chrome and Safari.
+ * 2. Correct the outline style in Safari.
+ */
+
+[type="search"] {
+	-webkit-appearance: textfield; /* 1 */
+	outline-offset: -2px; /* 2 */
+}
+
+/**
+ * Remove the inner padding in Chrome and Safari on macOS.
+ */
+
+[type="search"]::-webkit-search-decoration {
+	-webkit-appearance: none;
+}
+
+/**
+ * 1. Correct the inability to style clickable types in iOS and Safari.
+ * 2. Change font properties to `inherit` in Safari.
+ */
+
+::-webkit-file-upload-button {
+	-webkit-appearance: button; /* 1 */
+	font: inherit; /* 2 */
+}
+
+/* Interactive
+   ========================================================================== */
+
+/*
+ * Add the correct display in Edge, IE 10+, and Firefox.
+ */
+
+details {
+	display: block;
+}
+
+/*
+ * Add the correct display in all browsers.
+ */
+
+summary {
+	display: list-item;
+}
+
+/* Misc
+   ========================================================================== */
+
+/**
+ * Add the correct display in IE 10+.
+ */
+
+template {
+	display: none;
+}
+
+/**
+ * Add the correct display in IE 10.
+ */
+
+[hidden] {
+	display: none;
+}
+
+The file reset.scss contains:
+/**
+ * Reset specific elements to make them easier to style in other contexts.
+ */
+
+html,
+body,
+p,
+ol,
+ul,
+li,
+dl,
+dt,
+dd,
+blockquote,
+figure,
+fieldset,
+form,
+legend,
+textarea,
+pre,
+iframe,
+hr,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	padding: 0;
+	margin: 0;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-font-smoothing: antialiased;
+}
+
+/**
+ * Apply generic border-box to all elements.
+ * See:
+ * https://css-tricks.com/inheriting-box-sizing-probably-slightly-better-best-practice/
+ */
+
+html {
+
+	/* Apply border-box across the entire page. */
+	box-sizing: border-box;
+
+	// HTML resets
+	font-family: var(--global--font-secondary);
+	line-height: var(--global--line-height-body);
+}
+
+/**
+ * Relax the definition a bit, to allow components to override it manually.
+ */
+* {
+
+	&,
+	&::before,
+	&::after {
+		box-sizing: inherit;
+	}
+}
+
+// body resets
+body {
+	font-size: var(--global--font-size-base);
+	font-weight: normal;
+	color: var(--global--color-primary);
+	text-align: left;
+	background-color: var(--global--color-background);
+}
+
+
+button {
+	cursor: pointer;
+}
+
+The file vertical-margins.scss contains:
+/**
+ * Site Structure
+ *
+ * - Set vertical margins and responsive widths on
+ *   top-level wrappers and content wrappers
+ * - `--global--width-content` is a responsive variable
+ * - See: globals/_global-width-responsive.scss
+ */
+
+/**
+ * Top Level Wrappers (header, main, footer)
+ * - Set vertical padding and horizontal margins
+ */
+.site-header,
+.site-main,
+.widget-area,
+.site-footer {
+	padding-top: var(--global--spacing-vertical);
+	padding-bottom: var(--global--spacing-vertical);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.site-header {
+	padding-top: calc(0.75 * var(--global--spacing-vertical));
+	padding-bottom: calc(2 * var(--global--spacing-vertical));
+
+	@include media(mobile) {
+		padding-bottom: calc(3 * var(--global--spacing-vertical));
+	}
+}
+
+/**
+ * Site-main children wrappers
+ * - Add double vertical margins here for clearer hierarchy
+ */
+.site-main > * {
+	margin-top: calc(3 * var(--global--spacing-vertical));
+	margin-bottom: calc(3 * var(--global--spacing-vertical));
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+/**
+ * Set the default maximum responsive content-width
+ */
+.default-max-width {
+	@extend %responsive-aligndefault-width;
+}
+
+/**
+ * Set the wide maximum responsive content-width
+ */
+.wide-max-width {
+	@extend %responsive-alignwide-width;
+}
+
+/**
+ * Set the full maximum responsive content-width
+ */
+.full-max-width {
+	@extend %responsive-alignfull-width-mobile;
+	@extend %responsive-alignfull-width;
+}
+
+/*
+ * Block & non-gutenberg content wrappers
+ * - Set margins
+ */
+.entry-header,
+.post-thumbnail,
+.entry-content,
+.entry-footer,
+.author-bio {
+	margin-top: var(--global--spacing-vertical);
+	margin-right: auto;
+	margin-bottom: var(--global--spacing-vertical);
+	margin-left: auto;
+}
+
+/*
+ * Block & non-gutenberg content wrapper children
+ * - Sets spacing-vertical margin logic
+ */
+.site-main > article > *, // apply vertical margins to article level
+.site-main > .not-found > *, // apply vertical margins to article level
+.entry-content > *,
+[class*="inner-container"] > *,
+.wp-block-template-part > * {
+
+	margin-top: calc(0.666 * var(--global--spacing-vertical));
+	margin-bottom: calc(0.666 * var(--global--spacing-vertical));
+
+	@include media(mobile) {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.site-footer > *,
+.widget-area > * {
+	margin-top: calc(0.666 * var(--global--spacing-vertical));
+	margin-bottom: calc(0.666 * var(--global--spacing-vertical));
+
+	@include media(mobile) {
+		margin-top: var(--global--spacing-vertical);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+}
+
+/*
+ * Block & non-gutenberg content wrapper children
+ * - Sets spacing-unit margins
+ */
+//.site-header > *, // Removed, to align site title and menu.
+.entry-header > *,
+.post-thumbnail > *,
+.page-content > *,
+.comment-content > *,
+.widget > * {
+	margin-top: var(--global--spacing-unit);
+	margin-bottom: var(--global--spacing-unit);
+
+	&:first-child {
+		margin-top: 0;
+	}
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+
+/*
+ * .entry-content children specific controls
+ * - Adds special margin overrides for alignment utility classes
+ */
+.entry-content > * {
+
+	&.alignleft,
+	&.alignright,
+	&.alignleft:first-child + *,
+	&.alignright:first-child + *,
+	&.alignfull.has-background {
+		margin-top: 0;
+	}
+
+	&:last-child,
+	&.alignfull.has-background {
+		margin-bottom: 0;
+	}
+
+	/* Reset alignleft and alignright margins after alignfull */
+	&.alignfull + .alignleft,
+	&.alignfull + .alignright {
+		margin-top: var(--global--spacing-vertical);
+	}
+}
+

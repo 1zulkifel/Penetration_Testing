@@ -1,0 +1,815 @@
+The file activate.php contains:
+<div class="akismet-box">
+	<?php Akismet::view( 'title' ); ?>
+	<?php Akismet::view( 'setup' );?>
+</div>
+<br/>
+<div class="akismet-box">
+	<?php Akismet::view( 'enter' );?>
+</div>
+The file config.php contains:
+<div id="akismet-plugin-container">
+	<div class="akismet-masthead">
+		<div class="akismet-masthead__inside-container">
+			<div class="akismet-masthead__logo-container">
+				<img class="akismet-masthead__logo" src="<?php echo esc_url( plugins_url( '../_inc/img/logo-full-2x.png', __FILE__ ) ); ?>" alt="Akismet" />
+			</div>
+		</div>
+	</div>
+	<div class="akismet-lower">
+		<?php if ( Akismet::get_api_key() ) { ?>
+			<?php Akismet_Admin::display_status(); ?>
+		<?php } ?>
+		<?php if ( ! empty( $notices ) ) { ?>
+			<?php foreach ( $notices as $notice ) { ?>
+				<?php Akismet::view( 'notice', $notice ); ?>
+			<?php } ?>
+		<?php } ?>
+		<?php if ( $stat_totals && isset( $stat_totals['all'] ) && (int) $stat_totals['all']->spam > 0 ) : ?>
+			<div class="akismet-card">
+				<div class="akismet-section-header">
+					<div class="akismet-section-header__label">
+						<span><?php esc_html_e( 'Statistics' , 'akismet'); ?></span>
+					</div>
+					<div class="akismet-section-header__actions">
+						<a href="<?php echo esc_url( Akismet_Admin::get_page_url( 'stats' ) ); ?>">
+							<?php esc_html_e( 'Detailed Stats' , 'akismet');?>
+						</a>
+					</div>
+				</div>
+				
+				<div class="akismet-new-snapshot">
+					<iframe allowtransparency="true" scrolling="no" frameborder="0" style="width: 100%; height: 220px; overflow: hidden;" src="<?php printf( '//akismet.com/web/1.0/snapshot.php?blog=%s&api_key=%s&height=200&locale=%s', urlencode( get_option( 'home' ) ), Akismet::get_api_key(), get_locale() );?>"></iframe>
+					<ul>
+						<li>
+							<h3><?php esc_html_e( 'Past six months' , 'akismet');?></h3>
+							<span><?php echo number_format( $stat_totals['6-months']->spam );?></span>
+							<?php echo esc_html( _n( 'Spam blocked', 'Spam blocked', $stat_totals['6-months']->spam, 'akismet' ) ); ?>
+						</li>
+						<li>
+							<h3><?php esc_html_e( 'All time' , 'akismet');?></h3>
+							<span><?php echo number_format( $stat_totals['all']->spam );?></span>
+							<?php echo esc_html( _n( 'Spam blocked', 'Spam blocked', $stat_totals['all']->spam, 'akismet' ) ); ?>
+						</li>
+						<li>
+							<h3><?php esc_html_e( 'Accuracy' , 'akismet');?></h3>
+							<span><?php echo floatval( $stat_totals['all']->accuracy ); ?>%</span>
+							<?php printf( _n( '%s missed spam', '%s missed spam', $stat_totals['all']->missed_spam, 'akismet' ), number_format( $stat_totals['all']->missed_spam ) ); ?>
+							|
+							<?php printf( _n( '%s false positive', '%s false positives', $stat_totals['all']->false_positives, 'akismet' ), number_format( $stat_totals['all']->false_positives ) ); ?>
+						</li>
+					</ul>
+				</div>
+			</div>
+		<?php endif;?>
+
+		<?php if ( $akismet_user ):?>
+			<div class="akismet-card">
+				<div class="akismet-section-header">
+					<div class="akismet-section-header__label">
+						<span><?php esc_html_e( 'Settings' , 'akismet'); ?></span>
+					</div>
+				</div>
+
+				<div class="inside">
+					<form action="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>" method="POST">
+						<table cellspacing="0" class="akismet-settings">
+							<tbody>
+								<?php if ( ! Akismet::predefined_api_key() ) { ?>
+								<tr>
+									<th class="akismet-api-key" width="10%" align="left" scope="row"><?php esc_html_e('API Key', 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<span class="api-key"><input id="key" name="key" type="text" size="15" value="<?php echo esc_attr( get_option('wordpress_api_key') ); ?>" class="<?php echo esc_attr( 'regular-text code ' . $akismet_user->status ); ?>"></span>
+									</td>
+								</tr>
+								<?php } ?>
+								<?php if ( isset( $_GET['ssl_status'] ) ) { ?>
+									<tr>
+										<th align="left" scope="row"><?php esc_html_e( 'SSL Status', 'akismet' ); ?></th>
+										<td></td>
+										<td align="left">
+											<p>
+												<?php
+
+												if ( ! wp_http_supports( array( 'ssl' ) ) ) {
+													?><b><?php esc_html_e( 'Disabled.', 'akismet' ); ?></b> <?php esc_html_e( 'Your Web server cannot make SSL requests; contact your Web host and ask them to add support for SSL requests.', 'akismet' ); ?><?php
+												}
+												else {
+													$ssl_disabled = get_option( 'akismet_ssl_disabled' );
+
+													if ( $ssl_disabled ) {
+														?><b><?php esc_html_e( 'Temporarily disabled.', 'akismet' ); ?></b> <?php esc_html_e( 'Akismet encountered a problem with a previous SSL request and disabled it temporarily. It will begin using SSL for requests again shortly.', 'akismet' ); ?><?php
+													}
+													else {
+														?><b><?php esc_html_e( 'Enabled.', 'akismet' ); ?></b> <?php esc_html_e( 'All systems functional.', 'akismet' ); ?><?php
+													}
+												}
+
+												?>
+											</p>
+										</td>
+									</tr>
+								<?php } ?>
+								<tr>
+									<th align="left" scope="row"><?php esc_html_e('Comments', 'akismet');?></th>
+									<td></td>
+									<td align="left">
+										<p>
+											<label for="akismet_show_user_comments_approved" title="<?php esc_attr_e( 'Show approved comments' , 'akismet'); ?>">
+												<input
+													name="akismet_show_user_comments_approved"
+													id="akismet_show_user_comments_approved"
+													value="1"
+													type="checkbox"
+													<?php
+													
+													// If the option isn't set, or if it's enabled ('1'), or if it was enabled a long time ago ('true'), check the checkbox.
+													checked( true, ( in_array( get_option( 'akismet_show_user_comments_approved' ), array( false, '1', 'true' ), true ) ) );
+													
+													?>
+													/>
+												<?php esc_html_e( 'Show the number of approved comments beside each comment author', 'akismet' ); ?>
+											</label>
+										</p>
+									</td>
+								</tr>
+								<tr>
+									<th class="strictness" align="left" scope="row"><?php esc_html_e('Strictness', 'akismet'); ?></th>
+									<td></td>
+									<td align="left">
+										<fieldset><legend class="screen-reader-text"><span><?php esc_html_e('Akismet anti-spam strictness', 'akismet'); ?></span></legend>
+										<p><label for="akismet_strictness_1"><input type="radio" name="akismet_strictness" id="akismet_strictness_1" value="1" <?php checked('1', get_option('akismet_strictness')); ?> /> <?php esc_html_e('Silently discard the worst and most pervasive spam so I never see it.', 'akismet'); ?></label></p>
+										<p><label for="akismet_strictness_0"><input type="radio" name="akismet_strictness" id="akismet_strictness_0" value="0" <?php checked('0', get_option('akismet_strictness')); ?> /> <?php esc_html_e('Always put spam in the Spam folder for review.', 'akismet'); ?></label></p>
+										</fieldset>
+										<span class="akismet-note"><strong><?php esc_html_e('Note:', 'akismet');?></strong>
+										<?php
+									
+										$delete_interval = max( 1, intval( apply_filters( 'akismet_delete_comment_interval', 15 ) ) );
+									
+										printf(
+											_n(
+												'Spam in the <a href="%1$s">spam folder</a> older than 1 day is deleted automatically.',
+												'Spam in the <a href="%1$s">spam folder</a> older than %2$d days is deleted automatically.',
+												$delete_interval,
+												'akismet'
+											),
+											admin_url( 'edit-comments.php?comment_status=spam' ),
+											$delete_interval
+										);
+									
+										?>
+									</td>
+								</tr>
+								<tr>
+									<th class="comment-form-privacy-notice" align="left" scope="row"><?php esc_html_e('Privacy', 'akismet'); ?></th>
+									<td></td>
+									<td align="left">
+										<fieldset><legend class="screen-reader-text"><span><?php esc_html_e('Akismet privacy notice', 'akismet'); ?></span></legend>
+										<p><label for="akismet_comment_form_privacy_notice_display"><input type="radio" name="akismet_comment_form_privacy_notice" id="akismet_comment_form_privacy_notice_display" value="display" <?php checked('display', get_option('akismet_comment_form_privacy_notice')); ?> /> <?php esc_html_e('Display a privacy notice under your comment forms.', 'akismet'); ?></label></p>
+										<p><label for="akismet_comment_form_privacy_notice_hide"><input type="radio" name="akismet_comment_form_privacy_notice" id="akismet_comment_form_privacy_notice_hide" value="hide" <?php echo in_array( get_option('akismet_comment_form_privacy_notice'), array('display', 'hide') ) ? checked('hide', get_option('akismet_comment_form_privacy_notice'), false) : 'checked="checked"'; ?> /> <?php esc_html_e('Do not display privacy notice.', 'akismet'); ?></label></p>
+										</fieldset>
+										<span class="akismet-note"><?php esc_html_e( 'To help your site with transparency under privacy laws like the GDPR, Akismet can display a notice to your users under your comment forms. This feature is disabled by default, however, you can turn it on above.', 'akismet' );?></span>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="akismet-card-actions">
+							<?php if ( ! Akismet::predefined_api_key() ) { ?>
+							<div id="delete-action">
+								<a class="submitdelete deletion" href="<?php echo esc_url( Akismet_Admin::get_page_url( 'delete_key' ) ); ?>"><?php esc_html_e('Disconnect this account', 'akismet'); ?></a>
+							</div>
+							<?php } ?>
+							<?php wp_nonce_field(Akismet_Admin::NONCE) ?>
+							<div id="publishing-action">
+								<input type="hidden" name="action" value="enter-key">
+								<input type="submit" name="submit" id="submit" class="akismet-button akismet-could-be-primary" value="<?php esc_attr_e('Save Changes', 'akismet');?>">
+							</div>
+							<div class="clear"></div>
+						</div>
+					</form>
+				</div>
+			</div>
+			
+			<?php if ( ! Akismet::predefined_api_key() ) { ?>
+				<div class="akismet-card">
+					<div class="akismet-section-header">
+						<div class="akismet-section-header__label">
+							<span><?php esc_html_e( 'Account' , 'akismet'); ?></span>
+						</div>
+					</div>
+				
+					<div class="inside">
+						<table cellspacing="0" border="0" class="akismet-settings">
+							<tbody>
+								<tr>
+									<th scope="row" align="left"><?php esc_html_e( 'Subscription Type' , 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<p><?php echo esc_html( $akismet_user->account_name ); ?></p>
+									</td>
+								</tr>
+								<tr>
+									<th scope="row" align="left"><?php esc_html_e( 'Status' , 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<p><?php 
+											if ( 'cancelled' == $akismet_user->status ) :
+												esc_html_e( 'Cancelled', 'akismet' ); 
+											elseif ( 'suspended' == $akismet_user->status ) :
+												esc_html_e( 'Suspended', 'akismet' );
+											elseif ( 'missing' == $akismet_user->status ) :
+												esc_html_e( 'Missing', 'akismet' ); 
+											elseif ( 'no-sub' == $akismet_user->status ) :
+												esc_html_e( 'No Subscription Found', 'akismet' );
+											else :
+												esc_html_e( 'Active', 'akismet' );  
+											endif; ?></p>
+									</td>
+								</tr>
+								<?php if ( $akismet_user->next_billing_date ) : ?>
+								<tr>
+									<th scope="row" align="left"><?php esc_html_e( 'Next Billing Date' , 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<p><?php echo date( 'F j, Y', $akismet_user->next_billing_date ); ?></p>
+									</td>
+								</tr>
+								<?php endif; ?>
+							</tbody>
+						</table>
+						<div class="akismet-card-actions">
+							<div id="publishing-action">
+								<?php Akismet::view( 'get', array( 'text' => ( $akismet_user->account_type == 'free-api-key' && $akismet_user->status == 'active' ? __( 'Upgrade' , 'akismet') : __( 'Change' , 'akismet') ), 'redirect' => 'upgrade' ) ); ?>
+							</div>
+							<div class="clear"></div>
+						</div>
+					</div>
+				</div>
+			<?php } ?>
+		<?php endif;?>
+	</div>
+</div>
+
+The file connect-jp.php contains:
+<?php
+
+//phpcs:disable VariableAnalysis
+// There are "undefined" variables here because they're defined in the code that includes this file as a template.
+
+?>
+<div class="akismet-box">
+	<?php Akismet::view( 'title' ); ?>
+	<div class="akismet-jp-connect">
+		<h3><?php esc_html_e( 'Connect with Jetpack', 'akismet' ); ?></h3><?php
+		if ( in_array( $akismet_user->status, array( 'no-sub', 'missing' ) ) ) {?>
+		<p><?php esc_html_e( 'Use your Jetpack connection to set up Akismet.', 'akismet' ); ?></p>
+		<form name="akismet_activate" id="akismet_activate" action="https://akismet.com/get/" method="post" class="akismet-right" target="_blank">
+			<input type="hidden" name="passback_url" value="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>"/>
+			<input type="hidden" name="blog" value="<?php echo esc_url( get_option( 'home' ) ); ?>"/>
+			<input type="hidden" name="auto-connect" value="<?php echo esc_attr( $akismet_user->ID ); ?>"/>
+			<input type="hidden" name="redirect" value="plugin-signup"/>
+			<input type="submit" class="akismet-button akismet-is-primary" value="<?php esc_attr_e( 'Connect with Jetpack' , 'akismet' ); ?>"/>
+		</form>
+		<?php echo get_avatar( $akismet_user->user_email, null, null, null, array( 'class' => 'akismet-jetpack-gravatar' ) ); ?>
+		<p><?php
+			/* translators: %s is the WordPress.com username */
+            echo sprintf( esc_html( __( 'You are connected as %s.', 'akismet' ) ), '<b>' . esc_html( $akismet_user->user_login ) . '</b>' ); ?><br /><span class="akismet-jetpack-email"><?php echo esc_html( $akismet_user->user_email ); ?></span></p>
+		<?php } elseif ( $akismet_user->status == 'cancelled' ) { ?>
+		<p><?php esc_html_e( 'Use your Jetpack connection to set up Akismet.', 'akismet' ); ?></p>
+		<form name="akismet_activate" id="akismet_activate" action="https://akismet.com/get/" method="post" class="akismet-right" target="_blank">
+			<input type="hidden" name="passback_url" value="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>"/>
+			<input type="hidden" name="blog" value="<?php echo esc_url( get_option( 'home' ) ); ?>"/>
+			<input type="hidden" name="user_id" value="<?php echo esc_attr( $akismet_user->ID ); ?>"/>
+			<input type="hidden" name="redirect" value="upgrade"/>
+			<input type="submit" class="akismet-button akismet-is-primary" value="<?php esc_attr_e( 'Connect with Jetpack' , 'akismet' ); ?>"/>
+		</form>
+		<?php echo get_avatar( $akismet_user->user_email, null, null, null, array( 'class' => 'akismet-jetpack-gravatar' ) ); ?>
+		<p><?php
+			/* translators: %s is the WordPress.com email address */
+            echo esc_html( sprintf( __( 'Your subscription for %s is cancelled.' , 'akismet' ), $akismet_user->user_email ) ); ?><br /><span class="akismet-jetpack-email"><?php echo esc_html( $akismet_user->user_email ); ?></span></p>
+		<?php } elseif ( $akismet_user->status == 'suspended' ) { ?>
+		<div class="akismet-right">
+			<p><a href="https://akismet.com/contact" class="akismet-button akismet-is-primary"><?php esc_html_e( 'Contact Akismet support' , 'akismet' ); ?></a></p>
+		</div>		
+		<p>
+			<span class="akismet-alert-text"><?php
+				/* translators: %s is the WordPress.com email address */
+                echo esc_html( sprintf( __( 'Your subscription for %s is suspended.' , 'akismet' ), $akismet_user->user_email ) ); ?></span>
+			<?php esc_html_e( 'No worries! Get in touch and we&#8217;ll sort this out.', 'akismet' ); ?>
+		</p>
+		<?php } else { // ask do they want to use akismet account found using jetpack wpcom connection ?>			
+		<p><?php esc_html_e( 'Use your Jetpack connection to set up Akismet.', 'akismet' ); ?></p>
+		<form name="akismet_use_wpcom_key" action="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>" method="post" id="akismet-activate" class="akismet-right">
+			<input type="hidden" name="key" value="<?php echo esc_attr( $akismet_user->api_key );?>"/>
+			<input type="hidden" name="action" value="enter-key">
+			<?php wp_nonce_field( Akismet_Admin::NONCE ) ?>
+			<input type="submit" class="akismet-button akismet-is-primary" value="<?php esc_attr_e( 'Connect with Jetpack' , 'akismet' ); ?>"/>
+		</form>
+		<?php echo get_avatar( $akismet_user->user_email, null, null, null, array( 'class' => 'akismet-jetpack-gravatar' ) ); ?>
+		<p><?php
+			/* translators: %s is the WordPress.com username */
+            echo sprintf( esc_html( __( 'You are connected as %s.', 'akismet' ) ), '<b>' . esc_html( $akismet_user->user_login ) . '</b>' ); ?><br /><span class="akismet-jetpack-email"><?php echo esc_html( $akismet_user->user_email ); ?></span></p>
+		<?php }	?>
+	</div>
+	<div class="akismet-ak-connect">
+		<?php Akismet::view( 'setup' );?>
+	</div>
+	<div class="centered akismet-toggles">
+		<a href="#" class="toggle-jp-connect"><?php esc_html_e( 'Connect with Jetpack' ); ?></a>
+		<a href="#" class="toggle-ak-connect"><?php esc_html_e( 'Set up a different account' ); ?></a>
+	</div>
+</div>
+<br/>
+<div class="akismet-box">
+	<?php Akismet::view( 'enter' );?>
+</div>
+The file enter.php contains:
+<div class="akismet-enter-api-key-box centered">
+	<a href="#"><?php esc_html_e( 'Manually enter an API key' ); ?></a>
+	<div class="enter-api-key">
+		<form action="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>" method="post">
+			<?php wp_nonce_field( Akismet_Admin::NONCE ) ?>
+			<input type="hidden" name="action" value="enter-key">
+			<p style="width: 100%; display: flex; flex-wrap: nowrap; box-sizing: border-box;">
+				<input id="key" name="key" type="text" size="15" value="" placeholder="<?php esc_attr_e( 'Enter your API key' , 'akismet' ); ?>" class="regular-text code" style="flex-grow: 1; margin-right: 1rem;">
+				<input type="submit" name="submit" id="submit" class="akismet-button" value="<?php esc_attr_e( 'Connect with API key', 'akismet' );?>">
+			</p>
+		</form>
+	</div>
+</div>
+The file get.php contains:
+<?php
+
+//phpcs:disable VariableAnalysis
+// There are "undefined" variables here because they're defined in the code that includes this file as a template.
+
+?>
+<form name="akismet_activate" action="https://akismet.com/get/" method="POST" target="_blank">
+	<input type="hidden" name="passback_url" value="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>"/>
+	<input type="hidden" name="blog" value="<?php echo esc_url( get_option( 'home' ) ); ?>"/>
+	<input type="hidden" name="redirect" value="<?php echo isset( $redirect ) ? $redirect : 'plugin-signup'; ?>"/>
+	<input type="submit" class="<?php echo isset( $classes ) && count( $classes ) > 0 ? implode( ' ', $classes ) : 'akismet-button';?>" value="<?php echo esc_attr( $text ); ?>"/>
+</form>
+The file my-directory-list.txt contains:
+The file activate.php contains:
+<div class="akismet-box">
+	<?php Akismet::view( 'title' ); ?>
+	<?php Akismet::view( 'setup' );?>
+</div>
+<br/>
+<div class="akismet-box">
+	<?php Akismet::view( 'enter' );?>
+</div>
+The file config.php contains:
+<div id="akismet-plugin-container">
+	<div class="akismet-masthead">
+		<div class="akismet-masthead__inside-container">
+			<div class="akismet-masthead__logo-container">
+				<img class="akismet-masthead__logo" src="<?php echo esc_url( plugins_url( '../_inc/img/logo-full-2x.png', __FILE__ ) ); ?>" alt="Akismet" />
+			</div>
+		</div>
+	</div>
+	<div class="akismet-lower">
+		<?php if ( Akismet::get_api_key() ) { ?>
+			<?php Akismet_Admin::display_status(); ?>
+		<?php } ?>
+		<?php if ( ! empty( $notices ) ) { ?>
+			<?php foreach ( $notices as $notice ) { ?>
+				<?php Akismet::view( 'notice', $notice ); ?>
+			<?php } ?>
+		<?php } ?>
+		<?php if ( $stat_totals && isset( $stat_totals['all'] ) && (int) $stat_totals['all']->spam > 0 ) : ?>
+			<div class="akismet-card">
+				<div class="akismet-section-header">
+					<div class="akismet-section-header__label">
+						<span><?php esc_html_e( 'Statistics' , 'akismet'); ?></span>
+					</div>
+					<div class="akismet-section-header__actions">
+						<a href="<?php echo esc_url( Akismet_Admin::get_page_url( 'stats' ) ); ?>">
+							<?php esc_html_e( 'Detailed Stats' , 'akismet');?>
+						</a>
+					</div>
+				</div>
+				
+				<div class="akismet-new-snapshot">
+					<iframe allowtransparency="true" scrolling="no" frameborder="0" style="width: 100%; height: 220px; overflow: hidden;" src="<?php printf( '//akismet.com/web/1.0/snapshot.php?blog=%s&api_key=%s&height=200&locale=%s', urlencode( get_option( 'home' ) ), Akismet::get_api_key(), get_locale() );?>"></iframe>
+					<ul>
+						<li>
+							<h3><?php esc_html_e( 'Past six months' , 'akismet');?></h3>
+							<span><?php echo number_format( $stat_totals['6-months']->spam );?></span>
+							<?php echo esc_html( _n( 'Spam blocked', 'Spam blocked', $stat_totals['6-months']->spam, 'akismet' ) ); ?>
+						</li>
+						<li>
+							<h3><?php esc_html_e( 'All time' , 'akismet');?></h3>
+							<span><?php echo number_format( $stat_totals['all']->spam );?></span>
+							<?php echo esc_html( _n( 'Spam blocked', 'Spam blocked', $stat_totals['all']->spam, 'akismet' ) ); ?>
+						</li>
+						<li>
+							<h3><?php esc_html_e( 'Accuracy' , 'akismet');?></h3>
+							<span><?php echo floatval( $stat_totals['all']->accuracy ); ?>%</span>
+							<?php printf( _n( '%s missed spam', '%s missed spam', $stat_totals['all']->missed_spam, 'akismet' ), number_format( $stat_totals['all']->missed_spam ) ); ?>
+							|
+							<?php printf( _n( '%s false positive', '%s false positives', $stat_totals['all']->false_positives, 'akismet' ), number_format( $stat_totals['all']->false_positives ) ); ?>
+						</li>
+					</ul>
+				</div>
+			</div>
+		<?php endif;?>
+
+		<?php if ( $akismet_user ):?>
+			<div class="akismet-card">
+				<div class="akismet-section-header">
+					<div class="akismet-section-header__label">
+						<span><?php esc_html_e( 'Settings' , 'akismet'); ?></span>
+					</div>
+				</div>
+
+				<div class="inside">
+					<form action="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>" method="POST">
+						<table cellspacing="0" class="akismet-settings">
+							<tbody>
+								<?php if ( ! Akismet::predefined_api_key() ) { ?>
+								<tr>
+									<th class="akismet-api-key" width="10%" align="left" scope="row"><?php esc_html_e('API Key', 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<span class="api-key"><input id="key" name="key" type="text" size="15" value="<?php echo esc_attr( get_option('wordpress_api_key') ); ?>" class="<?php echo esc_attr( 'regular-text code ' . $akismet_user->status ); ?>"></span>
+									</td>
+								</tr>
+								<?php } ?>
+								<?php if ( isset( $_GET['ssl_status'] ) ) { ?>
+									<tr>
+										<th align="left" scope="row"><?php esc_html_e( 'SSL Status', 'akismet' ); ?></th>
+										<td></td>
+										<td align="left">
+											<p>
+												<?php
+
+												if ( ! wp_http_supports( array( 'ssl' ) ) ) {
+													?><b><?php esc_html_e( 'Disabled.', 'akismet' ); ?></b> <?php esc_html_e( 'Your Web server cannot make SSL requests; contact your Web host and ask them to add support for SSL requests.', 'akismet' ); ?><?php
+												}
+												else {
+													$ssl_disabled = get_option( 'akismet_ssl_disabled' );
+
+													if ( $ssl_disabled ) {
+														?><b><?php esc_html_e( 'Temporarily disabled.', 'akismet' ); ?></b> <?php esc_html_e( 'Akismet encountered a problem with a previous SSL request and disabled it temporarily. It will begin using SSL for requests again shortly.', 'akismet' ); ?><?php
+													}
+													else {
+														?><b><?php esc_html_e( 'Enabled.', 'akismet' ); ?></b> <?php esc_html_e( 'All systems functional.', 'akismet' ); ?><?php
+													}
+												}
+
+												?>
+											</p>
+										</td>
+									</tr>
+								<?php } ?>
+								<tr>
+									<th align="left" scope="row"><?php esc_html_e('Comments', 'akismet');?></th>
+									<td></td>
+									<td align="left">
+										<p>
+											<label for="akismet_show_user_comments_approved" title="<?php esc_attr_e( 'Show approved comments' , 'akismet'); ?>">
+												<input
+													name="akismet_show_user_comments_approved"
+													id="akismet_show_user_comments_approved"
+													value="1"
+													type="checkbox"
+													<?php
+													
+													// If the option isn't set, or if it's enabled ('1'), or if it was enabled a long time ago ('true'), check the checkbox.
+													checked( true, ( in_array( get_option( 'akismet_show_user_comments_approved' ), array( false, '1', 'true' ), true ) ) );
+													
+													?>
+													/>
+												<?php esc_html_e( 'Show the number of approved comments beside each comment author', 'akismet' ); ?>
+											</label>
+										</p>
+									</td>
+								</tr>
+								<tr>
+									<th class="strictness" align="left" scope="row"><?php esc_html_e('Strictness', 'akismet'); ?></th>
+									<td></td>
+									<td align="left">
+										<fieldset><legend class="screen-reader-text"><span><?php esc_html_e('Akismet anti-spam strictness', 'akismet'); ?></span></legend>
+										<p><label for="akismet_strictness_1"><input type="radio" name="akismet_strictness" id="akismet_strictness_1" value="1" <?php checked('1', get_option('akismet_strictness')); ?> /> <?php esc_html_e('Silently discard the worst and most pervasive spam so I never see it.', 'akismet'); ?></label></p>
+										<p><label for="akismet_strictness_0"><input type="radio" name="akismet_strictness" id="akismet_strictness_0" value="0" <?php checked('0', get_option('akismet_strictness')); ?> /> <?php esc_html_e('Always put spam in the Spam folder for review.', 'akismet'); ?></label></p>
+										</fieldset>
+										<span class="akismet-note"><strong><?php esc_html_e('Note:', 'akismet');?></strong>
+										<?php
+									
+										$delete_interval = max( 1, intval( apply_filters( 'akismet_delete_comment_interval', 15 ) ) );
+									
+										printf(
+											_n(
+												'Spam in the <a href="%1$s">spam folder</a> older than 1 day is deleted automatically.',
+												'Spam in the <a href="%1$s">spam folder</a> older than %2$d days is deleted automatically.',
+												$delete_interval,
+												'akismet'
+											),
+											admin_url( 'edit-comments.php?comment_status=spam' ),
+											$delete_interval
+										);
+									
+										?>
+									</td>
+								</tr>
+								<tr>
+									<th class="comment-form-privacy-notice" align="left" scope="row"><?php esc_html_e('Privacy', 'akismet'); ?></th>
+									<td></td>
+									<td align="left">
+										<fieldset><legend class="screen-reader-text"><span><?php esc_html_e('Akismet privacy notice', 'akismet'); ?></span></legend>
+										<p><label for="akismet_comment_form_privacy_notice_display"><input type="radio" name="akismet_comment_form_privacy_notice" id="akismet_comment_form_privacy_notice_display" value="display" <?php checked('display', get_option('akismet_comment_form_privacy_notice')); ?> /> <?php esc_html_e('Display a privacy notice under your comment forms.', 'akismet'); ?></label></p>
+										<p><label for="akismet_comment_form_privacy_notice_hide"><input type="radio" name="akismet_comment_form_privacy_notice" id="akismet_comment_form_privacy_notice_hide" value="hide" <?php echo in_array( get_option('akismet_comment_form_privacy_notice'), array('display', 'hide') ) ? checked('hide', get_option('akismet_comment_form_privacy_notice'), false) : 'checked="checked"'; ?> /> <?php esc_html_e('Do not display privacy notice.', 'akismet'); ?></label></p>
+										</fieldset>
+										<span class="akismet-note"><?php esc_html_e( 'To help your site with transparency under privacy laws like the GDPR, Akismet can display a notice to your users under your comment forms. This feature is disabled by default, however, you can turn it on above.', 'akismet' );?></span>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="akismet-card-actions">
+							<?php if ( ! Akismet::predefined_api_key() ) { ?>
+							<div id="delete-action">
+								<a class="submitdelete deletion" href="<?php echo esc_url( Akismet_Admin::get_page_url( 'delete_key' ) ); ?>"><?php esc_html_e('Disconnect this account', 'akismet'); ?></a>
+							</div>
+							<?php } ?>
+							<?php wp_nonce_field(Akismet_Admin::NONCE) ?>
+							<div id="publishing-action">
+								<input type="hidden" name="action" value="enter-key">
+								<input type="submit" name="submit" id="submit" class="akismet-button akismet-could-be-primary" value="<?php esc_attr_e('Save Changes', 'akismet');?>">
+							</div>
+							<div class="clear"></div>
+						</div>
+					</form>
+				</div>
+			</div>
+			
+			<?php if ( ! Akismet::predefined_api_key() ) { ?>
+				<div class="akismet-card">
+					<div class="akismet-section-header">
+						<div class="akismet-section-header__label">
+							<span><?php esc_html_e( 'Account' , 'akismet'); ?></span>
+						</div>
+					</div>
+				
+					<div class="inside">
+						<table cellspacing="0" border="0" class="akismet-settings">
+							<tbody>
+								<tr>
+									<th scope="row" align="left"><?php esc_html_e( 'Subscription Type' , 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<p><?php echo esc_html( $akismet_user->account_name ); ?></p>
+									</td>
+								</tr>
+								<tr>
+									<th scope="row" align="left"><?php esc_html_e( 'Status' , 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<p><?php 
+											if ( 'cancelled' == $akismet_user->status ) :
+												esc_html_e( 'Cancelled', 'akismet' ); 
+											elseif ( 'suspended' == $akismet_user->status ) :
+												esc_html_e( 'Suspended', 'akismet' );
+											elseif ( 'missing' == $akismet_user->status ) :
+												esc_html_e( 'Missing', 'akismet' ); 
+											elseif ( 'no-sub' == $akismet_user->status ) :
+												esc_html_e( 'No Subscription Found', 'akismet' );
+											else :
+												esc_html_e( 'Active', 'akismet' );  
+											endif; ?></p>
+									</td>
+								</tr>
+								<?php if ( $akismet_user->next_billing_date ) : ?>
+								<tr>
+									<th scope="row" align="left"><?php esc_html_e( 'Next Billing Date' , 'akismet');?></th>
+									<td width="5%"/>
+									<td align="left">
+										<p><?php echo date( 'F j, Y', $akismet_user->next_billing_date ); ?></p>
+									</td>
+								</tr>
+								<?php endif; ?>
+							</tbody>
+						</table>
+						<div class="akismet-card-actions">
+							<div id="publishing-action">
+								<?php Akismet::view( 'get', array( 'text' => ( $akismet_user->account_type == 'free-api-key' && $akismet_user->status == 'active' ? __( 'Upgrade' , 'akismet') : __( 'Change' , 'akismet') ), 'redirect' => 'upgrade' ) ); ?>
+							</div>
+							<div class="clear"></div>
+						</div>
+					</div>
+				</div>
+			<?php } ?>
+		<?php endif;?>
+	</div>
+</div>
+
+The file notice.php contains:
+<?php
+
+//phpcs:disable VariableAnalysis
+// There are "undefined" variables here because they're defined in the code that includes this file as a template.
+
+?>
+<?php if ( $type == 'plugin' ) :?>
+<div class="updated" id="akismet_setup_prompt">
+	<form name="akismet_activate" action="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>" method="POST">
+		<div class="akismet_activate">
+			<div class="aa_a">A</div>
+			<div class="aa_button_container">
+				<div class="aa_button_border">
+					<input type="submit" class="aa_button" value="<?php esc_attr_e( 'Set up your Akismet account', 'akismet' ); ?>" />
+				</div>
+			</div>
+			<div class="aa_description"><?php _e('<strong>Almost done</strong> - configure Akismet and say goodbye to spam', 'akismet');?></div>
+		</div>
+	</form>
+</div>
+<?php elseif ( $type == 'spam-check' ) :?>
+<div class="notice notice-warning">
+	<p><strong><?php esc_html_e( 'Akismet has detected a problem.', 'akismet' );?></strong></p>
+	<p><?php esc_html_e( 'Some comments have not yet been checked for spam by Akismet. They have been temporarily held for moderation and will automatically be rechecked later.', 'akismet' ); ?></p>
+	<?php if ( $link_text ) { ?>
+		<p><?php echo $link_text; ?></p>
+	<?php } ?>
+</div>
+<?php elseif ( $type == 'alert' ) :?>
+<div class='error'>
+	<p><strong><?php printf( esc_html__( 'Akismet Error Code: %s', 'akismet' ), $code ); ?></strong></p>
+	<p><?php echo esc_html( $msg ); ?></p>
+	<p><?php
+
+	/* translators: the placeholder is a clickable URL that leads to more information regarding an error code. */
+	printf( esc_html__( 'For more information: %s' , 'akismet'), '<a href="https://akismet.com/errors/' . $code . '">https://akismet.com/errors/' . $code . '</a>' );
+
+	?>
+	</p>
+</div>
+<?php elseif ( $type == 'notice' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status failed"><?php echo $notice_header; ?></h3>
+	<p class="akismet-description">
+		<?php echo $notice_text; ?>
+	</p>
+</div>
+<?php elseif ( $type == 'missing-functions' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status failed"><?php esc_html_e('Network functions are disabled.', 'akismet'); ?></h3>
+	<p class="akismet-description"><?php printf( __('Your web host or server administrator has disabled PHP&#8217;s <code>gethostbynamel</code> function.  <strong>Akismet cannot work correctly until this is fixed.</strong>  Please contact your web host or firewall administrator and give them <a href="%s" target="_blank">this information about Akismet&#8217;s system requirements</a>.', 'akismet'), 'https://blog.akismet.com/akismet-hosting-faq/'); ?></p>
+</div>
+<?php elseif ( $type == 'servers-be-down' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status failed"><?php esc_html_e("Your site can&#8217;t connect to the Akismet servers.", 'akismet'); ?></h3>
+	<p class="akismet-description"><?php printf( __('Your firewall may be blocking Akismet from connecting to its API. Please contact your host and refer to <a href="%s" target="_blank">our guide about firewalls</a>.', 'akismet'), 'https://blog.akismet.com/akismet-hosting-faq/'); ?></p>
+</div>
+<?php elseif ( $type == 'active-dunning' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status"><?php esc_html_e("Please update your payment information.", 'akismet'); ?></h3>
+	<p class="akismet-description"><?php printf( __('We cannot process your payment. Please <a href="%s" target="_blank">update your payment details</a>.', 'akismet'), 'https://akismet.com/account/'); ?></p>
+</div>
+<?php elseif ( $type == 'cancelled' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status"><?php esc_html_e("Your Akismet plan has been cancelled.", 'akismet'); ?></h3>
+	<p class="akismet-description"><?php printf( __('Please visit your <a href="%s" target="_blank">Akismet account page</a> to reactivate your subscription.', 'akismet'), 'https://akismet.com/account/'); ?></p>
+</div>
+<?php elseif ( $type == 'suspended' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status failed"><?php esc_html_e("Your Akismet subscription is suspended.", 'akismet'); ?></h3>
+	<p class="akismet-description"><?php printf( __('Please contact <a href="%s" target="_blank">Akismet support</a> for assistance.', 'akismet'), 'https://akismet.com/contact/'); ?></p>
+</div>
+<?php elseif ( $type == 'active-notice' && $time_saved ) :?>
+<div class="akismet-alert akismet-active">
+	<h3 class="akismet-key-status"><?php echo esc_html( $time_saved ); ?></h3>
+	<p class="akismet-description"><?php printf( __('You can help us fight spam and upgrade your account by <a href="%s" target="_blank">contributing a token amount</a>.', 'akismet'), 'https://akismet.com/account/upgrade/'); ?></p>
+</div>
+<?php elseif ( $type == 'missing' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status failed"><?php esc_html_e( 'There is a problem with your API key.', 'akismet'); ?></h3>
+	<p class="akismet-description"><?php printf( __('Please contact <a href="%s" target="_blank">Akismet support</a> for assistance.', 'akismet'), 'https://akismet.com/contact/'); ?></p>
+</div>
+<?php elseif ( $type == 'no-sub' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status failed"><?php esc_html_e( 'You don&#8217;t have an Akismet plan.', 'akismet'); ?></h3>
+	<p class="akismet-description">
+		<?php printf( __( 'In 2012, Akismet began using subscription plans for all accounts (even free ones). A plan has not been assigned to your account, and we&#8217;d appreciate it if you&#8217;d <a href="%s" target="_blank">sign into your account</a> and choose one.', 'akismet'), 'https://akismet.com/account/upgrade/' ); ?>
+		<br /><br />
+		<?php printf( __( 'Please <a href="%s" target="_blank">contact our support team</a> with any questions.', 'akismet' ), 'https://akismet.com/contact/' ); ?>
+	</p>
+</div>
+<?php elseif ( $type == 'new-key-valid' ) :
+	global $wpdb;
+	
+	$check_pending_link = false;
+	
+	$at_least_one_comment_in_moderation = !! $wpdb->get_var( "SELECT comment_ID FROM {$wpdb->comments} WHERE comment_approved = '0' LIMIT 1" );
+	
+	if ( $at_least_one_comment_in_moderation)  {
+		$check_pending_link = 'edit-comments.php?akismet_recheck=' . wp_create_nonce( 'akismet_recheck' );
+	}
+	
+	?>
+<div class="akismet-alert akismet-active">
+	<h3 class="akismet-key-status"><?php esc_html_e( 'Akismet is now protecting your site from spam. Happy blogging!', 'akismet' ); ?></h3>
+	<?php if ( $check_pending_link ) { ?>
+		<p class="akismet-description"><?php printf( __( 'Would you like to <a href="%s">check pending comments</a>?', 'akismet' ), esc_url( $check_pending_link ) ); ?></p>
+	<?php } ?>
+</div>
+<?php elseif ( $type == 'new-key-invalid' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status"><?php esc_html_e( 'The key you entered is invalid. Please double-check it.' , 'akismet'); ?></h3>
+</div>
+<?php elseif ( $type == 'existing-key-invalid' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status"><?php esc_html_e( 'Your API key is no longer valid. Please enter a new key or contact support@akismet.com.' , 'akismet'); ?></h3>
+</div>
+<?php elseif ( $type == 'new-key-failed' ) :?>
+<div class="akismet-alert akismet-critical">
+	<h3 class="akismet-key-status"><?php esc_html_e( 'The API key you entered could not be verified.' , 'akismet'); ?></h3>
+	<p class="akismet-description"><?php printf( __('The connection to akismet.com could not be established. Please refer to <a href="%s" target="_blank">our guide about firewalls</a> and check your server configuration.', 'akismet'), 'https://blog.akismet.com/akismet-hosting-faq/'); ?></p>
+</div>
+<?php elseif ( $type == 'limit-reached' && in_array( $level, array( 'yellow', 'red' ) ) ) :?>
+<div class="akismet-alert akismet-critical">
+	<?php if ( $level == 'yellow' ): ?>
+	<h3 class="akismet-key-status failed"><?php esc_html_e( 'You&#8217;re using your Akismet key on more sites than your Pro subscription allows.', 'akismet' ); ?></h3>
+	<p class="akismet-description">
+		<?php printf( __( 'Your Pro subscription allows the use of Akismet on only one site. Please <a href="%s" target="_blank">purchase additional Pro subscriptions</a> or upgrade to an Enterprise subscription that allows the use of Akismet on unlimited sites.', 'akismet' ), 'https://docs.akismet.com/billing/add-more-sites/' ); ?>
+		<br /><br />
+		<?php printf( __( 'Please <a href="%s" target="_blank">contact our support team</a> with any questions.', 'akismet' ), 'https://akismet.com/contact/'); ?>
+	</p>
+	<?php elseif ( $level == 'red' ): ?>
+	<h3 class="akismet-key-status failed"><?php esc_html_e( 'You&#8217;re using Akismet on far too many sites for your Pro subscription.', 'akismet' ); ?></h3>
+	<p class="akismet-description">
+		<?php printf( __( 'To continue your service, <a href="%s" target="_blank">upgrade to an Enterprise subscription</a>, which covers an unlimited number of sites.', 'akismet'), 'https://akismet.com/account/upgrade/' ); ?>
+		<br /><br />
+		<?php printf( __( 'Please <a href="%s" target="_blank">contact our support team</a> with any questions.', 'akismet' ), 'https://akismet.com/contact/'); ?>
+	</p>
+	<?php endif; ?>
+</div>
+<?php endif;?>
+The file predefined.php contains:
+<div class="akismet-box">
+	<h2><?php esc_html_e( 'Manual Configuration', 'akismet' ); ?></h2>
+	<p>
+		<?php
+
+		/* translators: %s is the wp-config.php file */
+		echo sprintf( esc_html__( 'An Akismet API key has been defined in the %s file for this site.', 'akismet' ), '<code>wp-config.php</code>' );
+
+		?>
+	</p>
+</div>
+The file setup.php contains:
+<div class="akismet-setup-instructions">
+	<p><?php esc_html_e( 'Set up your Akismet account to enable spam filtering on this site.', 'akismet' ); ?></p>
+	<?php Akismet::view( 'get', array( 'text' => __( 'Set up your Akismet account' , 'akismet' ), 'classes' => array( 'akismet-button', 'akismet-is-primary' ) ) ); ?>
+</div>
+
+The file start.php contains:
+<?php
+
+//phpcs:disable VariableAnalysis
+// There are "undefined" variables here because they're defined in the code that includes this file as a template.
+
+?>
+<div id="akismet-plugin-container">
+	<div class="akismet-masthead">
+		<div class="akismet-masthead__inside-container">
+			<div class="akismet-masthead__logo-container">
+				<img class="akismet-masthead__logo" src="<?php echo esc_url( plugins_url( '../_inc/img/logo-full-2x.png', __FILE__ ) ); ?>" alt="Akismet" />
+			</div>
+		</div>
+	</div>
+	<div class="akismet-lower">
+		<?php Akismet_Admin::display_status();?>
+		<div class="akismet-boxes">
+			<?php
+
+			if ( Akismet::predefined_api_key() ) {
+				Akismet::view( 'predefined' );
+			} elseif ( $akismet_user && in_array( $akismet_user->status, array( 'active', 'active-dunning', 'no-sub', 'missing', 'cancelled', 'suspended' ) ) ) {
+				Akismet::view( 'connect-jp', compact( 'akismet_user' ) );
+			} else {
+				Akismet::view( 'activate' );
+			}
+
+			?>
+		</div>
+	</div>
+</div>
+The file stats.php contains:
+<div id="akismet-plugin-container">
+	<div class="akismet-masthead">
+		<div class="akismet-masthead__inside-container">
+			<a href="<?php echo esc_url( Akismet_Admin::get_page_url() ); ?>" class="akismet-right"><?php esc_html_e( 'Anti-Spam Settings', 'akismet' ); ?></a>
+			<div class="akismet-masthead__logo-container">
+				<img class="akismet-masthead__logo" src="<?php echo esc_url( plugins_url( '../_inc/img/logo-full-2x.png', __FILE__ ) ); ?>" alt="Akismet" />
+			</div>
+		</div>
+	</div>
+	<iframe src="<?php echo esc_url( sprintf( '//akismet.com/web/1.0/user-stats.php?blog=%s&api_key=%s&locale=%s', urlencode( get_option( 'home' ) ), Akismet::get_api_key(), get_locale() ) ); ?>" width="100%" height="2500px" frameborder="0"></iframe>
+</div>
+The file title.php contains:
+<div class="centered akismet-box-header">
+	<h2><?php esc_html_e( 'Eliminate spam from your site', 'akismet' ); ?></h2>
+</div>

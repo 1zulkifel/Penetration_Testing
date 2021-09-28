@@ -1,0 +1,119 @@
+The file BLAKE2b.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class BLAKE2b extends \ParagonIE_Sodium_Core_BLAKE2b
+{
+
+}
+
+The file ChaCha20.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class ChaCha20 extends \ParagonIE_Sodium_Core_ChaCha20
+{
+
+}
+
+The file Curve25519.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class Curve25519 extends \ParagonIE_Sodium_Core_Curve25519
+{
+
+}
+
+The file Ed25519.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class Ed25519 extends \ParagonIE_Sodium_Core_Ed25519
+{
+
+}
+
+The file HChaCha20.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class HChaCha20 extends \ParagonIE_Sodium_Core_HChaCha20
+{
+
+}
+
+The file HSalsa20.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class HSalsa20 extends \ParagonIE_Sodium_Core_HSalsa20
+{
+
+}
+
+The file my-directory-list.txt contains:
+
+The file Poly1305.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class Poly1305 extends \ParagonIE_Sodium_Core_Poly1305
+{
+
+}
+
+The file Salsa20.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class Salsa20 extends \ParagonIE_Sodium_Core_Salsa20
+{
+
+}
+
+The file SipHash.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class SipHash extends \ParagonIE_Sodium_Core_SipHash
+{
+
+}
+
+The file Util.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class Util extends \ParagonIE_Sodium_Core_Util
+{
+
+}
+
+The file X25519.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class X25519 extends \ParagonIE_Sodium_Core_X25519
+{
+
+}
+
+The file XChaCha20.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class XChaCha20 extends \ParagonIE_Sodium_Core_XChaCha20
+{
+
+}
+
+The file Xsalsa20.php contains:
+<?php
+namespace ParagonIE\Sodium\Core;
+
+class Xsalsa20 extends \ParagonIE_Sodium_Core_XSalsa20
+{
+
+}
+

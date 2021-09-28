@@ -1,0 +1,13 @@
+The file my-directory-list.txt contains:
+
+The file _editor.scss contains:
+pre.wp-block-verse {
+	padding: 0;
+	color: currentColor;
+}
+
+The file _style.scss contains:
+.wp-block-verse {
+	font-family: var(--entry-content--font-family);
+}
+

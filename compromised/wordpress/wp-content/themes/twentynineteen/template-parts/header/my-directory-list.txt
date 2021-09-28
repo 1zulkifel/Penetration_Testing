@@ -1,0 +1,112 @@
+The file entry-header.php contains:
+<?php
+/**
+ * Displays the post header
+ *
+ * @package WordPress
+ * @subpackage Twenty_Nineteen
+ * @since Twenty Nineteen 1.0
+ */
+
+$discussion = ! is_page() && twentynineteen_can_show_post_thumbnail() ? twentynineteen_get_discussion_data() : null; ?>
+
+<?php the_title( '<h1 class="entry-title">', '</h1>' ); ?>
+
+<?php if ( ! is_page() ) : ?>
+<div class="entry-meta">
+	<?php twentynineteen_posted_by(); ?>
+	<?php twentynineteen_posted_on(); ?>
+	<span class="comment-count">
+		<?php
+		if ( ! empty( $discussion ) ) {
+			twentynineteen_discussion_avatars_list( $discussion->authors );
+		}
+		?>
+		<?php twentynineteen_comment_count(); ?>
+	</span>
+	<?php
+		// Edit post link.
+		edit_post_link(
+			sprintf(
+				wp_kses(
+					/* translators: %s: Post title. Only visible to screen readers. */
+					__( 'Edit <span class="screen-reader-text">%s</span>', 'twentynineteen' ),
+					array(
+						'span' => array(
+							'class' => array(),
+						),
+					)
+				),
+				get_the_title()
+			),
+			'<span class="edit-link">' . twentynineteen_get_icon_svg( 'edit', 16 ),
+			'</span>'
+		);
+	?>
+</div><!-- .entry-meta -->
+<?php endif; ?>
+
+The file my-directory-list.txt contains:
+
+The file site-branding.php contains:
+<?php
+/**
+ * Displays header site branding
+ *
+ * @package WordPress
+ * @subpackage Twenty_Nineteen
+ * @since Twenty Nineteen 1.0
+ */
+?>
+<div class="site-branding">
+
+	<?php if ( has_custom_logo() ) : ?>
+		<div class="site-logo"><?php the_custom_logo(); ?></div>
+	<?php endif; ?>
+	<?php $blog_info = get_bloginfo( 'name' ); ?>
+	<?php if ( ! empty( $blog_info ) ) : ?>
+		<?php if ( is_front_page() && is_home() ) : ?>
+			<h1 class="site-title"><a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home"><?php bloginfo( 'name' ); ?></a></h1>
+		<?php else : ?>
+			<p class="site-title"><a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home"><?php bloginfo( 'name' ); ?></a></p>
+		<?php endif; ?>
+	<?php endif; ?>
+
+	<?php
+	$description = get_bloginfo( 'description', 'display' );
+	if ( $description || is_customize_preview() ) :
+		?>
+			<p class="site-description">
+				<?php echo $description; ?>
+			</p>
+	<?php endif; ?>
+	<?php if ( has_nav_menu( 'menu-1' ) ) : ?>
+		<nav id="site-navigation" class="main-navigation" aria-label="<?php esc_attr_e( 'Top Menu', 'twentynineteen' ); ?>">
+			<?php
+			wp_nav_menu(
+				array(
+					'theme_location' => 'menu-1',
+					'menu_class'     => 'main-menu',
+					'items_wrap'     => '<ul id="%1$s" class="%2$s">%3$s</ul>',
+				)
+			);
+			?>
+		</nav><!-- #site-navigation -->
+	<?php endif; ?>
+	<?php if ( has_nav_menu( 'social' ) ) : ?>
+		<nav class="social-navigation" aria-label="<?php esc_attr_e( 'Social Links Menu', 'twentynineteen' ); ?>">
+			<?php
+			wp_nav_menu(
+				array(
+					'theme_location' => 'social',
+					'menu_class'     => 'social-links-menu',
+					'link_before'    => '<span class="screen-reader-text">',
+					'link_after'     => '</span>' . twentynineteen_get_icon_svg( 'link' ),
+					'depth'          => 1,
+				)
+			);
+			?>
+		</nav><!-- .social-navigation -->
+	<?php endif; ?>
+</div><!-- .site-branding -->
+

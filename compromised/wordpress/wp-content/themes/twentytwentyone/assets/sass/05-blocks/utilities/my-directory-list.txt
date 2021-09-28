@@ -1,0 +1,361 @@
+The file my-directory-list.txt contains:
+
+The file _editor.scss contains:
+/**
+* Editor Post Title
+* - Needs a special styles
+*/
+
+// Post title style
+.wp-block.editor-post-title__block {
+	border-bottom: 3px solid var(--global--color-border);
+	padding-bottom: calc(2 * var(--global--spacing-vertical));
+	margin-bottom: calc(3 * var(--global--spacing-vertical));
+	max-width: var(--responsive--alignwide-width);
+
+	.editor-post-title__input {
+		color: var(--global--color-secondary);
+		font-family: var(--heading--font-family);
+		font-size: var(--global--font-size-page-title);
+		font-weight: var(--heading--font-weight-page-title);
+		line-height: var(--heading--line-height-h1);
+	}
+}
+
+// Editor UI font styles
+.wp-block.block-editor-default-block-appender > textarea {
+	font-family: var(--global--font-secondary);
+	font-size: var(--global--font-size-md);
+}
+
+// Gutenberg text color options
+.has-primary-color[class] {
+	color: var(--global--color-primary);
+}
+
+.has-secondary-color[class] {
+	color: var(--global--color-secondary);
+}
+
+// Gutenberg background-color options
+.has-background {
+
+	a,
+	p,
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		color: currentColor;
+	}
+}
+
+.has-primary-background-color[class] {
+	background-color: var(--global--color-primary);
+	color: var(--global--color-background);
+}
+
+.has-secondary-background-color[class] {
+	background-color: var(--global--color-secondary);
+	color: var(--global--color-background);
+}
+
+.has-white-background-color[class] {
+	background-color: var(--global--color-white);
+	color: var(--global--color-secondary);
+}
+
+.has-black-background-color[class] {
+	background-color: var(--global--color-black);
+	color: var(--global--color-primary);
+}
+
+// Spacing Overrides
+[data-block] {
+	margin-top: var(--global--spacing-vertical);
+	margin-bottom: var(--global--spacing-vertical);
+}
+
+// Block Alignments
+.wp-block {
+
+	// Gutenberg injects a rule that limits the max width of .wp-block to 580px
+	// This line overrides it to use the responsive spacing rules for default width content
+	max-width: var(--responsive--aligndefault-width);
+
+	// Use the theme's max-width for wide alignment.
+	&[data-align="wide"],
+	&.alignwide {
+		max-width: var(--responsive--alignwide-width);
+	}
+
+	&[data-align="full"],
+	&.alignfull {
+		max-width: none;
+	}
+}
+
+.alignleft {
+	margin: 0;
+	margin-right: var(--global--spacing-horizontal);
+}
+
+.alignright {
+	margin: 0;
+	margin-left: var(--global--spacing-horizontal);
+}
+
+// Drop cap
+.has-drop-cap:not(:focus)::first-letter {
+	font-family: var(--heading--font-family);
+	font-weight: var(--heading--font-weight);
+	line-height: 0.66;
+	text-transform: uppercase;
+	font-style: normal;
+	float: left;
+	margin: 0.1em 0.1em 0 0;
+	font-size: calc(1.2 * var(--heading--font-size-h1));
+}
+
+@media only screen and (min-width: 482px) {
+
+	.wp-block[data-align="left"] > * {
+		max-width: 290px;
+		margin-right: var(--global--spacing-horizontal);
+	}
+
+	.wp-block[data-align="right"] > * {
+		max-width: 290px;
+		margin-left: var(--global--spacing-horizontal);
+	}
+}
+
+// Remove the border of blockquotes inside the classic block.
+.wp-block-freeform.block-library-rich-text__tinymce blockquote {
+	border: none;
+}
+
+// Adjust the position of the quote symbol for blockquotes inside the classic block.
+.wp-block-freeform.block-library-rich-text__tinymce blockquote:before {
+	left: 5px;
+}
+
+The file _font-sizes.scss contains:
+// Gutenberg Font-size utility classes
+:root {
+
+	.is-extra-small-text,
+	.has-extra-small-font-size {
+		font-size: var(--global--font-size-xs);
+	}
+
+	.is-small-text,
+	.has-small-font-size {
+		font-size: var(--global--font-size-sm);
+	}
+
+	.is-regular-text,
+	.has-regular-font-size,
+	.is-normal-font-size,
+	.has-normal-font-size,
+	.has-medium-font-size {
+		font-size: var(--global--font-size-base);
+	}
+
+	.is-large-text,
+	.has-large-font-size {
+		font-size: var(--global--font-size-lg);
+		line-height: var(--global--line-height-heading);
+	}
+
+	.is-larger-text,
+	.has-larger-font-size,
+	.is-extra-large-text,
+	.has-extra-large-font-size {
+		font-size: var(--global--font-size-xl);
+		line-height: var(--global--line-height-heading);
+	}
+
+	.is-huge-text,
+	.has-huge-font-size {
+		font-size: var(--global--font-size-xxl);
+		line-height: var(--global--line-height-heading);
+
+		// This size is meant to mimic the page titles, so the font weight is reduced to match.
+		font-weight: var(--heading--font-weight-page-title);
+	}
+
+	.is-gigantic-text,
+	.has-gigantic-font-size {
+		font-size: var(--global--font-size-xxxl);
+		line-height: var(--global--line-height-heading);
+
+		// This size is meant to mimic the page titles, so the font weight is reduced to match.
+		font-weight: var(--heading--font-weight-page-title);
+	}
+}
+
+The file _style.scss contains:
+/* Block Alignments */
+
+/**
+ * These selectors set the default max width for content appearing inside a post or page.
+ */
+.entry-content > *:not(.alignwide):not(.alignfull):not(.alignleft):not(.alignright):not(.wp-block-separator):not(.woocommerce),
+*[class*="inner-container"] > *:not(.entry-content):not(.alignwide):not(.alignfull):not(.alignleft):not(.alignright):not(.wp-block-separator):not(.woocommerce) {
+	@extend %responsive-aligndefault-width;
+}
+
+/**
+ * .alignleft
+ */
+.alignleft {
+
+	/*rtl:ignore*/
+	text-align: left;
+
+	margin-top: 0;
+}
+
+// Targeting the .entry-content class is necessary to ensure these styles
+// only apply when the block isn't nested.
+.entry-content > .alignleft {
+	max-width: var(--responsive--aligndefault-width);
+	@extend %responsive-alignleft;
+}
+
+@include media(mobile) {
+
+	.alignleft {
+
+		/*rtl:ignore*/
+		float: left;
+
+		/*rtl:ignore*/
+		margin-right: var(--global--spacing-horizontal);
+		margin-bottom: var(--global--spacing-vertical);
+	}
+
+	.entry-content > .alignleft {
+		max-width: calc(50% - var(--responsive--alignleft-margin));
+	}
+}
+
+/**
+ * .aligncenter
+ */
+.aligncenter {
+	clear: both;
+	display: block;
+	float: none;
+	margin-right: auto;
+	margin-left: auto;
+	text-align: center;
+}
+
+/**
+ * .alignright
+ */
+.alignright {
+
+	margin-top: 0;
+	margin-bottom: var(--global--spacing-vertical);
+}
+
+// Targeting the .entry-content class is necessary to ensure these styles
+// only apply when the block isn't nested.
+.entry-content > .alignright {
+	max-width: var(--responsive--aligndefault-width);
+	@extend %responsive-alignright;
+}
+
+@include media(mobile) {
+
+	.alignright {
+
+		/*rtl:ignore*/
+		float: right;
+
+		/*rtl:ignore*/
+		margin-left: var(--global--spacing-horizontal);
+	}
+
+	.entry-content > .alignright {
+		max-width: calc(50% - var(--responsive--alignright-margin));
+	}
+}
+
+// Make sure siblings of floated elements are top-aligned when nested
+[class*="inner-container"] > .alignleft + *,
+[class*="inner-container"] > .alignright + * {
+	margin-top: 0;
+}
+
+/**
+ * .alignwide
+ */
+.alignwide {
+	clear: both;
+	@extend %responsive-alignwide-width;
+}
+
+.alignwide [class*="inner-container"] > .alignwide {
+	@extend %responsive-alignwide-width-nested;
+}
+
+/**
+ * .alignfull
+ */
+.alignfull {
+	clear: both;
+	@extend %responsive-alignfull-width-mobile;
+	@extend %responsive-alignfull-width;
+}
+
+.alignfull [class*="inner-container"] > .alignwide {
+	@extend %responsive-alignwide-width-nested;
+}
+
+// Content alignment
+.has-left-content {
+	justify-content: flex-start;
+}
+
+.has-right-content {
+	justify-content: flex-end;
+}
+
+// Parallax
+.has-parallax {
+	background-attachment: fixed;
+}
+
+// Drop caps
+.has-drop-cap:not(:focus)::first-letter {
+	font-family: var(--heading--font-family);
+	font-weight: var(--heading--font-weight);
+	line-height: 0.66;
+	text-transform: uppercase;
+	font-style: normal;
+	float: left;
+	margin: 0.1em 0.1em 0 0;
+	font-size: calc(1.2 * var(--heading--font-size-h1));
+}
+
+.has-drop-cap:not(:focus)::after {
+	content: "";
+	display: table;
+	clear: both;
+	padding-top: 14px;
+}
+
+.desktop-only {
+	display: none;
+
+	@include media(mobile) {
+		display: block;
+	}
+}
+

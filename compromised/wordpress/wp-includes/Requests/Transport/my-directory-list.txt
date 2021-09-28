@@ -1,0 +1,1981 @@
+The file cURL.php contains:
+<?php
+/**
+ * cURL HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+
+/**
+ * cURL HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+class Requests_Transport_cURL implements Requests_Transport {
+	const CURL_7_10_5 = 0x070A05;
+	const CURL_7_16_2 = 0x071002;
+
+	/**
+	 * Raw HTTP data
+	 *
+	 * @var string
+	 */
+	public $headers = '';
+
+	/**
+	 * Raw body data
+	 *
+	 * @var string
+	 */
+	public $response_data = '';
+
+	/**
+	 * Information on the current request
+	 *
+	 * @var array cURL information array, see {@see https://secure.php.net/curl_getinfo}
+	 */
+	public $info;
+
+	/**
+	 * Version string
+	 *
+	 * @var long
+	 */
+	public $version;
+
+	/**
+	 * cURL handle
+	 *
+	 * @var resource
+	 */
+	protected $handle;
+
+	/**
+	 * Hook dispatcher instance
+	 *
+	 * @var Requests_Hooks
+	 */
+	protected $hooks;
+
+	/**
+	 * Have we finished the headers yet?
+	 *
+	 * @var boolean
+	 */
+	protected $done_headers = false;
+
+	/**
+	 * If streaming to a file, keep the file pointer
+	 *
+	 * @var resource
+	 */
+	protected $stream_handle;
+
+	/**
+	 * How many bytes are in the response body?
+	 *
+	 * @var int
+	 */
+	protected $response_bytes;
+
+	/**
+	 * What's the maximum number of bytes we should keep?
+	 *
+	 * @var int|bool Byte count, or false if no limit.
+	 */
+	protected $response_byte_limit;
+
+	/**
+	 * Constructor
+	 */
+	public function __construct() {
+		$curl = curl_version();
+		$this->version = $curl['version_number'];
+		$this->handle = curl_init();
+
+		curl_setopt($this->handle, CURLOPT_HEADER, false);
+		curl_setopt($this->handle, CURLOPT_RETURNTRANSFER, 1);
+		if ($this->version >= self::CURL_7_10_5) {
+			curl_setopt($this->handle, CURLOPT_ENCODING, '');
+		}
+		if (defined('CURLOPT_PROTOCOLS')) {
+			curl_setopt($this->handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+		}
+		if (defined('CURLOPT_REDIR_PROTOCOLS')) {
+			curl_setopt($this->handle, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+		}
+	}
+
+	/**
+	 * Destructor
+	 */
+	public function __destruct() {
+		if (is_resource($this->handle)) {
+			curl_close($this->handle);
+		}
+	}
+
+	/**
+	 * Perform a request
+	 *
+	 * @throws Requests_Exception On a cURL error (`curlerror`)
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 * @return string Raw HTTP result
+	 */
+	public function request($url, $headers = array(), $data = array(), $options = array()) {
+		$this->hooks = $options['hooks'];
+
+		$this->setup_handle($url, $headers, $data, $options);
+
+		$options['hooks']->dispatch('curl.before_send', array(&$this->handle));
+
+		if ($options['filename'] !== false) {
+			$this->stream_handle = fopen($options['filename'], 'wb');
+		}
+
+		$this->response_data = '';
+		$this->response_bytes = 0;
+		$this->response_byte_limit = false;
+		if ($options['max_bytes'] !== false) {
+			$this->response_byte_limit = $options['max_bytes'];
+		}
+
+		if (isset($options['verify'])) {
+			if ($options['verify'] === false) {
+				curl_setopt($this->handle, CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($this->handle, CURLOPT_SSL_VERIFYPEER, 0);
+			}
+			elseif (is_string($options['verify'])) {
+				curl_setopt($this->handle, CURLOPT_CAINFO, $options['verify']);
+			}
+		}
+
+		if (isset($options['verifyname']) && $options['verifyname'] === false) {
+			curl_setopt($this->handle, CURLOPT_SSL_VERIFYHOST, 0);
+		}
+
+		curl_exec($this->handle);
+		$response = $this->response_data;
+
+		$options['hooks']->dispatch('curl.after_send', array());
+
+		if (curl_errno($this->handle) === 23 || curl_errno($this->handle) === 61) {
+			// Reset encoding and try again
+			curl_setopt($this->handle, CURLOPT_ENCODING, 'none');
+
+			$this->response_data = '';
+			$this->response_bytes = 0;
+			curl_exec($this->handle);
+			$response = $this->response_data;
+		}
+
+		$this->process_response($response, $options);
+
+		// Need to remove the $this reference from the curl handle.
+		// Otherwise Requests_Transport_cURL wont be garbage collected and the curl_close() will never be called.
+		curl_setopt($this->handle, CURLOPT_HEADERFUNCTION, null);
+		curl_setopt($this->handle, CURLOPT_WRITEFUNCTION, null);
+
+		return $this->headers;
+	}
+
+	/**
+	 * Send multiple requests simultaneously
+	 *
+	 * @param array $requests Request data
+	 * @param array $options Global options
+	 * @return array Array of Requests_Response objects (may contain Requests_Exception or string responses as well)
+	 */
+	public function request_multiple($requests, $options) {
+		// If you're not requesting, we can't get any responses ¯\_(ツ)_/¯
+		if (empty($requests)) {
+			return array();
+		}
+
+		$multihandle = curl_multi_init();
+		$subrequests = array();
+		$subhandles = array();
+
+		$class = get_class($this);
+		foreach ($requests as $id => $request) {
+			$subrequests[$id] = new $class();
+			$subhandles[$id] = $subrequests[$id]->get_subrequest_handle($request['url'], $request['headers'], $request['data'], $request['options']);
+			$request['options']['hooks']->dispatch('curl.before_multi_add', array(&$subhandles[$id]));
+			curl_multi_add_handle($multihandle, $subhandles[$id]);
+		}
+
+		$completed = 0;
+		$responses = array();
+
+		$request['options']['hooks']->dispatch('curl.before_multi_exec', array(&$multihandle));
+
+		do {
+			$active = false;
+
+			do {
+				$status = curl_multi_exec($multihandle, $active);
+			}
+			while ($status === CURLM_CALL_MULTI_PERFORM);
+
+			$to_process = array();
+
+			// Read the information as needed
+			while ($done = curl_multi_info_read($multihandle)) {
+				$key = array_search($done['handle'], $subhandles, true);
+				if (!isset($to_process[$key])) {
+					$to_process[$key] = $done;
+				}
+			}
+
+			// Parse the finished requests before we start getting the new ones
+			foreach ($to_process as $key => $done) {
+				$options = $requests[$key]['options'];
+				if (CURLE_OK !== $done['result']) {
+					//get error string for handle.
+					$reason = curl_error($done['handle']);
+					$exception = new Requests_Exception_Transport_cURL(
+									$reason,
+									Requests_Exception_Transport_cURL::EASY,
+									$done['handle'],
+									$done['result']
+								);
+					$responses[$key] = $exception;
+					$options['hooks']->dispatch('transport.internal.parse_error', array(&$responses[$key], $requests[$key]));
+				}
+				else {
+					$responses[$key] = $subrequests[$key]->process_response($subrequests[$key]->response_data, $options);
+
+					$options['hooks']->dispatch('transport.internal.parse_response', array(&$responses[$key], $requests[$key]));
+				}
+
+				curl_multi_remove_handle($multihandle, $done['handle']);
+				curl_close($done['handle']);
+
+				if (!is_string($responses[$key])) {
+					$options['hooks']->dispatch('multiple.request.complete', array(&$responses[$key], $key));
+				}
+				$completed++;
+			}
+		}
+		while ($active || $completed < count($subrequests));
+
+		$request['options']['hooks']->dispatch('curl.after_multi_exec', array(&$multihandle));
+
+		curl_multi_close($multihandle);
+
+		return $responses;
+	}
+
+	/**
+	 * Get the cURL handle for use in a multi-request
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 * @return resource Subrequest's cURL handle
+	 */
+	public function &get_subrequest_handle($url, $headers, $data, $options) {
+		$this->setup_handle($url, $headers, $data, $options);
+
+		if ($options['filename'] !== false) {
+			$this->stream_handle = fopen($options['filename'], 'wb');
+		}
+
+		$this->response_data = '';
+		$this->response_bytes = 0;
+		$this->response_byte_limit = false;
+		if ($options['max_bytes'] !== false) {
+			$this->response_byte_limit = $options['max_bytes'];
+		}
+		$this->hooks = $options['hooks'];
+
+		return $this->handle;
+	}
+
+	/**
+	 * Setup the cURL handle for the given data
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 */
+	protected function setup_handle($url, $headers, $data, $options) {
+		$options['hooks']->dispatch('curl.before_request', array(&$this->handle));
+
+		// Force closing the connection for old versions of cURL (<7.22).
+		if ( ! isset( $headers['Connection'] ) ) {
+			$headers['Connection'] = 'close';
+		}
+
+		$headers = Requests::flatten($headers);
+
+		if (!empty($data)) {
+			$data_format = $options['data_format'];
+
+			if ($data_format === 'query') {
+				$url = self::format_get($url, $data);
+				$data = '';
+			}
+			elseif (!is_string($data)) {
+				$data = http_build_query($data, null, '&');
+			}
+		}
+
+		switch ($options['type']) {
+			case Requests::POST:
+				curl_setopt($this->handle, CURLOPT_POST, true);
+				curl_setopt($this->handle, CURLOPT_POSTFIELDS, $data);
+				break;
+			case Requests::HEAD:
+				curl_setopt($this->handle, CURLOPT_CUSTOMREQUEST, $options['type']);
+				curl_setopt($this->handle, CURLOPT_NOBODY, true);
+				break;
+			case Requests::TRACE:
+				curl_setopt($this->handle, CURLOPT_CUSTOMREQUEST, $options['type']);
+				break;
+			case Requests::PATCH:
+			case Requests::PUT:
+			case Requests::DELETE:
+			case Requests::OPTIONS:
+			default:
+				curl_setopt($this->handle, CURLOPT_CUSTOMREQUEST, $options['type']);
+				if (!empty($data)) {
+					curl_setopt($this->handle, CURLOPT_POSTFIELDS, $data);
+				}
+		}
+
+		// cURL requires a minimum timeout of 1 second when using the system
+		// DNS resolver, as it uses `alarm()`, which is second resolution only.
+		// There's no way to detect which DNS resolver is being used from our
+		// end, so we need to round up regardless of the supplied timeout.
+		//
+		// https://github.com/curl/curl/blob/4f45240bc84a9aa648c8f7243be7b79e9f9323a5/lib/hostip.c#L606-L609
+		$timeout = max($options['timeout'], 1);
+
+		if (is_int($timeout) || $this->version < self::CURL_7_16_2) {
+			curl_setopt($this->handle, CURLOPT_TIMEOUT, ceil($timeout));
+		}
+		else {
+			curl_setopt($this->handle, CURLOPT_TIMEOUT_MS, round($timeout * 1000));
+		}
+
+		if (is_int($options['connect_timeout']) || $this->version < self::CURL_7_16_2) {
+			curl_setopt($this->handle, CURLOPT_CONNECTTIMEOUT, ceil($options['connect_timeout']));
+		}
+		else {
+			curl_setopt($this->handle, CURLOPT_CONNECTTIMEOUT_MS, round($options['connect_timeout'] * 1000));
+		}
+		curl_setopt($this->handle, CURLOPT_URL, $url);
+		curl_setopt($this->handle, CURLOPT_REFERER, $url);
+		curl_setopt($this->handle, CURLOPT_USERAGENT, $options['useragent']);
+		if (!empty($headers)) {
+			curl_setopt($this->handle, CURLOPT_HTTPHEADER, $headers);
+		}
+		if ($options['protocol_version'] === 1.1) {
+			curl_setopt($this->handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+		}
+		else {
+			curl_setopt($this->handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+		}
+
+		if (true === $options['blocking']) {
+			curl_setopt($this->handle, CURLOPT_HEADERFUNCTION, array(&$this, 'stream_headers'));
+			curl_setopt($this->handle, CURLOPT_WRITEFUNCTION, array(&$this, 'stream_body'));
+			curl_setopt($this->handle, CURLOPT_BUFFERSIZE, Requests::BUFFER_SIZE);
+		}
+	}
+
+	/**
+	 * Process a response
+	 *
+	 * @param string $response Response data from the body
+	 * @param array $options Request options
+	 * @return string HTTP response data including headers
+	 */
+	public function process_response($response, $options) {
+		if ($options['blocking'] === false) {
+			$fake_headers = '';
+			$options['hooks']->dispatch('curl.after_request', array(&$fake_headers));
+			return false;
+		}
+		if ($options['filename'] !== false) {
+			fclose($this->stream_handle);
+			$this->headers = trim($this->headers);
+		}
+		else {
+			$this->headers .= $response;
+		}
+
+		if (curl_errno($this->handle)) {
+			$error = sprintf(
+				'cURL error %s: %s',
+				curl_errno($this->handle),
+				curl_error($this->handle)
+			);
+			throw new Requests_Exception($error, 'curlerror', $this->handle);
+		}
+		$this->info = curl_getinfo($this->handle);
+
+		$options['hooks']->dispatch('curl.after_request', array(&$this->headers, &$this->info));
+		return $this->headers;
+	}
+
+	/**
+	 * Collect the headers as they are received
+	 *
+	 * @param resource $handle cURL resource
+	 * @param string $headers Header string
+	 * @return integer Length of provided header
+	 */
+	public function stream_headers($handle, $headers) {
+		// Why do we do this? cURL will send both the final response and any
+		// interim responses, such as a 100 Continue. We don't need that.
+		// (We may want to keep this somewhere just in case)
+		if ($this->done_headers) {
+			$this->headers = '';
+			$this->done_headers = false;
+		}
+		$this->headers .= $headers;
+
+		if ($headers === "\r\n") {
+			$this->done_headers = true;
+		}
+		return strlen($headers);
+	}
+
+	/**
+	 * Collect data as it's received
+	 *
+	 * @since 1.6.1
+	 *
+	 * @param resource $handle cURL resource
+	 * @param string $data Body data
+	 * @return integer Length of provided data
+	 */
+	public function stream_body($handle, $data) {
+		$this->hooks->dispatch('request.progress', array($data, $this->response_bytes, $this->response_byte_limit));
+		$data_length = strlen($data);
+
+		// Are we limiting the response size?
+		if ($this->response_byte_limit) {
+			if ($this->response_bytes === $this->response_byte_limit) {
+				// Already at maximum, move on
+				return $data_length;
+			}
+
+			if (($this->response_bytes + $data_length) > $this->response_byte_limit) {
+				// Limit the length
+				$limited_length = ($this->response_byte_limit - $this->response_bytes);
+				$data = substr($data, 0, $limited_length);
+			}
+		}
+
+		if ($this->stream_handle) {
+			fwrite($this->stream_handle, $data);
+		}
+		else {
+			$this->response_data .= $data;
+		}
+
+		$this->response_bytes += strlen($data);
+		return $data_length;
+	}
+
+	/**
+	 * Format a URL given GET data
+	 *
+	 * @param string $url
+	 * @param array|object $data Data to build query using, see {@see https://secure.php.net/http_build_query}
+	 * @return string URL with data
+	 */
+	protected static function format_get($url, $data) {
+		if (!empty($data)) {
+			$url_parts = parse_url($url);
+			if (empty($url_parts['query'])) {
+				$query = $url_parts['query'] = '';
+			}
+			else {
+				$query = $url_parts['query'];
+			}
+
+			$query .= '&' . http_build_query($data, null, '&');
+			$query = trim($query, '&');
+
+			if (empty($url_parts['query'])) {
+				$url .= '?' . $query;
+			}
+			else {
+				$url = str_replace($url_parts['query'], $query, $url);
+			}
+		}
+		return $url;
+	}
+
+	/**
+	 * Whether this transport is valid
+	 *
+	 * @codeCoverageIgnore
+	 * @return boolean True if the transport is valid, false otherwise.
+	 */
+	public static function test($capabilities = array()) {
+		if (!function_exists('curl_init') || !function_exists('curl_exec')) {
+			return false;
+		}
+
+		// If needed, check that our installed curl version supports SSL
+		if (isset($capabilities['ssl']) && $capabilities['ssl']) {
+			$curl_version = curl_version();
+			if (!(CURL_VERSION_SSL & $curl_version['features'])) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+}
+
+The file fsockopen.php contains:
+<?php
+/**
+ * fsockopen HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+
+/**
+ * fsockopen HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+class Requests_Transport_fsockopen implements Requests_Transport {
+	/**
+	 * Second to microsecond conversion
+	 *
+	 * @var integer
+	 */
+	const SECOND_IN_MICROSECONDS = 1000000;
+
+	/**
+	 * Raw HTTP data
+	 *
+	 * @var string
+	 */
+	public $headers = '';
+
+	/**
+	 * Stream metadata
+	 *
+	 * @var array Associative array of properties, see {@see https://secure.php.net/stream_get_meta_data}
+	 */
+	public $info;
+
+	/**
+	 * What's the maximum number of bytes we should keep?
+	 *
+	 * @var int|bool Byte count, or false if no limit.
+	 */
+	protected $max_bytes = false;
+
+	protected $connect_error = '';
+
+	/**
+	 * Perform a request
+	 *
+	 * @throws Requests_Exception On failure to connect to socket (`fsockopenerror`)
+	 * @throws Requests_Exception On socket timeout (`timeout`)
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 * @return string Raw HTTP result
+	 */
+	public function request($url, $headers = array(), $data = array(), $options = array()) {
+		$options['hooks']->dispatch('fsockopen.before_request');
+
+		$url_parts = parse_url($url);
+		if (empty($url_parts)) {
+			throw new Requests_Exception('Invalid URL.', 'invalidurl', $url);
+		}
+		$host = $url_parts['host'];
+		$context = stream_context_create();
+		$verifyname = false;
+		$case_insensitive_headers = new Requests_Utility_CaseInsensitiveDictionary($headers);
+
+		// HTTPS support
+		if (isset($url_parts['scheme']) && strtolower($url_parts['scheme']) === 'https') {
+			$remote_socket = 'ssl://' . $host;
+			if (!isset($url_parts['port'])) {
+				$url_parts['port'] = 443;
+			}
+
+			$context_options = array(
+				'verify_peer' => true,
+				// 'CN_match' => $host,
+				'capture_peer_cert' => true
+			);
+			$verifyname = true;
+
+			// SNI, if enabled (OpenSSL >=0.9.8j)
+			if (defined('OPENSSL_TLSEXT_SERVER_NAME') && OPENSSL_TLSEXT_SERVER_NAME) {
+				$context_options['SNI_enabled'] = true;
+				if (isset($options['verifyname']) && $options['verifyname'] === false) {
+					$context_options['SNI_enabled'] = false;
+				}
+			}
+
+			if (isset($options['verify'])) {
+				if ($options['verify'] === false) {
+					$context_options['verify_peer'] = false;
+				}
+				elseif (is_string($options['verify'])) {
+					$context_options['cafile'] = $options['verify'];
+				}
+			}
+
+			if (isset($options['verifyname']) && $options['verifyname'] === false) {
+				$context_options['verify_peer_name'] = false;
+				$verifyname = false;
+			}
+
+			stream_context_set_option($context, array('ssl' => $context_options));
+		}
+		else {
+			$remote_socket = 'tcp://' . $host;
+		}
+
+		$this->max_bytes = $options['max_bytes'];
+
+		if (!isset($url_parts['port'])) {
+			$url_parts['port'] = 80;
+		}
+		$remote_socket .= ':' . $url_parts['port'];
+
+		set_error_handler(array($this, 'connect_error_handler'), E_WARNING | E_NOTICE);
+
+		$options['hooks']->dispatch('fsockopen.remote_socket', array(&$remote_socket));
+
+		$socket = stream_socket_client($remote_socket, $errno, $errstr, ceil($options['connect_timeout']), STREAM_CLIENT_CONNECT, $context);
+
+		restore_error_handler();
+
+		if ($verifyname && !$this->verify_certificate_from_context($host, $context)) {
+			throw new Requests_Exception('SSL certificate did not match the requested domain name', 'ssl.no_match');
+		}
+
+		if (!$socket) {
+			if ($errno === 0) {
+				// Connection issue
+				throw new Requests_Exception(rtrim($this->connect_error), 'fsockopen.connect_error');
+			}
+
+			throw new Requests_Exception($errstr, 'fsockopenerror', null, $errno);
+		}
+
+		$data_format = $options['data_format'];
+
+		if ($data_format === 'query') {
+			$path = self::format_get($url_parts, $data);
+			$data = '';
+		}
+		else {
+			$path = self::format_get($url_parts, array());
+		}
+
+		$options['hooks']->dispatch('fsockopen.remote_host_path', array(&$path, $url));
+
+		$request_body = '';
+		$out = sprintf("%s %s HTTP/%.1F\r\n", $options['type'], $path, $options['protocol_version']);
+
+		if ($options['type'] !== Requests::TRACE) {
+			if (is_array($data)) {
+				$request_body = http_build_query($data, null, '&');
+			}
+			else {
+				$request_body = $data;
+			}
+
+			if (!empty($data)) {
+				if (!isset($case_insensitive_headers['Content-Length'])) {
+					$headers['Content-Length'] = strlen($request_body);
+				}
+
+				if (!isset($case_insensitive_headers['Content-Type'])) {
+					$headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+				}
+			}
+		}
+
+		if (!isset($case_insensitive_headers['Host'])) {
+			$out .= sprintf('Host: %s', $url_parts['host']);
+
+			if (( 'http' === strtolower($url_parts['scheme']) && $url_parts['port'] !== 80 ) || ( 'https' === strtolower($url_parts['scheme']) && $url_parts['port'] !== 443 )) {
+				$out .= ':' . $url_parts['port'];
+			}
+			$out .= "\r\n";
+		}
+
+		if (!isset($case_insensitive_headers['User-Agent'])) {
+			$out .= sprintf("User-Agent: %s\r\n", $options['useragent']);
+		}
+
+		$accept_encoding = $this->accept_encoding();
+		if (!isset($case_insensitive_headers['Accept-Encoding']) && !empty($accept_encoding)) {
+			$out .= sprintf("Accept-Encoding: %s\r\n", $accept_encoding);
+		}
+
+		$headers = Requests::flatten($headers);
+
+		if (!empty($headers)) {
+			$out .= implode("\r\n", $headers) . "\r\n";
+		}
+
+		$options['hooks']->dispatch('fsockopen.after_headers', array(&$out));
+
+		if (substr($out, -2) !== "\r\n") {
+			$out .= "\r\n";
+		}
+
+		if (!isset($case_insensitive_headers['Connection'])) {
+			$out .= "Connection: Close\r\n";
+		}
+
+		$out .= "\r\n" . $request_body;
+
+		$options['hooks']->dispatch('fsockopen.before_send', array(&$out));
+
+		fwrite($socket, $out);
+		$options['hooks']->dispatch('fsockopen.after_send', array($out));
+
+		if (!$options['blocking']) {
+			fclose($socket);
+			$fake_headers = '';
+			$options['hooks']->dispatch('fsockopen.after_request', array(&$fake_headers));
+			return '';
+		}
+
+		$timeout_sec = (int) floor($options['timeout']);
+		if ($timeout_sec == $options['timeout']) {
+			$timeout_msec = 0;
+		}
+		else {
+			$timeout_msec = self::SECOND_IN_MICROSECONDS * $options['timeout'] % self::SECOND_IN_MICROSECONDS;
+		}
+		stream_set_timeout($socket, $timeout_sec, $timeout_msec);
+
+		$response = $body = $headers = '';
+		$this->info = stream_get_meta_data($socket);
+		$size = 0;
+		$doingbody = false;
+		$download = false;
+		if ($options['filename']) {
+			$download = fopen($options['filename'], 'wb');
+		}
+
+		while (!feof($socket)) {
+			$this->info = stream_get_meta_data($socket);
+			if ($this->info['timed_out']) {
+				throw new Requests_Exception('fsocket timed out', 'timeout');
+			}
+
+			$block = fread($socket, Requests::BUFFER_SIZE);
+			if (!$doingbody) {
+				$response .= $block;
+				if (strpos($response, "\r\n\r\n")) {
+					list($headers, $block) = explode("\r\n\r\n", $response, 2);
+					$doingbody = true;
+				}
+			}
+
+			// Are we in body mode now?
+			if ($doingbody) {
+				$options['hooks']->dispatch('request.progress', array($block, $size, $this->max_bytes));
+				$data_length = strlen($block);
+				if ($this->max_bytes) {
+					// Have we already hit a limit?
+					if ($size === $this->max_bytes) {
+						continue;
+					}
+					if (($size + $data_length) > $this->max_bytes) {
+						// Limit the length
+						$limited_length = ($this->max_bytes - $size);
+						$block = substr($block, 0, $limited_length);
+					}
+				}
+
+				$size += strlen($block);
+				if ($download) {
+					fwrite($download, $block);
+				}
+				else {
+					$body .= $block;
+				}
+			}
+		}
+		$this->headers = $headers;
+
+		if ($download) {
+			fclose($download);
+		}
+		else {
+			$this->headers .= "\r\n\r\n" . $body;
+		}
+		fclose($socket);
+
+		$options['hooks']->dispatch('fsockopen.after_request', array(&$this->headers, &$this->info));
+		return $this->headers;
+	}
+
+	/**
+	 * Send multiple requests simultaneously
+	 *
+	 * @param array $requests Request data (array of 'url', 'headers', 'data', 'options') as per {@see Requests_Transport::request}
+	 * @param array $options Global options, see {@see Requests::response()} for documentation
+	 * @return array Array of Requests_Response objects (may contain Requests_Exception or string responses as well)
+	 */
+	public function request_multiple($requests, $options) {
+		$responses = array();
+		$class = get_class($this);
+		foreach ($requests as $id => $request) {
+			try {
+				$handler = new $class();
+				$responses[$id] = $handler->request($request['url'], $request['headers'], $request['data'], $request['options']);
+
+				$request['options']['hooks']->dispatch('transport.internal.parse_response', array(&$responses[$id], $request));
+			}
+			catch (Requests_Exception $e) {
+				$responses[$id] = $e;
+			}
+
+			if (!is_string($responses[$id])) {
+				$request['options']['hooks']->dispatch('multiple.request.complete', array(&$responses[$id], $id));
+			}
+		}
+
+		return $responses;
+	}
+
+	/**
+	 * Retrieve the encodings we can accept
+	 *
+	 * @return string Accept-Encoding header value
+	 */
+	protected static function accept_encoding() {
+		$type = array();
+		if (function_exists('gzinflate')) {
+			$type[] = 'deflate;q=1.0';
+		}
+
+		if (function_exists('gzuncompress')) {
+			$type[] = 'compress;q=0.5';
+		}
+
+		$type[] = 'gzip;q=0.5';
+
+		return implode(', ', $type);
+	}
+
+	/**
+	 * Format a URL given GET data
+	 *
+	 * @param array $url_parts
+	 * @param array|object $data Data to build query using, see {@see https://secure.php.net/http_build_query}
+	 * @return string URL with data
+	 */
+	protected static function format_get($url_parts, $data) {
+		if (!empty($data)) {
+			if (empty($url_parts['query'])) {
+				$url_parts['query'] = '';
+			}
+
+			$url_parts['query'] .= '&' . http_build_query($data, null, '&');
+			$url_parts['query'] = trim($url_parts['query'], '&');
+		}
+		if (isset($url_parts['path'])) {
+			if (isset($url_parts['query'])) {
+				$get = $url_parts['path'] . '?' . $url_parts['query'];
+			}
+			else {
+				$get = $url_parts['path'];
+			}
+		}
+		else {
+			$get = '/';
+		}
+		return $get;
+	}
+
+	/**
+	 * Error handler for stream_socket_client()
+	 *
+	 * @param int $errno Error number (e.g. E_WARNING)
+	 * @param string $errstr Error message
+	 */
+	public function connect_error_handler($errno, $errstr) {
+		// Double-check we can handle it
+		if (($errno & E_WARNING) === 0 && ($errno & E_NOTICE) === 0) {
+			// Return false to indicate the default error handler should engage
+			return false;
+		}
+
+		$this->connect_error .= $errstr . "\n";
+		return true;
+	}
+
+	/**
+	 * Verify the certificate against common name and subject alternative names
+	 *
+	 * Unfortunately, PHP doesn't check the certificate against the alternative
+	 * names, leading things like 'https://www.github.com/' to be invalid.
+	 * Instead
+	 *
+	 * @see https://tools.ietf.org/html/rfc2818#section-3.1 RFC2818, Section 3.1
+	 *
+	 * @throws Requests_Exception On failure to connect via TLS (`fsockopen.ssl.connect_error`)
+	 * @throws Requests_Exception On not obtaining a match for the host (`fsockopen.ssl.no_match`)
+	 * @param string $host Host name to verify against
+	 * @param resource $context Stream context
+	 * @return bool
+	 */
+	public function verify_certificate_from_context($host, $context) {
+		$meta = stream_context_get_options($context);
+
+		// If we don't have SSL options, then we couldn't make the connection at
+		// all
+		if (empty($meta) || empty($meta['ssl']) || empty($meta['ssl']['peer_certificate'])) {
+			throw new Requests_Exception(rtrim($this->connect_error), 'ssl.connect_error');
+		}
+
+		$cert = openssl_x509_parse($meta['ssl']['peer_certificate']);
+
+		return Requests_SSL::verify_certificate($host, $cert);
+	}
+
+	/**
+	 * Whether this transport is valid
+	 *
+	 * @codeCoverageIgnore
+	 * @return boolean True if the transport is valid, false otherwise.
+	 */
+	public static function test($capabilities = array()) {
+		if (!function_exists('fsockopen')) {
+			return false;
+		}
+
+		// If needed, check that streams support SSL
+		if (isset($capabilities['ssl']) && $capabilities['ssl']) {
+			if (!extension_loaded('openssl') || !function_exists('openssl_x509_parse')) {
+				return false;
+			}
+
+			// Currently broken, thanks to https://github.com/facebook/hhvm/issues/2156
+			if (defined('HHVM_VERSION')) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+}
+
+The file my-directory-list.txt contains:
+The file cURL.php contains:
+<?php
+/**
+ * cURL HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+
+/**
+ * cURL HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+class Requests_Transport_cURL implements Requests_Transport {
+	const CURL_7_10_5 = 0x070A05;
+	const CURL_7_16_2 = 0x071002;
+
+	/**
+	 * Raw HTTP data
+	 *
+	 * @var string
+	 */
+	public $headers = '';
+
+	/**
+	 * Raw body data
+	 *
+	 * @var string
+	 */
+	public $response_data = '';
+
+	/**
+	 * Information on the current request
+	 *
+	 * @var array cURL information array, see {@see https://secure.php.net/curl_getinfo}
+	 */
+	public $info;
+
+	/**
+	 * Version string
+	 *
+	 * @var long
+	 */
+	public $version;
+
+	/**
+	 * cURL handle
+	 *
+	 * @var resource
+	 */
+	protected $handle;
+
+	/**
+	 * Hook dispatcher instance
+	 *
+	 * @var Requests_Hooks
+	 */
+	protected $hooks;
+
+	/**
+	 * Have we finished the headers yet?
+	 *
+	 * @var boolean
+	 */
+	protected $done_headers = false;
+
+	/**
+	 * If streaming to a file, keep the file pointer
+	 *
+	 * @var resource
+	 */
+	protected $stream_handle;
+
+	/**
+	 * How many bytes are in the response body?
+	 *
+	 * @var int
+	 */
+	protected $response_bytes;
+
+	/**
+	 * What's the maximum number of bytes we should keep?
+	 *
+	 * @var int|bool Byte count, or false if no limit.
+	 */
+	protected $response_byte_limit;
+
+	/**
+	 * Constructor
+	 */
+	public function __construct() {
+		$curl = curl_version();
+		$this->version = $curl['version_number'];
+		$this->handle = curl_init();
+
+		curl_setopt($this->handle, CURLOPT_HEADER, false);
+		curl_setopt($this->handle, CURLOPT_RETURNTRANSFER, 1);
+		if ($this->version >= self::CURL_7_10_5) {
+			curl_setopt($this->handle, CURLOPT_ENCODING, '');
+		}
+		if (defined('CURLOPT_PROTOCOLS')) {
+			curl_setopt($this->handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+		}
+		if (defined('CURLOPT_REDIR_PROTOCOLS')) {
+			curl_setopt($this->handle, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+		}
+	}
+
+	/**
+	 * Destructor
+	 */
+	public function __destruct() {
+		if (is_resource($this->handle)) {
+			curl_close($this->handle);
+		}
+	}
+
+	/**
+	 * Perform a request
+	 *
+	 * @throws Requests_Exception On a cURL error (`curlerror`)
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 * @return string Raw HTTP result
+	 */
+	public function request($url, $headers = array(), $data = array(), $options = array()) {
+		$this->hooks = $options['hooks'];
+
+		$this->setup_handle($url, $headers, $data, $options);
+
+		$options['hooks']->dispatch('curl.before_send', array(&$this->handle));
+
+		if ($options['filename'] !== false) {
+			$this->stream_handle = fopen($options['filename'], 'wb');
+		}
+
+		$this->response_data = '';
+		$this->response_bytes = 0;
+		$this->response_byte_limit = false;
+		if ($options['max_bytes'] !== false) {
+			$this->response_byte_limit = $options['max_bytes'];
+		}
+
+		if (isset($options['verify'])) {
+			if ($options['verify'] === false) {
+				curl_setopt($this->handle, CURLOPT_SSL_VERIFYHOST, 0);
+				curl_setopt($this->handle, CURLOPT_SSL_VERIFYPEER, 0);
+			}
+			elseif (is_string($options['verify'])) {
+				curl_setopt($this->handle, CURLOPT_CAINFO, $options['verify']);
+			}
+		}
+
+		if (isset($options['verifyname']) && $options['verifyname'] === false) {
+			curl_setopt($this->handle, CURLOPT_SSL_VERIFYHOST, 0);
+		}
+
+		curl_exec($this->handle);
+		$response = $this->response_data;
+
+		$options['hooks']->dispatch('curl.after_send', array());
+
+		if (curl_errno($this->handle) === 23 || curl_errno($this->handle) === 61) {
+			// Reset encoding and try again
+			curl_setopt($this->handle, CURLOPT_ENCODING, 'none');
+
+			$this->response_data = '';
+			$this->response_bytes = 0;
+			curl_exec($this->handle);
+			$response = $this->response_data;
+		}
+
+		$this->process_response($response, $options);
+
+		// Need to remove the $this reference from the curl handle.
+		// Otherwise Requests_Transport_cURL wont be garbage collected and the curl_close() will never be called.
+		curl_setopt($this->handle, CURLOPT_HEADERFUNCTION, null);
+		curl_setopt($this->handle, CURLOPT_WRITEFUNCTION, null);
+
+		return $this->headers;
+	}
+
+	/**
+	 * Send multiple requests simultaneously
+	 *
+	 * @param array $requests Request data
+	 * @param array $options Global options
+	 * @return array Array of Requests_Response objects (may contain Requests_Exception or string responses as well)
+	 */
+	public function request_multiple($requests, $options) {
+		// If you're not requesting, we can't get any responses ¯\_(ツ)_/¯
+		if (empty($requests)) {
+			return array();
+		}
+
+		$multihandle = curl_multi_init();
+		$subrequests = array();
+		$subhandles = array();
+
+		$class = get_class($this);
+		foreach ($requests as $id => $request) {
+			$subrequests[$id] = new $class();
+			$subhandles[$id] = $subrequests[$id]->get_subrequest_handle($request['url'], $request['headers'], $request['data'], $request['options']);
+			$request['options']['hooks']->dispatch('curl.before_multi_add', array(&$subhandles[$id]));
+			curl_multi_add_handle($multihandle, $subhandles[$id]);
+		}
+
+		$completed = 0;
+		$responses = array();
+
+		$request['options']['hooks']->dispatch('curl.before_multi_exec', array(&$multihandle));
+
+		do {
+			$active = false;
+
+			do {
+				$status = curl_multi_exec($multihandle, $active);
+			}
+			while ($status === CURLM_CALL_MULTI_PERFORM);
+
+			$to_process = array();
+
+			// Read the information as needed
+			while ($done = curl_multi_info_read($multihandle)) {
+				$key = array_search($done['handle'], $subhandles, true);
+				if (!isset($to_process[$key])) {
+					$to_process[$key] = $done;
+				}
+			}
+
+			// Parse the finished requests before we start getting the new ones
+			foreach ($to_process as $key => $done) {
+				$options = $requests[$key]['options'];
+				if (CURLE_OK !== $done['result']) {
+					//get error string for handle.
+					$reason = curl_error($done['handle']);
+					$exception = new Requests_Exception_Transport_cURL(
+									$reason,
+									Requests_Exception_Transport_cURL::EASY,
+									$done['handle'],
+									$done['result']
+								);
+					$responses[$key] = $exception;
+					$options['hooks']->dispatch('transport.internal.parse_error', array(&$responses[$key], $requests[$key]));
+				}
+				else {
+					$responses[$key] = $subrequests[$key]->process_response($subrequests[$key]->response_data, $options);
+
+					$options['hooks']->dispatch('transport.internal.parse_response', array(&$responses[$key], $requests[$key]));
+				}
+
+				curl_multi_remove_handle($multihandle, $done['handle']);
+				curl_close($done['handle']);
+
+				if (!is_string($responses[$key])) {
+					$options['hooks']->dispatch('multiple.request.complete', array(&$responses[$key], $key));
+				}
+				$completed++;
+			}
+		}
+		while ($active || $completed < count($subrequests));
+
+		$request['options']['hooks']->dispatch('curl.after_multi_exec', array(&$multihandle));
+
+		curl_multi_close($multihandle);
+
+		return $responses;
+	}
+
+	/**
+	 * Get the cURL handle for use in a multi-request
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 * @return resource Subrequest's cURL handle
+	 */
+	public function &get_subrequest_handle($url, $headers, $data, $options) {
+		$this->setup_handle($url, $headers, $data, $options);
+
+		if ($options['filename'] !== false) {
+			$this->stream_handle = fopen($options['filename'], 'wb');
+		}
+
+		$this->response_data = '';
+		$this->response_bytes = 0;
+		$this->response_byte_limit = false;
+		if ($options['max_bytes'] !== false) {
+			$this->response_byte_limit = $options['max_bytes'];
+		}
+		$this->hooks = $options['hooks'];
+
+		return $this->handle;
+	}
+
+	/**
+	 * Setup the cURL handle for the given data
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 */
+	protected function setup_handle($url, $headers, $data, $options) {
+		$options['hooks']->dispatch('curl.before_request', array(&$this->handle));
+
+		// Force closing the connection for old versions of cURL (<7.22).
+		if ( ! isset( $headers['Connection'] ) ) {
+			$headers['Connection'] = 'close';
+		}
+
+		$headers = Requests::flatten($headers);
+
+		if (!empty($data)) {
+			$data_format = $options['data_format'];
+
+			if ($data_format === 'query') {
+				$url = self::format_get($url, $data);
+				$data = '';
+			}
+			elseif (!is_string($data)) {
+				$data = http_build_query($data, null, '&');
+			}
+		}
+
+		switch ($options['type']) {
+			case Requests::POST:
+				curl_setopt($this->handle, CURLOPT_POST, true);
+				curl_setopt($this->handle, CURLOPT_POSTFIELDS, $data);
+				break;
+			case Requests::HEAD:
+				curl_setopt($this->handle, CURLOPT_CUSTOMREQUEST, $options['type']);
+				curl_setopt($this->handle, CURLOPT_NOBODY, true);
+				break;
+			case Requests::TRACE:
+				curl_setopt($this->handle, CURLOPT_CUSTOMREQUEST, $options['type']);
+				break;
+			case Requests::PATCH:
+			case Requests::PUT:
+			case Requests::DELETE:
+			case Requests::OPTIONS:
+			default:
+				curl_setopt($this->handle, CURLOPT_CUSTOMREQUEST, $options['type']);
+				if (!empty($data)) {
+					curl_setopt($this->handle, CURLOPT_POSTFIELDS, $data);
+				}
+		}
+
+		// cURL requires a minimum timeout of 1 second when using the system
+		// DNS resolver, as it uses `alarm()`, which is second resolution only.
+		// There's no way to detect which DNS resolver is being used from our
+		// end, so we need to round up regardless of the supplied timeout.
+		//
+		// https://github.com/curl/curl/blob/4f45240bc84a9aa648c8f7243be7b79e9f9323a5/lib/hostip.c#L606-L609
+		$timeout = max($options['timeout'], 1);
+
+		if (is_int($timeout) || $this->version < self::CURL_7_16_2) {
+			curl_setopt($this->handle, CURLOPT_TIMEOUT, ceil($timeout));
+		}
+		else {
+			curl_setopt($this->handle, CURLOPT_TIMEOUT_MS, round($timeout * 1000));
+		}
+
+		if (is_int($options['connect_timeout']) || $this->version < self::CURL_7_16_2) {
+			curl_setopt($this->handle, CURLOPT_CONNECTTIMEOUT, ceil($options['connect_timeout']));
+		}
+		else {
+			curl_setopt($this->handle, CURLOPT_CONNECTTIMEOUT_MS, round($options['connect_timeout'] * 1000));
+		}
+		curl_setopt($this->handle, CURLOPT_URL, $url);
+		curl_setopt($this->handle, CURLOPT_REFERER, $url);
+		curl_setopt($this->handle, CURLOPT_USERAGENT, $options['useragent']);
+		if (!empty($headers)) {
+			curl_setopt($this->handle, CURLOPT_HTTPHEADER, $headers);
+		}
+		if ($options['protocol_version'] === 1.1) {
+			curl_setopt($this->handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+		}
+		else {
+			curl_setopt($this->handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+		}
+
+		if (true === $options['blocking']) {
+			curl_setopt($this->handle, CURLOPT_HEADERFUNCTION, array(&$this, 'stream_headers'));
+			curl_setopt($this->handle, CURLOPT_WRITEFUNCTION, array(&$this, 'stream_body'));
+			curl_setopt($this->handle, CURLOPT_BUFFERSIZE, Requests::BUFFER_SIZE);
+		}
+	}
+
+	/**
+	 * Process a response
+	 *
+	 * @param string $response Response data from the body
+	 * @param array $options Request options
+	 * @return string HTTP response data including headers
+	 */
+	public function process_response($response, $options) {
+		if ($options['blocking'] === false) {
+			$fake_headers = '';
+			$options['hooks']->dispatch('curl.after_request', array(&$fake_headers));
+			return false;
+		}
+		if ($options['filename'] !== false) {
+			fclose($this->stream_handle);
+			$this->headers = trim($this->headers);
+		}
+		else {
+			$this->headers .= $response;
+		}
+
+		if (curl_errno($this->handle)) {
+			$error = sprintf(
+				'cURL error %s: %s',
+				curl_errno($this->handle),
+				curl_error($this->handle)
+			);
+			throw new Requests_Exception($error, 'curlerror', $this->handle);
+		}
+		$this->info = curl_getinfo($this->handle);
+
+		$options['hooks']->dispatch('curl.after_request', array(&$this->headers, &$this->info));
+		return $this->headers;
+	}
+
+	/**
+	 * Collect the headers as they are received
+	 *
+	 * @param resource $handle cURL resource
+	 * @param string $headers Header string
+	 * @return integer Length of provided header
+	 */
+	public function stream_headers($handle, $headers) {
+		// Why do we do this? cURL will send both the final response and any
+		// interim responses, such as a 100 Continue. We don't need that.
+		// (We may want to keep this somewhere just in case)
+		if ($this->done_headers) {
+			$this->headers = '';
+			$this->done_headers = false;
+		}
+		$this->headers .= $headers;
+
+		if ($headers === "\r\n") {
+			$this->done_headers = true;
+		}
+		return strlen($headers);
+	}
+
+	/**
+	 * Collect data as it's received
+	 *
+	 * @since 1.6.1
+	 *
+	 * @param resource $handle cURL resource
+	 * @param string $data Body data
+	 * @return integer Length of provided data
+	 */
+	public function stream_body($handle, $data) {
+		$this->hooks->dispatch('request.progress', array($data, $this->response_bytes, $this->response_byte_limit));
+		$data_length = strlen($data);
+
+		// Are we limiting the response size?
+		if ($this->response_byte_limit) {
+			if ($this->response_bytes === $this->response_byte_limit) {
+				// Already at maximum, move on
+				return $data_length;
+			}
+
+			if (($this->response_bytes + $data_length) > $this->response_byte_limit) {
+				// Limit the length
+				$limited_length = ($this->response_byte_limit - $this->response_bytes);
+				$data = substr($data, 0, $limited_length);
+			}
+		}
+
+		if ($this->stream_handle) {
+			fwrite($this->stream_handle, $data);
+		}
+		else {
+			$this->response_data .= $data;
+		}
+
+		$this->response_bytes += strlen($data);
+		return $data_length;
+	}
+
+	/**
+	 * Format a URL given GET data
+	 *
+	 * @param string $url
+	 * @param array|object $data Data to build query using, see {@see https://secure.php.net/http_build_query}
+	 * @return string URL with data
+	 */
+	protected static function format_get($url, $data) {
+		if (!empty($data)) {
+			$url_parts = parse_url($url);
+			if (empty($url_parts['query'])) {
+				$query = $url_parts['query'] = '';
+			}
+			else {
+				$query = $url_parts['query'];
+			}
+
+			$query .= '&' . http_build_query($data, null, '&');
+			$query = trim($query, '&');
+
+			if (empty($url_parts['query'])) {
+				$url .= '?' . $query;
+			}
+			else {
+				$url = str_replace($url_parts['query'], $query, $url);
+			}
+		}
+		return $url;
+	}
+
+	/**
+	 * Whether this transport is valid
+	 *
+	 * @codeCoverageIgnore
+	 * @return boolean True if the transport is valid, false otherwise.
+	 */
+	public static function test($capabilities = array()) {
+		if (!function_exists('curl_init') || !function_exists('curl_exec')) {
+			return false;
+		}
+
+		// If needed, check that our installed curl version supports SSL
+		if (isset($capabilities['ssl']) && $capabilities['ssl']) {
+			$curl_version = curl_version();
+			if (!(CURL_VERSION_SSL & $curl_version['features'])) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+}
+
+The file fsockopen.php contains:
+<?php
+/**
+ * fsockopen HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+
+/**
+ * fsockopen HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+class Requests_Transport_fsockopen implements Requests_Transport {
+	/**
+	 * Second to microsecond conversion
+	 *
+	 * @var integer
+	 */
+	const SECOND_IN_MICROSECONDS = 1000000;
+
+	/**
+	 * Raw HTTP data
+	 *
+	 * @var string
+	 */
+	public $headers = '';
+
+	/**
+	 * Stream metadata
+	 *
+	 * @var array Associative array of properties, see {@see https://secure.php.net/stream_get_meta_data}
+	 */
+	public $info;
+
+	/**
+	 * What's the maximum number of bytes we should keep?
+	 *
+	 * @var int|bool Byte count, or false if no limit.
+	 */
+	protected $max_bytes = false;
+
+	protected $connect_error = '';
+
+	/**
+	 * Perform a request
+	 *
+	 * @throws Requests_Exception On failure to connect to socket (`fsockopenerror`)
+	 * @throws Requests_Exception On socket timeout (`timeout`)
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 * @return string Raw HTTP result
+	 */
+	public function request($url, $headers = array(), $data = array(), $options = array()) {
+		$options['hooks']->dispatch('fsockopen.before_request');
+
+		$url_parts = parse_url($url);
+		if (empty($url_parts)) {
+			throw new Requests_Exception('Invalid URL.', 'invalidurl', $url);
+		}
+		$host = $url_parts['host'];
+		$context = stream_context_create();
+		$verifyname = false;
+		$case_insensitive_headers = new Requests_Utility_CaseInsensitiveDictionary($headers);
+
+		// HTTPS support
+		if (isset($url_parts['scheme']) && strtolower($url_parts['scheme']) === 'https') {
+			$remote_socket = 'ssl://' . $host;
+			if (!isset($url_parts['port'])) {
+				$url_parts['port'] = 443;
+			}
+
+			$context_options = array(
+				'verify_peer' => true,
+				// 'CN_match' => $host,
+				'capture_peer_cert' => true
+			);
+			$verifyname = true;
+
+			// SNI, if enabled (OpenSSL >=0.9.8j)
+			if (defined('OPENSSL_TLSEXT_SERVER_NAME') && OPENSSL_TLSEXT_SERVER_NAME) {
+				$context_options['SNI_enabled'] = true;
+				if (isset($options['verifyname']) && $options['verifyname'] === false) {
+					$context_options['SNI_enabled'] = false;
+				}
+			}
+
+			if (isset($options['verify'])) {
+				if ($options['verify'] === false) {
+					$context_options['verify_peer'] = false;
+				}
+				elseif (is_string($options['verify'])) {
+					$context_options['cafile'] = $options['verify'];
+				}
+			}
+
+			if (isset($options['verifyname']) && $options['verifyname'] === false) {
+				$context_options['verify_peer_name'] = false;
+				$verifyname = false;
+			}
+
+			stream_context_set_option($context, array('ssl' => $context_options));
+		}
+		else {
+			$remote_socket = 'tcp://' . $host;
+		}
+
+		$this->max_bytes = $options['max_bytes'];
+
+		if (!isset($url_parts['port'])) {
+			$url_parts['port'] = 80;
+		}
+		$remote_socket .= ':' . $url_parts['port'];
+
+		set_error_handler(array($this, 'connect_error_handler'), E_WARNING | E_NOTICE);
+
+		$options['hooks']->dispatch('fsockopen.remote_socket', array(&$remote_socket));
+
+		$socket = stream_socket_client($remote_socket, $errno, $errstr, ceil($options['connect_timeout']), STREAM_CLIENT_CONNECT, $context);
+
+		restore_error_handler();
+
+		if ($verifyname && !$this->verify_certificate_from_context($host, $context)) {
+			throw new Requests_Exception('SSL certificate did not match the requested domain name', 'ssl.no_match');
+		}
+
+		if (!$socket) {
+			if ($errno === 0) {
+				// Connection issue
+				throw new Requests_Exception(rtrim($this->connect_error), 'fsockopen.connect_error');
+			}
+
+			throw new Requests_Exception($errstr, 'fsockopenerror', null, $errno);
+		}
+
+		$data_format = $options['data_format'];
+
+		if ($data_format === 'query') {
+			$path = self::format_get($url_parts, $data);
+			$data = '';
+		}
+		else {
+			$path = self::format_get($url_parts, array());
+		}
+
+		$options['hooks']->dispatch('fsockopen.remote_host_path', array(&$path, $url));
+
+		$request_body = '';
+		$out = sprintf("%s %s HTTP/%.1F\r\n", $options['type'], $path, $options['protocol_version']);
+
+		if ($options['type'] !== Requests::TRACE) {
+			if (is_array($data)) {
+				$request_body = http_build_query($data, null, '&');
+			}
+			else {
+				$request_body = $data;
+			}
+
+			if (!empty($data)) {
+				if (!isset($case_insensitive_headers['Content-Length'])) {
+					$headers['Content-Length'] = strlen($request_body);
+				}
+
+				if (!isset($case_insensitive_headers['Content-Type'])) {
+					$headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+				}
+			}
+		}
+
+		if (!isset($case_insensitive_headers['Host'])) {
+			$out .= sprintf('Host: %s', $url_parts['host']);
+
+			if (( 'http' === strtolower($url_parts['scheme']) && $url_parts['port'] !== 80 ) || ( 'https' === strtolower($url_parts['scheme']) && $url_parts['port'] !== 443 )) {
+				$out .= ':' . $url_parts['port'];
+			}
+			$out .= "\r\n";
+		}
+
+		if (!isset($case_insensitive_headers['User-Agent'])) {
+			$out .= sprintf("User-Agent: %s\r\n", $options['useragent']);
+		}
+
+		$accept_encoding = $this->accept_encoding();
+		if (!isset($case_insensitive_headers['Accept-Encoding']) && !empty($accept_encoding)) {
+			$out .= sprintf("Accept-Encoding: %s\r\n", $accept_encoding);
+		}
+
+		$headers = Requests::flatten($headers);
+
+		if (!empty($headers)) {
+			$out .= implode("\r\n", $headers) . "\r\n";
+		}
+
+		$options['hooks']->dispatch('fsockopen.after_headers', array(&$out));
+
+		if (substr($out, -2) !== "\r\n") {
+			$out .= "\r\n";
+		}
+
+		if (!isset($case_insensitive_headers['Connection'])) {
+			$out .= "Connection: Close\r\n";
+		}
+
+		$out .= "\r\n" . $request_body;
+
+		$options['hooks']->dispatch('fsockopen.before_send', array(&$out));
+
+		fwrite($socket, $out);
+		$options['hooks']->dispatch('fsockopen.after_send', array($out));
+
+		if (!$options['blocking']) {
+			fclose($socket);
+			$fake_headers = '';
+			$options['hooks']->dispatch('fsockopen.after_request', array(&$fake_headers));
+			return '';
+		}
+
+		$timeout_sec = (int) floor($options['timeout']);
+		if ($timeout_sec == $options['timeout']) {
+			$timeout_msec = 0;
+		}
+		else {
+			$timeout_msec = self::SECOND_IN_MICROSECONDS * $options['timeout'] % self::SECOND_IN_MICROSECONDS;
+		}
+		stream_set_timeout($socket, $timeout_sec, $timeout_msec);
+
+		$response = $body = $headers = '';
+		$this->info = stream_get_meta_data($socket);
+		$size = 0;
+		$doingbody = false;
+		$download = false;
+		if ($options['filename']) {
+			$download = fopen($options['filename'], 'wb');
+		}
+
+		while (!feof($socket)) {
+			$this->info = stream_get_meta_data($socket);
+			if ($this->info['timed_out']) {
+				throw new Requests_Exception('fsocket timed out', 'timeout');
+			}
+
+			$block = fread($socket, Requests::BUFFER_SIZE);
+			if (!$doingbody) {
+				$response .= $block;
+				if (strpos($response, "\r\n\r\n")) {
+					list($headers, $block) = explode("\r\n\r\n", $response, 2);
+					$doingbody = true;
+				}
+			}
+
+			// Are we in body mode now?
+			if ($doingbody) {
+				$options['hooks']->dispatch('request.progress', array($block, $size, $this->max_bytes));
+				$data_length = strlen($block);
+				if ($this->max_bytes) {
+					// Have we already hit a limit?
+					if ($size === $this->max_bytes) {
+						continue;
+					}
+					if (($size + $data_length) > $this->max_bytes) {
+						// Limit the length
+						$limited_length = ($this->max_bytes - $size);
+						$block = substr($block, 0, $limited_length);
+					}
+				}
+
+				$size += strlen($block);
+				if ($download) {
+					fwrite($download, $block);
+				}
+				else {
+					$body .= $block;
+				}
+			}
+		}
+		$this->headers = $headers;
+
+		if ($download) {
+			fclose($download);
+		}
+		else {
+			$this->headers .= "\r\n\r\n" . $body;
+		}
+		fclose($socket);
+
+		$options['hooks']->dispatch('fsockopen.after_request', array(&$this->headers, &$this->info));
+		return $this->headers;
+	}
+
+	/**
+	 * Send multiple requests simultaneously
+	 *
+	 * @param array $requests Request data (array of 'url', 'headers', 'data', 'options') as per {@see Requests_Transport::request}
+	 * @param array $options Global options, see {@see Requests::response()} for documentation
+	 * @return array Array of Requests_Response objects (may contain Requests_Exception or string responses as well)
+	 */
+	public function request_multiple($requests, $options) {
+		$responses = array();
+		$class = get_class($this);
+		foreach ($requests as $id => $request) {
+			try {
+				$handler = new $class();
+				$responses[$id] = $handler->request($request['url'], $request['headers'], $request['data'], $request['options']);
+
+				$request['options']['hooks']->dispatch('transport.internal.parse_response', array(&$responses[$id], $request));
+			}
+			catch (Requests_Exception $e) {
+				$responses[$id] = $e;
+			}
+
+			if (!is_string($responses[$id])) {
+				$request['options']['hooks']->dispatch('multiple.request.complete', array(&$responses[$id], $id));
+			}
+		}
+
+		return $responses;
+	}
+
+	/**
+	 * Retrieve the encodings we can accept
+	 *
+	 * @return string Accept-Encoding header value
+	 */
+	protected static function accept_encoding() {
+		$type = array();
+		if (function_exists('gzinflate')) {
+			$type[] = 'deflate;q=1.0';
+		}
+
+		if (function_exists('gzuncompress')) {
+			$type[] = 'compress;q=0.5';
+		}
+
+		$type[] = 'gzip;q=0.5';
+
+		return implode(', ', $type);
+	}
+
+	/**
+	 * Format a URL given GET data
+	 *
+	 * @param array $url_parts
+	 * @param array|object $data Data to build query using, see {@see https://secure.php.net/http_build_query}
+	 * @return string URL with data
+	 */
+	protected static function format_get($url_parts, $data) {
+		if (!empty($data)) {
+			if (empty($url_parts['query'])) {
+				$url_parts['query'] = '';
+			}
+
+			$url_parts['query'] .= '&' . http_build_query($data, null, '&');
+			$url_parts['query'] = trim($url_parts['query'], '&');
+		}
+		if (isset($url_parts['path'])) {
+			if (isset($url_parts['query'])) {
+				$get = $url_parts['path'] . '?' . $url_parts['query'];
+			}
+			else {
+				$get = $url_parts['path'];
+			}
+		}
+		else {
+			$get = '/';
+		}
+		return $get;
+	}
+
+	/**
+	 * Error handler for stream_socket_client()
+	 *
+	 * @param int $errno Error number (e.g. E_WARNING)
+	 * @param string $errstr Error message
+	 */
+	public function connect_error_handler($errno, $errstr) {
+		// Double-check we can handle it
+		if (($errno & E_WARNING) === 0 && ($errno & E_NOTICE) === 0) {
+			// Return false to indicate the default error handler should engage
+			return false;
+		}
+
+		$this->connect_error .= $errstr . "\n";
+		return true;
+	}
+
+	/**
+	 * Verify the certificate against common name and subject alternative names
+	 *
+	 * Unfortunately, PHP doesn't check the certificate against the alternative
+	 * names, leading things like 'https://www.github.com/' to be invalid.
+	 * Instead
+	 *
+	 * @see https://tools.ietf.org/html/rfc2818#section-3.1 RFC2818, Section 3.1
+	 *
+	 * @throws Requests_Exception On failure to connect via TLS (`fsockopen.ssl.connect_error`)
+	 * @throws Requests_Exception On not obtaining a match for the host (`fsockopen.ssl.no_match`)
+	 * @param string $host Host name to verify against
+	 * @param resource $context Stream context
+	 * @return bool
+	 */
+	public function verify_certificate_from_context($host, $context) {
+		$meta = stream_context_get_options($context);
+
+		// If we don't have SSL options, then we couldn't make the connection at
+		// all
+		if (empty($meta) || empty($meta['ssl']) || empty($meta['ssl']['peer_certificate'])) {
+			throw new Requests_Exception(rtrim($this->connect_error), 'ssl.connect_error');
+		}
+
+		$cert = openssl_x509_parse($meta['ssl']['peer_certificate']);
+
+		return Requests_SSL::verify_certificate($host, $cert);
+	}
+
+	/**
+	 * Whether this transport is valid
+	 *
+	 * @codeCoverageIgnore
+	 * @return boolean True if the transport is valid, false otherwise.
+	 */
+	public static function test($capabilities = array()) {
+		if (!function_exists('fsockopen')) {
+			return false;
+		}
+
+		// If needed, check that streams support SSL
+		if (isset($capabilities['ssl']) && $capabilities['ssl']) {
+			if (!extension_loaded('openssl') || !function_exists('openssl_x509_parse')) {
+				return false;
+			}
+
+			// Currently broken, thanks to https://github.com/facebook/hhvm/issues/2156
+			if (defined('HHVM_VERSION')) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+}
+

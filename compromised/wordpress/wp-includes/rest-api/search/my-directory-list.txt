@@ -1,0 +1,1021 @@
+The file class-wp-rest-post-format-search-handler.php contains:
+<?php
+/**
+ * REST API: WP_REST_Post_Format_Search_Handler class
+ *
+ * @package WordPress
+ * @subpackage REST_API
+ * @since 5.6.0
+ */
+
+/**
+ * Core class representing a search handler for post formats in the REST API.
+ *
+ * @since 5.6.0
+ *
+ * @see WP_REST_Search_Handler
+ */
+class WP_REST_Post_Format_Search_Handler extends WP_REST_Search_Handler {
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 5.6.0
+	 */
+	public function __construct() {
+		$this->type = 'post-format';
+	}
+
+	/**
+	 * Searches the object type content for a given search request.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param WP_REST_Request $request Full REST request.
+	 * @return array Associative array containing an `WP_REST_Search_Handler::RESULT_IDS` containing
+	 *               an array of found IDs and `WP_REST_Search_Handler::RESULT_TOTAL` containing the
+	 *               total count for the matching search results.
+	 */
+	public function search_items( WP_REST_Request $request ) {
+		$format_strings = get_post_format_strings();
+		$format_slugs   = array_keys( $format_strings );
+
+		$query_args = array();
+
+		if ( ! empty( $request['search'] ) ) {
+			$query_args['search'] = $request['search'];
+		}
+
+		/**
+		 * Filters the query arguments for a REST API search request.
+		 *
+		 * Enables adding extra arguments or setting defaults for a post format search request.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param array           $query_args Key value array of query var to query value.
+		 * @param WP_REST_Request $request    The request used.
+		 */
+		$query_args = apply_filters( 'rest_post_format_search_query', $query_args, $request );
+
+		$found_ids = array();
+		foreach ( $format_slugs as $index => $format_slug ) {
+			if ( ! empty( $query_args['search'] ) ) {
+				$format_string       = get_post_format_string( $format_slug );
+				$format_slug_match   = stripos( $format_slug, $query_args['search'] ) !== false;
+				$format_string_match = stripos( $format_string, $query_args['search'] ) !== false;
+				if ( ! $format_slug_match && ! $format_string_match ) {
+					continue;
+				}
+			}
+
+			$format_link = get_post_format_link( $format_slug );
+			if ( $format_link ) {
+				$found_ids[] = $format_slug;
+			}
+		}
+
+		$page     = (int) $request['page'];
+		$per_page = (int) $request['per_page'];
+
+		return array(
+			self::RESULT_IDS   => array_slice( $found_ids, ( $page - 1 ) * $per_page, $per_page ),
+			self::RESULT_TOTAL => count( $found_ids ),
+		);
+	}
+
+	/**
+	 * Prepares the search result for a given ID.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param string $id     Item ID, the post format slug.
+	 * @param array  $fields Fields to include for the item.
+	 * @return array Associative array containing all fields for the item.
+	 */
+	public function prepare_item( $id, array $fields ) {
+		$data = array();
+
+		if ( in_array( WP_REST_Search_Controller::PROP_ID, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_ID ] = $id;
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TITLE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TITLE ] = get_post_format_string( $id );
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_URL, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_URL ] = get_post_format_link( $id );
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TYPE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TYPE ] = $this->type;
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Prepares links for the search result.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param string $id Item ID, the post format slug.
+	 * @return array Links for the given item.
+	 */
+	public function prepare_item_links( $id ) {
+		return array();
+	}
+}
+
+The file class-wp-rest-post-search-handler.php contains:
+<?php
+/**
+ * REST API: WP_REST_Post_Search_Handler class
+ *
+ * @package WordPress
+ * @subpackage REST_API
+ * @since 5.0.0
+ */
+
+/**
+ * Core class representing a search handler for posts in the REST API.
+ *
+ * @since 5.0.0
+ *
+ * @see WP_REST_Search_Handler
+ */
+class WP_REST_Post_Search_Handler extends WP_REST_Search_Handler {
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 5.0.0
+	 */
+	public function __construct() {
+		$this->type = 'post';
+
+		// Support all public post types except attachments.
+		$this->subtypes = array_diff(
+			array_values(
+				get_post_types(
+					array(
+						'public'       => true,
+						'show_in_rest' => true,
+					),
+					'names'
+				)
+			),
+			array( 'attachment' )
+		);
+	}
+
+	/**
+	 * Searches the object type content for a given search request.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param WP_REST_Request $request Full REST request.
+	 * @return array Associative array containing an `WP_REST_Search_Handler::RESULT_IDS` containing
+	 *               an array of found IDs and `WP_REST_Search_Handler::RESULT_TOTAL` containing the
+	 *               total count for the matching search results.
+	 */
+	public function search_items( WP_REST_Request $request ) {
+
+		// Get the post types to search for the current request.
+		$post_types = $request[ WP_REST_Search_Controller::PROP_SUBTYPE ];
+		if ( in_array( WP_REST_Search_Controller::TYPE_ANY, $post_types, true ) ) {
+			$post_types = $this->subtypes;
+		}
+
+		$query_args = array(
+			'post_type'           => $post_types,
+			'post_status'         => 'publish',
+			'paged'               => (int) $request['page'],
+			'posts_per_page'      => (int) $request['per_page'],
+			'ignore_sticky_posts' => true,
+			'fields'              => 'ids',
+		);
+
+		if ( ! empty( $request['search'] ) ) {
+			$query_args['s'] = $request['search'];
+		}
+
+		/**
+		 * Filters the query arguments for a REST API search request.
+		 *
+		 * Enables adding extra arguments or setting defaults for a post search request.
+		 *
+		 * @since 5.1.0
+		 *
+		 * @param array           $query_args Key value array of query var to query value.
+		 * @param WP_REST_Request $request    The request used.
+		 */
+		$query_args = apply_filters( 'rest_post_search_query', $query_args, $request );
+
+		$query     = new WP_Query();
+		$found_ids = $query->query( $query_args );
+		$total     = $query->found_posts;
+
+		return array(
+			self::RESULT_IDS   => $found_ids,
+			self::RESULT_TOTAL => $total,
+		);
+	}
+
+	/**
+	 * Prepares the search result for a given ID.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param int   $id     Item ID.
+	 * @param array $fields Fields to include for the item.
+	 * @return array Associative array containing all fields for the item.
+	 */
+	public function prepare_item( $id, array $fields ) {
+		$post = get_post( $id );
+
+		$data = array();
+
+		if ( in_array( WP_REST_Search_Controller::PROP_ID, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_ID ] = (int) $post->ID;
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TITLE, $fields, true ) ) {
+			if ( post_type_supports( $post->post_type, 'title' ) ) {
+				add_filter( 'protected_title_format', array( $this, 'protected_title_format' ) );
+				$data[ WP_REST_Search_Controller::PROP_TITLE ] = get_the_title( $post->ID );
+				remove_filter( 'protected_title_format', array( $this, 'protected_title_format' ) );
+			} else {
+				$data[ WP_REST_Search_Controller::PROP_TITLE ] = '';
+			}
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_URL, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_URL ] = get_permalink( $post->ID );
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TYPE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TYPE ] = $this->type;
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_SUBTYPE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_SUBTYPE ] = $post->post_type;
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Prepares links for the search result of a given ID.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param int $id Item ID.
+	 * @return array Links for the given item.
+	 */
+	public function prepare_item_links( $id ) {
+		$post = get_post( $id );
+
+		$links = array();
+
+		$item_route = rest_get_route_for_post( $post );
+		if ( ! empty( $item_route ) ) {
+			$links['self'] = array(
+				'href'       => rest_url( $item_route ),
+				'embeddable' => true,
+			);
+		}
+
+		$links['about'] = array(
+			'href' => rest_url( 'wp/v2/types/' . $post->post_type ),
+		);
+
+		return $links;
+	}
+
+	/**
+	 * Overwrites the default protected title format.
+	 *
+	 * By default, WordPress will show password protected posts with a title of
+	 * "Protected: %s". As the REST API communicates the protected status of a post
+	 * in a machine readable format, we remove the "Protected: " prefix.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @return string Protected title format.
+	 */
+	public function protected_title_format() {
+		return '%s';
+	}
+
+	/**
+	 * Attempts to detect the route to access a single item.
+	 *
+	 * @since 5.0.0
+	 * @deprecated 5.5.0 Use rest_get_route_for_post()
+	 * @see rest_get_route_for_post()
+	 *
+	 * @param WP_Post $post Post object.
+	 * @return string REST route relative to the REST base URI, or empty string if unknown.
+	 */
+	protected function detect_rest_item_route( $post ) {
+		_deprecated_function( __METHOD__, '5.5.0', 'rest_get_route_for_post()' );
+
+		return rest_get_route_for_post( $post );
+	}
+
+}
+
+The file class-wp-rest-search-handler.php contains:
+<?php
+/**
+ * REST API: WP_REST_Search_Handler class
+ *
+ * @package WordPress
+ * @subpackage REST_API
+ * @since 5.0.0
+ */
+
+/**
+ * Core base class representing a search handler for an object type in the REST API.
+ *
+ * @since 5.0.0
+ */
+abstract class WP_REST_Search_Handler {
+
+	/**
+	 * Field containing the IDs in the search result.
+	 */
+	const RESULT_IDS = 'ids';
+
+	/**
+	 * Field containing the total count in the search result.
+	 */
+	const RESULT_TOTAL = 'total';
+
+	/**
+	 * Object type managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 * @var string
+	 */
+	protected $type = '';
+
+	/**
+	 * Object subtypes managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 * @var array
+	 */
+	protected $subtypes = array();
+
+	/**
+	 * Gets the object type managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @return string Object type identifier.
+	 */
+	public function get_type() {
+		return $this->type;
+	}
+
+	/**
+	 * Gets the object subtypes managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @return array Array of object subtype identifiers.
+	 */
+	public function get_subtypes() {
+		return $this->subtypes;
+	}
+
+	/**
+	 * Searches the object type content for a given search request.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param WP_REST_Request $request Full REST request.
+	 * @return array Associative array containing an `WP_REST_Search_Handler::RESULT_IDS` containing
+	 *               an array of found IDs and `WP_REST_Search_Handler::RESULT_TOTAL` containing the
+	 *               total count for the matching search results.
+	 */
+	abstract public function search_items( WP_REST_Request $request );
+
+	/**
+	 * Prepares the search result for a given ID.
+	 *
+	 * @since 5.0.0
+	 * @since 5.6.0 The `$id` parameter can accept a string.
+	 *
+	 * @param int|string $id     Item ID.
+	 * @param array      $fields Fields to include for the item.
+	 * @return array Associative array containing all fields for the item.
+	 */
+	abstract public function prepare_item( $id, array $fields );
+
+	/**
+	 * Prepares links for the search result of a given ID.
+	 *
+	 * @since 5.0.0
+	 * @since 5.6.0 The `$id` parameter can accept a string.
+	 *
+	 * @param int|string $id Item ID.
+	 * @return array Links for the given item.
+	 */
+	abstract public function prepare_item_links( $id );
+}
+
+The file class-wp-rest-term-search-handler.php contains:
+<?php
+/**
+ * REST API: WP_REST_Term_Search_Handler class
+ *
+ * @package WordPress
+ * @subpackage REST_API
+ * @since 5.6.0
+ */
+
+/**
+ * Core class representing a search handler for terms in the REST API.
+ *
+ * @since 5.6.0
+ *
+ * @see WP_REST_Search_Handler
+ */
+class WP_REST_Term_Search_Handler extends WP_REST_Search_Handler {
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 5.6.0
+	 */
+	public function __construct() {
+		$this->type = 'term';
+
+		$this->subtypes = array_values(
+			get_taxonomies(
+				array(
+					'public'       => true,
+					'show_in_rest' => true,
+				),
+				'names'
+			)
+		);
+	}
+
+	/**
+	 * Searches the object type content for a given search request.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param WP_REST_Request $request Full REST request.
+	 * @return array Associative array containing an `WP_REST_Search_Handler::RESULT_IDS` containing
+	 *               an array of found IDs and `WP_REST_Search_Handler::RESULT_TOTAL` containing the
+	 *               total count for the matching search results.
+	 */
+	public function search_items( WP_REST_Request $request ) {
+		$taxonomies = $request[ WP_REST_Search_Controller::PROP_SUBTYPE ];
+		if ( in_array( WP_REST_Search_Controller::TYPE_ANY, $taxonomies, true ) ) {
+			$taxonomies = $this->subtypes;
+		}
+
+		$page     = (int) $request['page'];
+		$per_page = (int) $request['per_page'];
+
+		$query_args = array(
+			'taxonomy'   => $taxonomies,
+			'hide_empty' => false,
+			'offset'     => ( $page - 1 ) * $per_page,
+			'number'     => $per_page,
+		);
+
+		if ( ! empty( $request['search'] ) ) {
+			$query_args['search'] = $request['search'];
+		}
+
+		/**
+		 * Filters the query arguments for a REST API search request.
+		 *
+		 * Enables adding extra arguments or setting defaults for a term search request.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param array           $query_args Key value array of query var to query value.
+		 * @param WP_REST_Request $request    The request used.
+		 */
+		$query_args = apply_filters( 'rest_term_search_query', $query_args, $request );
+
+		$query       = new WP_Term_Query();
+		$found_terms = $query->query( $query_args );
+		$found_ids   = wp_list_pluck( $found_terms, 'term_id' );
+
+		unset( $query_args['offset'], $query_args['number'] );
+
+		$total = wp_count_terms( $query_args );
+
+		// wp_count_terms() can return a falsey value when the term has no children.
+		if ( ! $total ) {
+			$total = 0;
+		}
+
+		return array(
+			self::RESULT_IDS   => $found_ids,
+			self::RESULT_TOTAL => $total,
+		);
+	}
+
+	/**
+	 * Prepares the search result for a given ID.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param int   $id     Item ID.
+	 * @param array $fields Fields to include for the item.
+	 * @return array Associative array containing all fields for the item.
+	 */
+	public function prepare_item( $id, array $fields ) {
+		$term = get_term( $id );
+
+		$data = array();
+
+		if ( in_array( WP_REST_Search_Controller::PROP_ID, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_ID ] = (int) $id;
+		}
+		if ( in_array( WP_REST_Search_Controller::PROP_TITLE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TITLE ] = $term->name;
+		}
+		if ( in_array( WP_REST_Search_Controller::PROP_URL, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_URL ] = get_term_link( $id );
+		}
+		if ( in_array( WP_REST_Search_Controller::PROP_TYPE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TYPE ] = $term->taxonomy;
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Prepares links for the search result of a given ID.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param int $id Item ID.
+	 * @return array Links for the given item.
+	 */
+	public function prepare_item_links( $id ) {
+		$term = get_term( $id );
+
+		$links = array();
+
+		$item_route = rest_get_route_for_term( $term );
+		if ( $item_route ) {
+			$links['self'] = array(
+				'href'       => rest_url( $item_route ),
+				'embeddable' => true,
+			);
+		}
+
+		$links['about'] = array(
+			'href' => rest_url( sprintf( 'wp/v2/taxonomies/%s', $term->taxonomy ) ),
+		);
+
+		return $links;
+	}
+}
+
+The file my-directory-list.txt contains:
+The file class-wp-rest-post-format-search-handler.php contains:
+<?php
+/**
+ * REST API: WP_REST_Post_Format_Search_Handler class
+ *
+ * @package WordPress
+ * @subpackage REST_API
+ * @since 5.6.0
+ */
+
+/**
+ * Core class representing a search handler for post formats in the REST API.
+ *
+ * @since 5.6.0
+ *
+ * @see WP_REST_Search_Handler
+ */
+class WP_REST_Post_Format_Search_Handler extends WP_REST_Search_Handler {
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 5.6.0
+	 */
+	public function __construct() {
+		$this->type = 'post-format';
+	}
+
+	/**
+	 * Searches the object type content for a given search request.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param WP_REST_Request $request Full REST request.
+	 * @return array Associative array containing an `WP_REST_Search_Handler::RESULT_IDS` containing
+	 *               an array of found IDs and `WP_REST_Search_Handler::RESULT_TOTAL` containing the
+	 *               total count for the matching search results.
+	 */
+	public function search_items( WP_REST_Request $request ) {
+		$format_strings = get_post_format_strings();
+		$format_slugs   = array_keys( $format_strings );
+
+		$query_args = array();
+
+		if ( ! empty( $request['search'] ) ) {
+			$query_args['search'] = $request['search'];
+		}
+
+		/**
+		 * Filters the query arguments for a REST API search request.
+		 *
+		 * Enables adding extra arguments or setting defaults for a post format search request.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param array           $query_args Key value array of query var to query value.
+		 * @param WP_REST_Request $request    The request used.
+		 */
+		$query_args = apply_filters( 'rest_post_format_search_query', $query_args, $request );
+
+		$found_ids = array();
+		foreach ( $format_slugs as $index => $format_slug ) {
+			if ( ! empty( $query_args['search'] ) ) {
+				$format_string       = get_post_format_string( $format_slug );
+				$format_slug_match   = stripos( $format_slug, $query_args['search'] ) !== false;
+				$format_string_match = stripos( $format_string, $query_args['search'] ) !== false;
+				if ( ! $format_slug_match && ! $format_string_match ) {
+					continue;
+				}
+			}
+
+			$format_link = get_post_format_link( $format_slug );
+			if ( $format_link ) {
+				$found_ids[] = $format_slug;
+			}
+		}
+
+		$page     = (int) $request['page'];
+		$per_page = (int) $request['per_page'];
+
+		return array(
+			self::RESULT_IDS   => array_slice( $found_ids, ( $page - 1 ) * $per_page, $per_page ),
+			self::RESULT_TOTAL => count( $found_ids ),
+		);
+	}
+
+	/**
+	 * Prepares the search result for a given ID.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param string $id     Item ID, the post format slug.
+	 * @param array  $fields Fields to include for the item.
+	 * @return array Associative array containing all fields for the item.
+	 */
+	public function prepare_item( $id, array $fields ) {
+		$data = array();
+
+		if ( in_array( WP_REST_Search_Controller::PROP_ID, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_ID ] = $id;
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TITLE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TITLE ] = get_post_format_string( $id );
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_URL, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_URL ] = get_post_format_link( $id );
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TYPE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TYPE ] = $this->type;
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Prepares links for the search result.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param string $id Item ID, the post format slug.
+	 * @return array Links for the given item.
+	 */
+	public function prepare_item_links( $id ) {
+		return array();
+	}
+}
+
+The file class-wp-rest-post-search-handler.php contains:
+<?php
+/**
+ * REST API: WP_REST_Post_Search_Handler class
+ *
+ * @package WordPress
+ * @subpackage REST_API
+ * @since 5.0.0
+ */
+
+/**
+ * Core class representing a search handler for posts in the REST API.
+ *
+ * @since 5.0.0
+ *
+ * @see WP_REST_Search_Handler
+ */
+class WP_REST_Post_Search_Handler extends WP_REST_Search_Handler {
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 5.0.0
+	 */
+	public function __construct() {
+		$this->type = 'post';
+
+		// Support all public post types except attachments.
+		$this->subtypes = array_diff(
+			array_values(
+				get_post_types(
+					array(
+						'public'       => true,
+						'show_in_rest' => true,
+					),
+					'names'
+				)
+			),
+			array( 'attachment' )
+		);
+	}
+
+	/**
+	 * Searches the object type content for a given search request.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param WP_REST_Request $request Full REST request.
+	 * @return array Associative array containing an `WP_REST_Search_Handler::RESULT_IDS` containing
+	 *               an array of found IDs and `WP_REST_Search_Handler::RESULT_TOTAL` containing the
+	 *               total count for the matching search results.
+	 */
+	public function search_items( WP_REST_Request $request ) {
+
+		// Get the post types to search for the current request.
+		$post_types = $request[ WP_REST_Search_Controller::PROP_SUBTYPE ];
+		if ( in_array( WP_REST_Search_Controller::TYPE_ANY, $post_types, true ) ) {
+			$post_types = $this->subtypes;
+		}
+
+		$query_args = array(
+			'post_type'           => $post_types,
+			'post_status'         => 'publish',
+			'paged'               => (int) $request['page'],
+			'posts_per_page'      => (int) $request['per_page'],
+			'ignore_sticky_posts' => true,
+			'fields'              => 'ids',
+		);
+
+		if ( ! empty( $request['search'] ) ) {
+			$query_args['s'] = $request['search'];
+		}
+
+		/**
+		 * Filters the query arguments for a REST API search request.
+		 *
+		 * Enables adding extra arguments or setting defaults for a post search request.
+		 *
+		 * @since 5.1.0
+		 *
+		 * @param array           $query_args Key value array of query var to query value.
+		 * @param WP_REST_Request $request    The request used.
+		 */
+		$query_args = apply_filters( 'rest_post_search_query', $query_args, $request );
+
+		$query     = new WP_Query();
+		$found_ids = $query->query( $query_args );
+		$total     = $query->found_posts;
+
+		return array(
+			self::RESULT_IDS   => $found_ids,
+			self::RESULT_TOTAL => $total,
+		);
+	}
+
+	/**
+	 * Prepares the search result for a given ID.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param int   $id     Item ID.
+	 * @param array $fields Fields to include for the item.
+	 * @return array Associative array containing all fields for the item.
+	 */
+	public function prepare_item( $id, array $fields ) {
+		$post = get_post( $id );
+
+		$data = array();
+
+		if ( in_array( WP_REST_Search_Controller::PROP_ID, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_ID ] = (int) $post->ID;
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TITLE, $fields, true ) ) {
+			if ( post_type_supports( $post->post_type, 'title' ) ) {
+				add_filter( 'protected_title_format', array( $this, 'protected_title_format' ) );
+				$data[ WP_REST_Search_Controller::PROP_TITLE ] = get_the_title( $post->ID );
+				remove_filter( 'protected_title_format', array( $this, 'protected_title_format' ) );
+			} else {
+				$data[ WP_REST_Search_Controller::PROP_TITLE ] = '';
+			}
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_URL, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_URL ] = get_permalink( $post->ID );
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_TYPE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_TYPE ] = $this->type;
+		}
+
+		if ( in_array( WP_REST_Search_Controller::PROP_SUBTYPE, $fields, true ) ) {
+			$data[ WP_REST_Search_Controller::PROP_SUBTYPE ] = $post->post_type;
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Prepares links for the search result of a given ID.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param int $id Item ID.
+	 * @return array Links for the given item.
+	 */
+	public function prepare_item_links( $id ) {
+		$post = get_post( $id );
+
+		$links = array();
+
+		$item_route = rest_get_route_for_post( $post );
+		if ( ! empty( $item_route ) ) {
+			$links['self'] = array(
+				'href'       => rest_url( $item_route ),
+				'embeddable' => true,
+			);
+		}
+
+		$links['about'] = array(
+			'href' => rest_url( 'wp/v2/types/' . $post->post_type ),
+		);
+
+		return $links;
+	}
+
+	/**
+	 * Overwrites the default protected title format.
+	 *
+	 * By default, WordPress will show password protected posts with a title of
+	 * "Protected: %s". As the REST API communicates the protected status of a post
+	 * in a machine readable format, we remove the "Protected: " prefix.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @return string Protected title format.
+	 */
+	public function protected_title_format() {
+		return '%s';
+	}
+
+	/**
+	 * Attempts to detect the route to access a single item.
+	 *
+	 * @since 5.0.0
+	 * @deprecated 5.5.0 Use rest_get_route_for_post()
+	 * @see rest_get_route_for_post()
+	 *
+	 * @param WP_Post $post Post object.
+	 * @return string REST route relative to the REST base URI, or empty string if unknown.
+	 */
+	protected function detect_rest_item_route( $post ) {
+		_deprecated_function( __METHOD__, '5.5.0', 'rest_get_route_for_post()' );
+
+		return rest_get_route_for_post( $post );
+	}
+
+}
+
+The file class-wp-rest-search-handler.php contains:
+<?php
+/**
+ * REST API: WP_REST_Search_Handler class
+ *
+ * @package WordPress
+ * @subpackage REST_API
+ * @since 5.0.0
+ */
+
+/**
+ * Core base class representing a search handler for an object type in the REST API.
+ *
+ * @since 5.0.0
+ */
+abstract class WP_REST_Search_Handler {
+
+	/**
+	 * Field containing the IDs in the search result.
+	 */
+	const RESULT_IDS = 'ids';
+
+	/**
+	 * Field containing the total count in the search result.
+	 */
+	const RESULT_TOTAL = 'total';
+
+	/**
+	 * Object type managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 * @var string
+	 */
+	protected $type = '';
+
+	/**
+	 * Object subtypes managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 * @var array
+	 */
+	protected $subtypes = array();
+
+	/**
+	 * Gets the object type managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @return string Object type identifier.
+	 */
+	public function get_type() {
+		return $this->type;
+	}
+
+	/**
+	 * Gets the object subtypes managed by this search handler.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @return array Array of object subtype identifiers.
+	 */
+	public function get_subtypes() {
+		return $this->subtypes;
+	}
+
+	/**
+	 * Searches the object type content for a given search request.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param WP_REST_Request $request Full REST request.
+	 * @return array Associative array containing an `WP_REST_Search_Handler::RESULT_IDS` containing
+	 *               an array of found IDs and `WP_REST_Search_Handler::RESULT_TOTAL` containing the
+	 *               total count for the matching search results.
+	 */
+	abstract public function search_items( WP_REST_Request $request );
+
+	/**
+	 * Prepares the search result for a given ID.
+	 *
+	 * @since 5.0.0
+	 * @since 5.6.0 The `$id` parameter can accept a string.
+	 *
+	 * @param int|string $id     Item ID.
+	 * @param array      $fields Fields to include for the item.
+	 * @return array Associative array containing all fields for the item.
+	 */
+	abstract public function prepare_item( $id, array $fields );
+
+	/**
+	 * Prepares links for the search result of a given ID.
+	 *
+	 * @since 5.0.0
+	 * @since 5.6.0 The `$id` parameter can accept a string.
+	 *
+	 * @param int|string $id Item ID.
+	 * @return array Links for the given item.
+	 */
+	abstract public function prepare_item_links( $id );
+}
+
+The file class-wp-rest-term-search-handler.php contains:
+

@@ -1,0 +1,189 @@
+The file autoload-php7.php contains:
+<?php
+/*
+ This file should only ever be loaded on PHP 7+
+ */
+if (PHP_VERSION_ID < 70000) {
+    return;
+}
+
+spl_autoload_register(function ($class) {
+    $namespace = 'ParagonIE_Sodium_';
+    // Does the class use the namespace prefix?
+    $len = strlen($namespace);
+    if (strncmp($namespace, $class, $len) !== 0) {
+        // no, move to the next registered autoloader
+        return false;
+    }
+
+    // Get the relative class name
+    $relative_class = substr($class, $len);
+
+    // Replace the namespace prefix with the base directory, replace namespace
+    // separators with directory separators in the relative class name, append
+    // with .php
+    $file = dirname(__FILE__) . '/src/' . str_replace('_', '/', $relative_class) . '.php';
+    // if the file exists, require it
+    if (file_exists($file)) {
+        require_once $file;
+        return true;
+    }
+    return false;
+});
+
+The file autoload.php contains:
+<?php
+
+if (PHP_VERSION_ID < 70000) {
+    if (!is_callable('sodiumCompatAutoloader')) {
+        /**
+         * Sodium_Compat autoloader.
+         *
+         * @param string $class Class name to be autoloaded.
+         *
+         * @return bool         Stop autoloading?
+         */
+        function sodiumCompatAutoloader($class)
+        {
+            $namespace = 'ParagonIE_Sodium_';
+            // Does the class use the namespace prefix?
+            $len = strlen($namespace);
+            if (strncmp($namespace, $class, $len) !== 0) {
+                // no, move to the next registered autoloader
+                return false;
+            }
+
+            // Get the relative class name
+            $relative_class = substr($class, $len);
+
+            // Replace the namespace prefix with the base directory, replace namespace
+            // separators with directory separators in the relative class name, append
+            // with .php
+            $file = dirname(__FILE__) . '/src/' . str_replace('_', '/', $relative_class) . '.php';
+            // if the file exists, require it
+            if (file_exists($file)) {
+                require_once $file;
+                return true;
+            }
+            return false;
+        }
+
+        // Now that we have an autoloader, let's register it!
+        spl_autoload_register('sodiumCompatAutoloader');
+    }
+} else {
+    require_once dirname(__FILE__) . '/autoload-php7.php';
+}
+
+if (!class_exists('SodiumException', false)) {
+    require_once dirname(__FILE__) . '/src/SodiumException.php';
+}
+if (PHP_VERSION_ID >= 50300) {
+    // Namespaces didn't exist before 5.3.0, so don't even try to use this
+    // unless PHP >= 5.3.0
+    require_once dirname(__FILE__) . '/lib/namespaced.php';
+    require_once dirname(__FILE__) . '/lib/sodium_compat.php';
+} else {
+    require_once dirname(__FILE__) . '/src/PHP52/SplFixedArray.php';
+}
+if (PHP_VERSION_ID < 70200 || !extension_loaded('sodium')) {
+    if (PHP_VERSION_ID >= 50300 && !defined('SODIUM_CRYPTO_SCALARMULT_BYTES')) {
+        require_once dirname(__FILE__) . '/lib/php72compat_const.php';
+    }
+    if (PHP_VERSION_ID >= 70000) {
+        assert(class_exists('ParagonIE_Sodium_Compat'), 'Possible filesystem/autoloader bug?');
+    } else {
+        assert(class_exists('ParagonIE_Sodium_Compat'));
+    }
+    require_once (dirname(__FILE__) . '/lib/php72compat.php');
+}
+
+The file composer.json contains:
+{
+  "name": "paragonie/sodium_compat",
+  "description": "Pure PHP implementation of libsodium; uses the PHP extension if it exists",
+  "keywords": [
+    "PHP",
+    "cryptography",
+    "elliptic curve",
+    "elliptic curve cryptography",
+    "Pure-PHP cryptography",
+    "side-channel resistant",
+    "Curve25519",
+    "X25519",
+    "ECDH",
+    "Elliptic Curve Diffie-Hellman",
+    "Ed25519",
+    "RFC 7748",
+    "RFC 8032",
+    "EdDSA",
+    "Edwards-curve Digital Signature Algorithm",
+    "ChaCha20",
+    "Salsa20",
+    "Xchacha20",
+    "Xsalsa20",
+    "Poly1305",
+    "BLAKE2b",
+    "public-key cryptography",
+    "secret-key cryptography",
+    "AEAD",
+    "Chapoly",
+    "Salpoly",
+    "ChaCha20-Poly1305",
+    "XSalsa20-Poly1305",
+    "XChaCha20-Poly1305",
+    "encryption",
+    "authentication",
+    "libsodium"
+  ],
+  "license": "ISC",
+  "authors": [
+    {
+      "name": "Paragon Initiative Enterprises",
+      "email": "security@paragonie.com"
+    },
+    {
+      "name": "Frank Denis",
+      "email": "jedisct1@pureftpd.org"
+    }
+  ],
+  "autoload": {
+    "files": ["autoload.php"]
+  },
+  "require": {
+    "php": "^5.2.4|^5.3|^5.4|^5.5|^5.6|^7|^8",
+    "paragonie/random_compat": ">=1"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^3|^4|^5|^6|^7|^8|^9"
+  },
+  "suggest": {
+    "ext-libsodium": "PHP < 7.0: Better performance, password hashing (Argon2i), secure memory management (memzero), and better security.",
+    "ext-sodium": "PHP >= 7.0: Better performance, password hashing (Argon2i), secure memory management (memzero), and better security."
+  }
+}
+
+The file LICENSE contains:
+/*
+ * ISC License
+ *
+ * Copyright (c) 2016-2019
+ * Paragon Initiative Enterprises <security at paragonie dot com>
+ *
+ * Copyright (c) 2013-2019
+ * Frank Denis <j at pureftpd dot org>
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+The file my-directory-list.txt contains:
+

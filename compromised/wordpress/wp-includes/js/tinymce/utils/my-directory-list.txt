@@ -1,0 +1,1037 @@
+The file editable_selects.js contains:
+/**
+ * editable_selects.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2017 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+var TinyMCE_EditableSelects = {
+  editSelectElm : null,
+
+  init : function () {
+    var nl = document.getElementsByTagName("select"), i, d = document, o;
+
+    for (i = 0; i < nl.length; i++) {
+      if (nl[i].className.indexOf('mceEditableSelect') != -1) {
+        o = new Option(tinyMCEPopup.editor.translate('value'), '__mce_add_custom__');
+
+        o.className = 'mceAddSelectValue';
+
+        nl[i].options[nl[i].options.length] = o;
+        nl[i].onchange = TinyMCE_EditableSelects.onChangeEditableSelect;
+      }
+    }
+  },
+
+  onChangeEditableSelect : function (e) {
+    var d = document, ne, se = window.event ? window.event.srcElement : e.target;
+
+    if (se.options[se.selectedIndex].value == '__mce_add_custom__') {
+      ne = d.createElement("input");
+      ne.id = se.id + "_custom";
+      ne.name = se.name + "_custom";
+      ne.type = "text";
+
+      ne.style.width = se.offsetWidth + 'px';
+      se.parentNode.insertBefore(ne, se);
+      se.style.display = 'none';
+      ne.focus();
+      ne.onblur = TinyMCE_EditableSelects.onBlurEditableSelectInput;
+      ne.onkeydown = TinyMCE_EditableSelects.onKeyDown;
+      TinyMCE_EditableSelects.editSelectElm = se;
+    }
+  },
+
+  onBlurEditableSelectInput : function () {
+    var se = TinyMCE_EditableSelects.editSelectElm;
+
+    if (se) {
+      if (se.previousSibling.value != '') {
+        addSelectValue(document.forms[0], se.id, se.previousSibling.value, se.previousSibling.value);
+        selectByValue(document.forms[0], se.id, se.previousSibling.value);
+      } else {
+        selectByValue(document.forms[0], se.id, '');
+      }
+
+      se.style.display = 'inline';
+      se.parentNode.removeChild(se.previousSibling);
+      TinyMCE_EditableSelects.editSelectElm = null;
+    }
+  },
+
+  onKeyDown : function (e) {
+    e = e || window.event;
+
+    if (e.keyCode == 13) {
+      TinyMCE_EditableSelects.onBlurEditableSelectInput();
+    }
+  }
+};
+
+The file form_utils.js contains:
+/**
+ * form_utils.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2017 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+var themeBaseURL = tinyMCEPopup.editor.baseURI.toAbsolute('themes/' + tinyMCEPopup.getParam("theme"));
+
+function getColorPickerHTML(id, target_form_element) {
+  var h = "", dom = tinyMCEPopup.dom;
+
+  if (label = dom.select('label[for=' + target_form_element + ']')[0]) {
+    label.id = label.id || dom.uniqueId();
+  }
+
+  h += '<a role="button" aria-labelledby="' + id + '_label" id="' + id + '_link" href="javascript:;" onclick="tinyMCEPopup.pickColor(event,\'' + target_form_element + '\');" onmousedown="return false;" class="pickcolor">';
+  h += '<span id="' + id + '" title="' + tinyMCEPopup.getLang('browse') + '">&nbsp;<span id="' + id + '_label" class="mceVoiceLabel mceIconOnly" style="display:none;">' + tinyMCEPopup.getLang('browse') + '</span></span></a>';
+
+  return h;
+}
+
+function updateColor(img_id, form_element_id) {
+  document.getElementById(img_id).style.backgroundColor = document.forms[0].elements[form_element_id].value;
+}
+
+function setBrowserDisabled(id, state) {
+  var img = document.getElementById(id);
+  var lnk = document.getElementById(id + "_link");
+
+  if (lnk) {
+    if (state) {
+      lnk.setAttribute("realhref", lnk.getAttribute("href"));
+      lnk.removeAttribute("href");
+      tinyMCEPopup.dom.addClass(img, 'disabled');
+    } else {
+      if (lnk.getAttribute("realhref")) {
+        lnk.setAttribute("href", lnk.getAttribute("realhref"));
+      }
+
+      tinyMCEPopup.dom.removeClass(img, 'disabled');
+    }
+  }
+}
+
+function getBrowserHTML(id, target_form_element, type, prefix) {
+  var option = prefix + "_" + type + "_browser_callback", cb, html;
+
+  cb = tinyMCEPopup.getParam(option, tinyMCEPopup.getParam("file_browser_callback"));
+
+  if (!cb) {
+    return "";
+  }
+
+  html = "";
+  html += '<a id="' + id + '_link" href="javascript:openBrowser(\'' + id + '\',\'' + target_form_element + '\', \'' + type + '\',\'' + option + '\');" onmousedown="return false;" class="browse">';
+  html += '<span id="' + id + '" title="' + tinyMCEPopup.getLang('browse') + '">&nbsp;</span></a>';
+
+  return html;
+}
+
+function openBrowser(img_id, target_form_element, type, option) {
+  var img = document.getElementById(img_id);
+
+  if (img.className != "mceButtonDisabled") {
+    tinyMCEPopup.openBrowser(target_form_element, type, option);
+  }
+}
+
+function selectByValue(form_obj, field_name, value, add_custom, ignore_case) {
+  if (!form_obj || !form_obj.elements[field_name]) {
+    return;
+  }
+
+  if (!value) {
+    value = "";
+  }
+
+  var sel = form_obj.elements[field_name];
+
+  var found = false;
+  for (var i = 0; i < sel.options.length; i++) {
+    var option = sel.options[i];
+
+    if (option.value == value || (ignore_case && option.value.toLowerCase() == value.toLowerCase())) {
+      option.selected = true;
+      found = true;
+    } else {
+      option.selected = false;
+    }
+  }
+
+  if (!found && add_custom && value != '') {
+    var option = new Option(value, value);
+    option.selected = true;
+    sel.options[sel.options.length] = option;
+    sel.selectedIndex = sel.options.length - 1;
+  }
+
+  return found;
+}
+
+function getSelectValue(form_obj, field_name) {
+  var elm = form_obj.elements[field_name];
+
+  if (elm == null || elm.options == null || elm.selectedIndex === -1) {
+    return "";
+  }
+
+  return elm.options[elm.selectedIndex].value;
+}
+
+function addSelectValue(form_obj, field_name, name, value) {
+  var s = form_obj.elements[field_name];
+  var o = new Option(name, value);
+  s.options[s.options.length] = o;
+}
+
+function addClassesToList(list_id, specific_option) {
+  // Setup class droplist
+  var styleSelectElm = document.getElementById(list_id);
+  var styles = tinyMCEPopup.getParam('theme_advanced_styles', false);
+  styles = tinyMCEPopup.getParam(specific_option, styles);
+
+  if (styles) {
+    var stylesAr = styles.split(';');
+
+    for (var i = 0; i < stylesAr.length; i++) {
+      if (stylesAr != "") {
+        var key, value;
+
+        key = stylesAr[i].split('=')[0];
+        value = stylesAr[i].split('=')[1];
+
+        styleSelectElm.options[styleSelectElm.length] = new Option(key, value);
+      }
+    }
+  } else {
+    /*tinymce.each(tinyMCEPopup.editor.dom.getClasses(), function(o) {
+    styleSelectElm.options[styleSelectElm.length] = new Option(o.title || o['class'], o['class']);
+    });*/
+  }
+}
+
+function isVisible(element_id) {
+  var elm = document.getElementById(element_id);
+
+  return elm && elm.style.display != "none";
+}
+
+function convertRGBToHex(col) {
+  var re = new RegExp("rgb\\s*\\(\\s*([0-9]+).*,\\s*([0-9]+).*,\\s*([0-9]+).*\\)", "gi");
+
+  var rgb = col.replace(re, "$1,$2,$3").split(',');
+  if (rgb.length == 3) {
+    r = parseInt(rgb[0]).toString(16);
+    g = parseInt(rgb[1]).toString(16);
+    b = parseInt(rgb[2]).toString(16);
+
+    r = r.length == 1 ? '0' + r : r;
+    g = g.length == 1 ? '0' + g : g;
+    b = b.length == 1 ? '0' + b : b;
+
+    return "#" + r + g + b;
+  }
+
+  return col;
+}
+
+function convertHexToRGB(col) {
+  if (col.indexOf('#') != -1) {
+    col = col.replace(new RegExp('[^0-9A-F]', 'gi'), '');
+
+    r = parseInt(col.substring(0, 2), 16);
+    g = parseInt(col.substring(2, 4), 16);
+    b = parseInt(col.substring(4, 6), 16);
+
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  return col;
+}
+
+function trimSize(size) {
+  return size.replace(/([0-9\.]+)(px|%|in|cm|mm|em|ex|pt|pc)/i, '$1$2');
+}
+
+function getCSSSize(size) {
+  size = trimSize(size);
+
+  if (size == "") {
+    return "";
+  }
+
+  // Add px
+  if (/^[0-9]+$/.test(size)) {
+    size += 'px';
+  }
+  // Sanity check, IE doesn't like broken values
+  else if (!(/^[0-9\.]+(px|%|in|cm|mm|em|ex|pt|pc)$/i.test(size))) {
+    return "";
+  }
+
+  return size;
+}
+
+function getStyle(elm, attrib, style) {
+  var val = tinyMCEPopup.dom.getAttrib(elm, attrib);
+
+  if (val != '') {
+    return '' + val;
+  }
+
+  if (typeof (style) == 'undefined') {
+    style = attrib;
+  }
+
+  return tinyMCEPopup.dom.getStyle(elm, style);
+}
+
+The file mctabs.js contains:
+/**
+ * mctabs.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2017 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/*jshint globals: tinyMCEPopup */
+
+function MCTabs() {
+  this.settings = [];
+  this.onChange = tinyMCEPopup.editor.windowManager.createInstance('tinymce.util.Dispatcher');
+}
+
+MCTabs.prototype.init = function (settings) {
+  this.settings = settings;
+};
+
+MCTabs.prototype.getParam = function (name, default_value) {
+  var value = null;
+
+  value = (typeof (this.settings[name]) == "undefined") ? default_value : this.settings[name];
+
+  // Fix bool values
+  if (value == "true" || value == "false") {
+    return (value == "true");
+  }
+
+  return value;
+};
+
+MCTabs.prototype.showTab = function (tab) {
+  tab.className = 'current';
+  tab.setAttribute("aria-selected", true);
+  tab.setAttribute("aria-expanded", true);
+  tab.tabIndex = 0;
+};
+
+MCTabs.prototype.hideTab = function (tab) {
+  var t = this;
+
+  tab.className = '';
+  tab.setAttribute("aria-selected", false);
+  tab.setAttribute("aria-expanded", false);
+  tab.tabIndex = -1;
+};
+
+MCTabs.prototype.showPanel = function (panel) {
+  panel.className = 'current';
+  panel.setAttribute("aria-hidden", false);
+};
+
+MCTabs.prototype.hidePanel = function (panel) {
+  panel.className = 'panel';
+  panel.setAttribute("aria-hidden", true);
+};
+
+MCTabs.prototype.getPanelForTab = function (tabElm) {
+  return tinyMCEPopup.dom.getAttrib(tabElm, "aria-controls");
+};
+
+MCTabs.prototype.displayTab = function (tab_id, panel_id, avoid_focus) {
+  var panelElm, panelContainerElm, tabElm, tabContainerElm, selectionClass, nodes, i, t = this;
+
+  tabElm = document.getElementById(tab_id);
+
+  if (panel_id === undefined) {
+    panel_id = t.getPanelForTab(tabElm);
+  }
+
+  panelElm = document.getElementById(panel_id);
+  panelContainerElm = panelElm ? panelElm.parentNode : null;
+  tabContainerElm = tabElm ? tabElm.parentNode : null;
+  selectionClass = t.getParam('selection_class', 'current');
+
+  if (tabElm && tabContainerElm) {
+    nodes = tabContainerElm.childNodes;
+
+    // Hide all other tabs
+    for (i = 0; i < nodes.length; i++) {
+      if (nodes[i].nodeName == "LI") {
+        t.hideTab(nodes[i]);
+      }
+    }
+
+    // Show selected tab
+    t.showTab(tabElm);
+  }
+
+  if (panelElm && panelContainerElm) {
+    nodes = panelContainerElm.childNodes;
+
+    // Hide all other panels
+    for (i = 0; i < nodes.length; i++) {
+      if (nodes[i].nodeName == "DIV") {
+        t.hidePanel(nodes[i]);
+      }
+    }
+
+    if (!avoid_focus) {
+      tabElm.focus();
+    }
+
+    // Show selected panel
+    t.showPanel(panelElm);
+  }
+};
+
+MCTabs.prototype.getAnchor = function () {
+  var pos, url = document.location.href;
+
+  if ((pos = url.lastIndexOf('#')) != -1) {
+    return url.substring(pos + 1);
+  }
+
+  return "";
+};
+
+
+//Global instance
+var mcTabs = new MCTabs();
+
+tinyMCEPopup.onInit.add(function () {
+  var tinymce = tinyMCEPopup.getWin().tinymce, dom = tinyMCEPopup.dom, each = tinymce.each;
+
+  each(dom.select('div.tabs'), function (tabContainerElm) {
+    //var keyNav;
+
+    dom.setAttrib(tabContainerElm, "role", "tablist");
+
+    var items = tinyMCEPopup.dom.select('li', tabContainerElm);
+    var action = function (id) {
+      mcTabs.displayTab(id, mcTabs.getPanelForTab(id));
+      mcTabs.onChange.dispatch(id);
+    };
+
+    each(items, function (item) {
+      dom.setAttrib(item, 'role', 'tab');
+      dom.bind(item, 'click', function (evt) {
+        action(item.id);
+      });
+    });
+
+    dom.bind(dom.getRoot(), 'keydown', function (evt) {
+      if (evt.keyCode === 9 && evt.ctrlKey && !evt.altKey) { // Tab
+        //keyNav.moveFocus(evt.shiftKey ? -1 : 1);
+        tinymce.dom.Event.cancel(evt);
+      }
+    });
+
+    each(dom.select('a', tabContainerElm), function (a) {
+      dom.setAttrib(a, 'tabindex', '-1');
+    });
+
+    /*keyNav = tinyMCEPopup.editor.windowManager.createInstance('tinymce.ui.KeyboardNavigation', {
+      root: tabContainerElm,
+      items: items,
+      onAction: action,
+      actOnFocus: true,
+      enableLeftRight: true,
+      enableUpDown: true
+    }, tinyMCEPopup.dom);*/
+  }
+);
+});
+The file my-directory-list.txt contains:
+The file editable_selects.js contains:
+/**
+ * editable_selects.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2017 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+var TinyMCE_EditableSelects = {
+  editSelectElm : null,
+
+  init : function () {
+    var nl = document.getElementsByTagName("select"), i, d = document, o;
+
+    for (i = 0; i < nl.length; i++) {
+      if (nl[i].className.indexOf('mceEditableSelect') != -1) {
+        o = new Option(tinyMCEPopup.editor.translate('value'), '__mce_add_custom__');
+
+        o.className = 'mceAddSelectValue';
+
+        nl[i].options[nl[i].options.length] = o;
+        nl[i].onchange = TinyMCE_EditableSelects.onChangeEditableSelect;
+      }
+    }
+  },
+
+  onChangeEditableSelect : function (e) {
+    var d = document, ne, se = window.event ? window.event.srcElement : e.target;
+
+    if (se.options[se.selectedIndex].value == '__mce_add_custom__') {
+      ne = d.createElement("input");
+      ne.id = se.id + "_custom";
+      ne.name = se.name + "_custom";
+      ne.type = "text";
+
+      ne.style.width = se.offsetWidth + 'px';
+      se.parentNode.insertBefore(ne, se);
+      se.style.display = 'none';
+      ne.focus();
+      ne.onblur = TinyMCE_EditableSelects.onBlurEditableSelectInput;
+      ne.onkeydown = TinyMCE_EditableSelects.onKeyDown;
+      TinyMCE_EditableSelects.editSelectElm = se;
+    }
+  },
+
+  onBlurEditableSelectInput : function () {
+    var se = TinyMCE_EditableSelects.editSelectElm;
+
+    if (se) {
+      if (se.previousSibling.value != '') {
+        addSelectValue(document.forms[0], se.id, se.previousSibling.value, se.previousSibling.value);
+        selectByValue(document.forms[0], se.id, se.previousSibling.value);
+      } else {
+        selectByValue(document.forms[0], se.id, '');
+      }
+
+      se.style.display = 'inline';
+      se.parentNode.removeChild(se.previousSibling);
+      TinyMCE_EditableSelects.editSelectElm = null;
+    }
+  },
+
+  onKeyDown : function (e) {
+    e = e || window.event;
+
+    if (e.keyCode == 13) {
+      TinyMCE_EditableSelects.onBlurEditableSelectInput();
+    }
+  }
+};
+
+The file form_utils.js contains:
+/**
+ * form_utils.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2017 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+var themeBaseURL = tinyMCEPopup.editor.baseURI.toAbsolute('themes/' + tinyMCEPopup.getParam("theme"));
+
+function getColorPickerHTML(id, target_form_element) {
+  var h = "", dom = tinyMCEPopup.dom;
+
+  if (label = dom.select('label[for=' + target_form_element + ']')[0]) {
+    label.id = label.id || dom.uniqueId();
+  }
+
+  h += '<a role="button" aria-labelledby="' + id + '_label" id="' + id + '_link" href="javascript:;" onclick="tinyMCEPopup.pickColor(event,\'' + target_form_element + '\');" onmousedown="return false;" class="pickcolor">';
+  h += '<span id="' + id + '" title="' + tinyMCEPopup.getLang('browse') + '">&nbsp;<span id="' + id + '_label" class="mceVoiceLabel mceIconOnly" style="display:none;">' + tinyMCEPopup.getLang('browse') + '</span></span></a>';
+
+  return h;
+}
+
+function updateColor(img_id, form_element_id) {
+  document.getElementById(img_id).style.backgroundColor = document.forms[0].elements[form_element_id].value;
+}
+
+function setBrowserDisabled(id, state) {
+  var img = document.getElementById(id);
+  var lnk = document.getElementById(id + "_link");
+
+  if (lnk) {
+    if (state) {
+      lnk.setAttribute("realhref", lnk.getAttribute("href"));
+      lnk.removeAttribute("href");
+      tinyMCEPopup.dom.addClass(img, 'disabled');
+    } else {
+      if (lnk.getAttribute("realhref")) {
+        lnk.setAttribute("href", lnk.getAttribute("realhref"));
+      }
+
+      tinyMCEPopup.dom.removeClass(img, 'disabled');
+    }
+  }
+}
+
+function getBrowserHTML(id, target_form_element, type, prefix) {
+  var option = prefix + "_" + type + "_browser_callback", cb, html;
+
+  cb = tinyMCEPopup.getParam(option, tinyMCEPopup.getParam("file_browser_callback"));
+
+  if (!cb) {
+    return "";
+  }
+
+  html = "";
+  html += '<a id="' + id + '_link" href="javascript:openBrowser(\'' + id + '\',\'' + target_form_element + '\', \'' + type + '\',\'' + option + '\');" onmousedown="return false;" class="browse">';
+  html += '<span id="' + id + '" title="' + tinyMCEPopup.getLang('browse') + '">&nbsp;</span></a>';
+
+  return html;
+}
+
+function openBrowser(img_id, target_form_element, type, option) {
+  var img = document.getElementById(img_id);
+
+  if (img.className != "mceButtonDisabled") {
+    tinyMCEPopup.openBrowser(target_form_element, type, option);
+  }
+}
+
+function selectByValue(form_obj, field_name, value, add_custom, ignore_case) {
+  if (!form_obj || !form_obj.elements[field_name]) {
+    return;
+  }
+
+  if (!value) {
+    value = "";
+  }
+
+  var sel = form_obj.elements[field_name];
+
+  var found = false;
+  for (var i = 0; i < sel.options.length; i++) {
+    var option = sel.options[i];
+
+    if (option.value == value || (ignore_case && option.value.toLowerCase() == value.toLowerCase())) {
+      option.selected = true;
+      found = true;
+    } else {
+      option.selected = false;
+    }
+  }
+
+  if (!found && add_custom && value != '') {
+    var option = new Option(value, value);
+    option.selected = true;
+    sel.options[sel.options.length] = option;
+    sel.selectedIndex = sel.options.length - 1;
+  }
+
+  return found;
+}
+
+function getSelectValue(form_obj, field_name) {
+  var elm = form_obj.elements[field_name];
+
+  if (elm == null || elm.options == null || elm.selectedIndex === -1) {
+    return "";
+  }
+
+  return elm.options[elm.selectedIndex].value;
+}
+
+function addSelectValue(form_obj, field_name, name, value) {
+  var s = form_obj.elements[field_name];
+  var o = new Option(name, value);
+  s.options[s.options.length] = o;
+}
+
+function addClassesToList(list_id, specific_option) {
+  // Setup class droplist
+  var styleSelectElm = document.getElementById(list_id);
+  var styles = tinyMCEPopup.getParam('theme_advanced_styles', false);
+  styles = tinyMCEPopup.getParam(specific_option, styles);
+
+  if (styles) {
+    var stylesAr = styles.split(';');
+
+    for (var i = 0; i < stylesAr.length; i++) {
+      if (stylesAr != "") {
+        var key, value;
+
+        key = stylesAr[i].split('=')[0];
+        value = stylesAr[i].split('=')[1];
+
+        styleSelectElm.options[styleSelectElm.length] = new Option(key, value);
+      }
+    }
+  } else {
+    /*tinymce.each(tinyMCEPopup.editor.dom.getClasses(), function(o) {
+    styleSelectElm.options[styleSelectElm.length] = new Option(o.title || o['class'], o['class']);
+    });*/
+  }
+}
+
+function isVisible(element_id) {
+  var elm = document.getElementById(element_id);
+
+  return elm && elm.style.display != "none";
+}
+
+function convertRGBToHex(col) {
+  var re = new RegExp("rgb\\s*\\(\\s*([0-9]+).*,\\s*([0-9]+).*,\\s*([0-9]+).*\\)", "gi");
+
+  var rgb = col.replace(re, "$1,$2,$3").split(',');
+  if (rgb.length == 3) {
+    r = parseInt(rgb[0]).toString(16);
+    g = parseInt(rgb[1]).toString(16);
+    b = parseInt(rgb[2]).toString(16);
+
+    r = r.length == 1 ? '0' + r : r;
+    g = g.length == 1 ? '0' + g : g;
+    b = b.length == 1 ? '0' + b : b;
+
+    return "#" + r + g + b;
+  }
+
+  return col;
+}
+
+function convertHexToRGB(col) {
+  if (col.indexOf('#') != -1) {
+    col = col.replace(new RegExp('[^0-9A-F]', 'gi'), '');
+
+    r = parseInt(col.substring(0, 2), 16);
+    g = parseInt(col.substring(2, 4), 16);
+    b = parseInt(col.substring(4, 6), 16);
+
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  return col;
+}
+
+function trimSize(size) {
+  return size.replace(/([0-9\.]+)(px|%|in|cm|mm|em|ex|pt|pc)/i, '$1$2');
+}
+
+function getCSSSize(size) {
+  size = trimSize(size);
+
+  if (size == "") {
+    return "";
+  }
+
+  // Add px
+  if (/^[0-9]+$/.test(size)) {
+    size += 'px';
+  }
+  // Sanity check, IE doesn't like broken values
+  else if (!(/^[0-9\.]+(px|%|in|cm|mm|em|ex|pt|pc)$/i.test(size))) {
+    return "";
+  }
+
+  return size;
+}
+
+function getStyle(elm, attrib, style) {
+  var val = tinyMCEPopup.dom.getAttrib(elm, attrib);
+
+  if (val != '') {
+    return '' + val;
+  }
+
+  if (typeof (style) == 'undefined') {
+    style = attrib;
+  }
+
+  return tinyMCEPopup.dom.getStyle(elm, style);
+}
+
+The file mctabs.js contains:
+
+The file validate.js contains:
+/**
+ * validate.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2017 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+  // String validation:
+
+  if (!Validator.isEmail('myemail'))
+    alert('Invalid email.');
+
+  // Form validation:
+
+  var f = document.forms['myform'];
+
+  if (!Validator.isEmail(f.myemail))
+    alert('Invalid email.');
+*/
+
+var Validator = {
+  isEmail : function (s) {
+    return this.test(s, '^[-!#$%&\'*+\\./0-9=?A-Z^_`a-z{|}~]+@[-!#$%&\'*+\\/0-9=?A-Z^_`a-z{|}~]+\.[-!#$%&\'*+\\./0-9=?A-Z^_`a-z{|}~]+$');
+  },
+
+  isAbsUrl : function (s) {
+    return this.test(s, '^(news|telnet|nttp|file|http|ftp|https)://[-A-Za-z0-9\\.]+\\/?.*$');
+  },
+
+  isSize : function (s) {
+    return this.test(s, '^[0-9.]+(%|in|cm|mm|em|ex|pt|pc|px)?$');
+  },
+
+  isId : function (s) {
+    return this.test(s, '^[A-Za-z_]([A-Za-z0-9_])*$');
+  },
+
+  isEmpty : function (s) {
+    var nl, i;
+
+    if (s.nodeName == 'SELECT' && s.selectedIndex < 1) {
+      return true;
+    }
+
+    if (s.type == 'checkbox' && !s.checked) {
+      return true;
+    }
+
+    if (s.type == 'radio') {
+      for (i = 0, nl = s.form.elements; i < nl.length; i++) {
+        if (nl[i].type == "radio" && nl[i].name == s.name && nl[i].checked) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    return new RegExp('^\\s*$').test(s.nodeType == 1 ? s.value : s);
+  },
+
+  isNumber : function (s, d) {
+    return !isNaN(s.nodeType == 1 ? s.value : s) && (!d || !this.test(s, '^-?[0-9]*\\.[0-9]*$'));
+  },
+
+  test : function (s, p) {
+    s = s.nodeType == 1 ? s.value : s;
+
+    return s == '' || new RegExp(p).test(s);
+  }
+};
+
+var AutoValidator = {
+  settings : {
+    id_cls : 'id',
+    int_cls : 'int',
+    url_cls : 'url',
+    number_cls : 'number',
+    email_cls : 'email',
+    size_cls : 'size',
+    required_cls : 'required',
+    invalid_cls : 'invalid',
+    min_cls : 'min',
+    max_cls : 'max'
+  },
+
+  init : function (s) {
+    var n;
+
+    for (n in s) {
+      this.settings[n] = s[n];
+    }
+  },
+
+  validate : function (f) {
+    var i, nl, s = this.settings, c = 0;
+
+    nl = this.tags(f, 'label');
+    for (i = 0; i < nl.length; i++) {
+      this.removeClass(nl[i], s.invalid_cls);
+      nl[i].setAttribute('aria-invalid', false);
+    }
+
+    c += this.validateElms(f, 'input');
+    c += this.validateElms(f, 'select');
+    c += this.validateElms(f, 'textarea');
+
+    return c == 3;
+  },
+
+  invalidate : function (n) {
+    this.mark(n.form, n);
+  },
+
+  getErrorMessages : function (f) {
+    var nl, i, s = this.settings, field, msg, values, messages = [], ed = tinyMCEPopup.editor;
+    nl = this.tags(f, "label");
+    for (i = 0; i < nl.length; i++) {
+      if (this.hasClass(nl[i], s.invalid_cls)) {
+        field = document.getElementById(nl[i].getAttribute("for"));
+        values = { field: nl[i].textContent };
+        if (this.hasClass(field, s.min_cls, true)) {
+          message = ed.getLang('invalid_data_min');
+          values.min = this.getNum(field, s.min_cls);
+        } else if (this.hasClass(field, s.number_cls)) {
+          message = ed.getLang('invalid_data_number');
+        } else if (this.hasClass(field, s.size_cls)) {
+          message = ed.getLang('invalid_data_size');
+        } else {
+          message = ed.getLang('invalid_data');
+        }
+
+        message = message.replace(/{\#([^}]+)\}/g, function (a, b) {
+          return values[b] || '{#' + b + '}';
+        });
+        messages.push(message);
+      }
+    }
+    return messages;
+  },
+
+  reset : function (e) {
+    var t = ['label', 'input', 'select', 'textarea'];
+    var i, j, nl, s = this.settings;
+
+    if (e == null) {
+      return;
+    }
+
+    for (i = 0; i < t.length; i++) {
+      nl = this.tags(e.form ? e.form : e, t[i]);
+      for (j = 0; j < nl.length; j++) {
+        this.removeClass(nl[j], s.invalid_cls);
+        nl[j].setAttribute('aria-invalid', false);
+      }
+    }
+  },
+
+  validateElms : function (f, e) {
+    var nl, i, n, s = this.settings, st = true, va = Validator, v;
+
+    nl = this.tags(f, e);
+    for (i = 0; i < nl.length; i++) {
+      n = nl[i];
+
+      this.removeClass(n, s.invalid_cls);
+
+      if (this.hasClass(n, s.required_cls) && va.isEmpty(n)) {
+        st = this.mark(f, n);
+      }
+
+      if (this.hasClass(n, s.number_cls) && !va.isNumber(n)) {
+        st = this.mark(f, n);
+      }
+
+      if (this.hasClass(n, s.int_cls) && !va.isNumber(n, true)) {
+        st = this.mark(f, n);
+      }
+
+      if (this.hasClass(n, s.url_cls) && !va.isAbsUrl(n)) {
+        st = this.mark(f, n);
+      }
+
+      if (this.hasClass(n, s.email_cls) && !va.isEmail(n)) {
+        st = this.mark(f, n);
+      }
+
+      if (this.hasClass(n, s.size_cls) && !va.isSize(n)) {
+        st = this.mark(f, n);
+      }
+
+      if (this.hasClass(n, s.id_cls) && !va.isId(n)) {
+        st = this.mark(f, n);
+      }
+
+      if (this.hasClass(n, s.min_cls, true)) {
+        v = this.getNum(n, s.min_cls);
+
+        if (isNaN(v) || parseInt(n.value) < parseInt(v)) {
+          st = this.mark(f, n);
+        }
+      }
+
+      if (this.hasClass(n, s.max_cls, true)) {
+        v = this.getNum(n, s.max_cls);
+
+        if (isNaN(v) || parseInt(n.value) > parseInt(v)) {
+          st = this.mark(f, n);
+        }
+      }
+    }
+
+    return st;
+  },
+
+  hasClass : function (n, c, d) {
+    return new RegExp('\\b' + c + (d ? '[0-9]+' : '') + '\\b', 'g').test(n.className);
+  },
+
+  getNum : function (n, c) {
+    c = n.className.match(new RegExp('\\b' + c + '([0-9]+)\\b', 'g'))[0];
+    c = c.replace(/[^0-9]/g, '');
+
+    return c;
+  },
+
+  addClass : function (n, c, b) {
+    var o = this.removeClass(n, c);
+    n.className = b ? c + (o !== '' ? (' ' + o) : '') : (o !== '' ? (o + ' ') : '') + c;
+  },
+
+  removeClass : function (n, c) {
+    c = n.className.replace(new RegExp("(^|\\s+)" + c + "(\\s+|$)"), ' ');
+    return n.className = c !== ' ' ? c : '';
+  },
+
+  tags : function (f, s) {
+    return f.getElementsByTagName(s);
+  },
+
+  mark : function (f, n) {
+    var s = this.settings;
+
+    this.addClass(n, s.invalid_cls);
+    n.setAttribute('aria-invalid', 'true');
+    this.markLabels(f, n, s.invalid_cls);
+
+    return false;
+  },
+
+  markLabels : function (f, n, ic) {
+    var nl, i;
+
+    nl = this.tags(f, "label");
+    for (i = 0; i < nl.length; i++) {
+      if (nl[i].getAttribute("for") == n.id || nl[i].htmlFor == n.id) {
+        this.addClass(nl[i], ic);
+      }
+    }
+
+    return null;
+  }
+};
+

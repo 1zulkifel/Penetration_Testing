@@ -1,0 +1,2519 @@
+The file entry.php contains:
+<?php
+/**
+ * Contains Translation_Entry class
+ *
+ * @version $Id: entry.php 1157 2015-11-20 04:30:11Z dd32 $
+ * @package pomo
+ * @subpackage entry
+ */
+
+if ( ! class_exists( 'Translation_Entry', false ) ) :
+	/**
+	 * Translation_Entry class encapsulates a translatable string
+	 */
+	class Translation_Entry {
+
+		/**
+		 * Whether the entry contains a string and its plural form, default is false
+		 *
+		 * @var boolean
+		 */
+		public $is_plural = false;
+
+		public $context             = null;
+		public $singular            = null;
+		public $plural              = null;
+		public $translations        = array();
+		public $translator_comments = '';
+		public $extracted_comments  = '';
+		public $references          = array();
+		public $flags               = array();
+
+		/**
+		 * @param array $args associative array, support following keys:
+		 *  - singular (string) -- the string to translate, if omitted and empty entry will be created
+		 *  - plural (string) -- the plural form of the string, setting this will set {@link $is_plural} to true
+		 *  - translations (array) -- translations of the string and possibly -- its plural forms
+		 *  - context (string) -- a string differentiating two equal strings used in different contexts
+		 *  - translator_comments (string) -- comments left by translators
+		 *  - extracted_comments (string) -- comments left by developers
+		 *  - references (array) -- places in the code this strings is used, in relative_to_root_path/file.php:linenum form
+		 *  - flags (array) -- flags like php-format
+		 */
+		function __construct( $args = array() ) {
+			// If no singular -- empty object.
+			if ( ! isset( $args['singular'] ) ) {
+				return;
+			}
+			// Get member variable values from args hash.
+			foreach ( $args as $varname => $value ) {
+				$this->$varname = $value;
+			}
+			if ( isset( $args['plural'] ) && $args['plural'] ) {
+				$this->is_plural = true;
+			}
+			if ( ! is_array( $this->translations ) ) {
+				$this->translations = array();
+			}
+			if ( ! is_array( $this->references ) ) {
+				$this->references = array();
+			}
+			if ( ! is_array( $this->flags ) ) {
+				$this->flags = array();
+			}
+		}
+
+		/**
+		 * PHP4 constructor.
+		 *
+		 * @deprecated 5.4.0 Use __construct() instead.
+		 *
+		 * @see Translation_Entry::__construct()
+		 */
+		public function Translation_Entry( $args = array() ) {
+			_deprecated_constructor( self::class, '5.4.0', static::class );
+			self::__construct( $args );
+		}
+
+		/**
+		 * Generates a unique key for this entry
+		 *
+		 * @return string|bool the key or false if the entry is empty
+		 */
+		function key() {
+			if ( null === $this->singular || '' === $this->singular ) {
+				return false;
+			}
+
+			// Prepend context and EOT, like in MO files.
+			$key = ! $this->context ? $this->singular : $this->context . "\4" . $this->singular;
+			// Standardize on \n line endings.
+			$key = str_replace( array( "\r\n", "\r" ), "\n", $key );
+
+			return $key;
+		}
+
+		/**
+		 * @param object $other
+		 */
+		function merge_with( &$other ) {
+			$this->flags      = array_unique( array_merge( $this->flags, $other->flags ) );
+			$this->references = array_unique( array_merge( $this->references, $other->references ) );
+			if ( $this->extracted_comments != $other->extracted_comments ) {
+				$this->extracted_comments .= $other->extracted_comments;
+			}
+
+		}
+	}
+endif;
+
+The file mo.php contains:
+<?php
+/**
+ * Class for working with MO files
+ *
+ * @version $Id: mo.php 1157 2015-11-20 04:30:11Z dd32 $
+ * @package pomo
+ * @subpackage mo
+ */
+
+require_once __DIR__ . '/translations.php';
+require_once __DIR__ . '/streams.php';
+
+if ( ! class_exists( 'MO', false ) ) :
+	class MO extends Gettext_Translations {
+
+		public $_nplurals = 2;
+
+		/**
+		 * Loaded MO file.
+		 *
+		 * @var string
+		 */
+		private $filename = '';
+
+		/**
+		 * Returns the loaded MO file.
+		 *
+		 * @return string The loaded MO file.
+		 */
+		public function get_filename() {
+			return $this->filename;
+		}
+
+		/**
+		 * Fills up with the entries from MO file $filename
+		 *
+		 * @param string $filename MO file to load
+		 * @return bool True if the import from file was successful, otherwise false.
+		 */
+		function import_from_file( $filename ) {
+			$reader = new POMO_FileReader( $filename );
+
+			if ( ! $reader->is_resource() ) {
+				return false;
+			}
+
+			$this->filename = (string) $filename;
+
+			return $this->import_from_reader( $reader );
+		}
+
+		/**
+		 * @param string $filename
+		 * @return bool
+		 */
+		function export_to_file( $filename ) {
+			$fh = fopen( $filename, 'wb' );
+			if ( ! $fh ) {
+				return false;
+			}
+			$res = $this->export_to_file_handle( $fh );
+			fclose( $fh );
+			return $res;
+		}
+
+		/**
+		 * @return string|false
+		 */
+		function export() {
+			$tmp_fh = fopen( 'php://temp', 'r+' );
+			if ( ! $tmp_fh ) {
+				return false;
+			}
+			$this->export_to_file_handle( $tmp_fh );
+			rewind( $tmp_fh );
+			return stream_get_contents( $tmp_fh );
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @return bool
+		 */
+		function is_entry_good_for_export( $entry ) {
+			if ( empty( $entry->translations ) ) {
+				return false;
+			}
+
+			if ( ! array_filter( $entry->translations ) ) {
+				return false;
+			}
+
+			return true;
+		}
+
+		/**
+		 * @param resource $fh
+		 * @return true
+		 */
+		function export_to_file_handle( $fh ) {
+			$entries = array_filter( $this->entries, array( $this, 'is_entry_good_for_export' ) );
+			ksort( $entries );
+			$magic                     = 0x950412de;
+			$revision                  = 0;
+			$total                     = count( $entries ) + 1; // All the headers are one entry.
+			$originals_lenghts_addr    = 28;
+			$translations_lenghts_addr = $originals_lenghts_addr + 8 * $total;
+			$size_of_hash              = 0;
+			$hash_addr                 = $translations_lenghts_addr + 8 * $total;
+			$current_addr              = $hash_addr;
+			fwrite(
+				$fh,
+				pack(
+					'V*',
+					$magic,
+					$revision,
+					$total,
+					$originals_lenghts_addr,
+					$translations_lenghts_addr,
+					$size_of_hash,
+					$hash_addr
+				)
+			);
+			fseek( $fh, $originals_lenghts_addr );
+
+			// Headers' msgid is an empty string.
+			fwrite( $fh, pack( 'VV', 0, $current_addr ) );
+			$current_addr++;
+			$originals_table = "\0";
+
+			$reader = new POMO_Reader();
+
+			foreach ( $entries as $entry ) {
+				$originals_table .= $this->export_original( $entry ) . "\0";
+				$length           = $reader->strlen( $this->export_original( $entry ) );
+				fwrite( $fh, pack( 'VV', $length, $current_addr ) );
+				$current_addr += $length + 1; // Account for the NULL byte after.
+			}
+
+			$exported_headers = $this->export_headers();
+			fwrite( $fh, pack( 'VV', $reader->strlen( $exported_headers ), $current_addr ) );
+			$current_addr      += strlen( $exported_headers ) + 1;
+			$translations_table = $exported_headers . "\0";
+
+			foreach ( $entries as $entry ) {
+				$translations_table .= $this->export_translations( $entry ) . "\0";
+				$length              = $reader->strlen( $this->export_translations( $entry ) );
+				fwrite( $fh, pack( 'VV', $length, $current_addr ) );
+				$current_addr += $length + 1;
+			}
+
+			fwrite( $fh, $originals_table );
+			fwrite( $fh, $translations_table );
+			return true;
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @return string
+		 */
+		function export_original( $entry ) {
+			// TODO: Warnings for control characters.
+			$exported = $entry->singular;
+			if ( $entry->is_plural ) {
+				$exported .= "\0" . $entry->plural;
+			}
+			if ( $entry->context ) {
+				$exported = $entry->context . "\4" . $exported;
+			}
+			return $exported;
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @return string
+		 */
+		function export_translations( $entry ) {
+			// TODO: Warnings for control characters.
+			return $entry->is_plural ? implode( "\0", $entry->translations ) : $entry->translations[0];
+		}
+
+		/**
+		 * @return string
+		 */
+		function export_headers() {
+			$exported = '';
+			foreach ( $this->headers as $header => $value ) {
+				$exported .= "$header: $value\n";
+			}
+			return $exported;
+		}
+
+		/**
+		 * @param int $magic
+		 * @return string|false
+		 */
+		function get_byteorder( $magic ) {
+			// The magic is 0x950412de.
+
+			// bug in PHP 5.0.2, see https://savannah.nongnu.org/bugs/?func=detailitem&item_id=10565
+			$magic_little    = (int) - 1794895138;
+			$magic_little_64 = (int) 2500072158;
+			// 0xde120495
+			$magic_big = ( (int) - 569244523 ) & 0xFFFFFFFF;
+			if ( $magic_little == $magic || $magic_little_64 == $magic ) {
+				return 'little';
+			} elseif ( $magic_big == $magic ) {
+				return 'big';
+			} else {
+				return false;
+			}
+		}
+
+		/**
+		 * @param POMO_FileReader $reader
+		 * @return bool True if the import was successful, otherwise false.
+		 */
+		function import_from_reader( $reader ) {
+			$endian_string = MO::get_byteorder( $reader->readint32() );
+			if ( false === $endian_string ) {
+				return false;
+			}
+			$reader->setEndian( $endian_string );
+
+			$endian = ( 'big' === $endian_string ) ? 'N' : 'V';
+
+			$header = $reader->read( 24 );
+			if ( $reader->strlen( $header ) != 24 ) {
+				return false;
+			}
+
+			// Parse header.
+			$header = unpack( "{$endian}revision/{$endian}total/{$endian}originals_lenghts_addr/{$endian}translations_lenghts_addr/{$endian}hash_length/{$endian}hash_addr", $header );
+			if ( ! is_array( $header ) ) {
+				return false;
+			}
+
+			// Support revision 0 of MO format specs, only.
+			if ( 0 != $header['revision'] ) {
+				return false;
+			}
+
+			// Seek to data blocks.
+			$reader->seekto( $header['originals_lenghts_addr'] );
+
+			// Read originals' indices.
+			$originals_lengths_length = $header['translations_lenghts_addr'] - $header['originals_lenghts_addr'];
+			if ( $originals_lengths_length != $header['total'] * 8 ) {
+				return false;
+			}
+
+			$originals = $reader->read( $originals_lengths_length );
+			if ( $reader->strlen( $originals ) != $originals_lengths_length ) {
+				return false;
+			}
+
+			// Read translations' indices.
+			$translations_lenghts_length = $header['hash_addr'] - $header['translations_lenghts_addr'];
+			if ( $translations_lenghts_length != $header['total'] * 8 ) {
+				return false;
+			}
+
+			$translations = $reader->read( $translations_lenghts_length );
+			if ( $reader->strlen( $translations ) != $translations_lenghts_length ) {
+				return false;
+			}
+
+			// Transform raw data into set of indices.
+			$originals    = $reader->str_split( $originals, 8 );
+			$translations = $reader->str_split( $translations, 8 );
+
+			// Skip hash table.
+			$strings_addr = $header['hash_addr'] + $header['hash_length'] * 4;
+
+			$reader->seekto( $strings_addr );
+
+			$strings = $reader->read_all();
+			$reader->close();
+
+			for ( $i = 0; $i < $header['total']; $i++ ) {
+				$o = unpack( "{$endian}length/{$endian}pos", $originals[ $i ] );
+				$t = unpack( "{$endian}length/{$endian}pos", $translations[ $i ] );
+				if ( ! $o || ! $t ) {
+					return false;
+				}
+
+				// Adjust offset due to reading strings to separate space before.
+				$o['pos'] -= $strings_addr;
+				$t['pos'] -= $strings_addr;
+
+				$original    = $reader->substr( $strings, $o['pos'], $o['length'] );
+				$translation = $reader->substr( $strings, $t['pos'], $t['length'] );
+
+				if ( '' === $original ) {
+					$this->set_headers( $this->make_headers( $translation ) );
+				} else {
+					$entry                          = &$this->make_entry( $original, $translation );
+					$this->entries[ $entry->key() ] = &$entry;
+				}
+			}
+			return true;
+		}
+
+		/**
+		 * Build a Translation_Entry from original string and translation strings,
+		 * found in a MO file
+		 *
+		 * @static
+		 * @param string $original original string to translate from MO file. Might contain
+		 *  0x04 as context separator or 0x00 as singular/plural separator
+		 * @param string $translation translation string from MO file. Might contain
+		 *  0x00 as a plural translations separator
+		 * @return Translation_Entry Entry instance.
+		 */
+		function &make_entry( $original, $translation ) {
+			$entry = new Translation_Entry();
+			// Look for context, separated by \4.
+			$parts = explode( "\4", $original );
+			if ( isset( $parts[1] ) ) {
+				$original       = $parts[1];
+				$entry->context = $parts[0];
+			}
+			// Look for plural original.
+			$parts           = explode( "\0", $original );
+			$entry->singular = $parts[0];
+			if ( isset( $parts[1] ) ) {
+				$entry->is_plural = true;
+				$entry->plural    = $parts[1];
+			}
+			// Plural translations are also separated by \0.
+			$entry->translations = explode( "\0", $translation );
+			return $entry;
+		}
+
+		/**
+		 * @param int $count
+		 * @return string
+		 */
+		function select_plural_form( $count ) {
+			return $this->gettext_select_plural_form( $count );
+		}
+
+		/**
+		 * @return int
+		 */
+		function get_plural_forms_count() {
+			return $this->_nplurals;
+		}
+	}
+endif;
+
+The file my-directory-list.txt contains:
+The file entry.php contains:
+<?php
+/**
+ * Contains Translation_Entry class
+ *
+ * @version $Id: entry.php 1157 2015-11-20 04:30:11Z dd32 $
+ * @package pomo
+ * @subpackage entry
+ */
+
+if ( ! class_exists( 'Translation_Entry', false ) ) :
+	/**
+	 * Translation_Entry class encapsulates a translatable string
+	 */
+	class Translation_Entry {
+
+		/**
+		 * Whether the entry contains a string and its plural form, default is false
+		 *
+		 * @var boolean
+		 */
+		public $is_plural = false;
+
+		public $context             = null;
+		public $singular            = null;
+		public $plural              = null;
+		public $translations        = array();
+		public $translator_comments = '';
+		public $extracted_comments  = '';
+		public $references          = array();
+		public $flags               = array();
+
+		/**
+		 * @param array $args associative array, support following keys:
+		 *  - singular (string) -- the string to translate, if omitted and empty entry will be created
+		 *  - plural (string) -- the plural form of the string, setting this will set {@link $is_plural} to true
+		 *  - translations (array) -- translations of the string and possibly -- its plural forms
+		 *  - context (string) -- a string differentiating two equal strings used in different contexts
+		 *  - translator_comments (string) -- comments left by translators
+		 *  - extracted_comments (string) -- comments left by developers
+		 *  - references (array) -- places in the code this strings is used, in relative_to_root_path/file.php:linenum form
+		 *  - flags (array) -- flags like php-format
+		 */
+		function __construct( $args = array() ) {
+			// If no singular -- empty object.
+			if ( ! isset( $args['singular'] ) ) {
+				return;
+			}
+			// Get member variable values from args hash.
+			foreach ( $args as $varname => $value ) {
+				$this->$varname = $value;
+			}
+			if ( isset( $args['plural'] ) && $args['plural'] ) {
+				$this->is_plural = true;
+			}
+			if ( ! is_array( $this->translations ) ) {
+				$this->translations = array();
+			}
+			if ( ! is_array( $this->references ) ) {
+				$this->references = array();
+			}
+			if ( ! is_array( $this->flags ) ) {
+				$this->flags = array();
+			}
+		}
+
+		/**
+		 * PHP4 constructor.
+		 *
+		 * @deprecated 5.4.0 Use __construct() instead.
+		 *
+		 * @see Translation_Entry::__construct()
+		 */
+		public function Translation_Entry( $args = array() ) {
+			_deprecated_constructor( self::class, '5.4.0', static::class );
+			self::__construct( $args );
+		}
+
+		/**
+		 * Generates a unique key for this entry
+		 *
+		 * @return string|bool the key or false if the entry is empty
+		 */
+		function key() {
+			if ( null === $this->singular || '' === $this->singular ) {
+				return false;
+			}
+
+			// Prepend context and EOT, like in MO files.
+			$key = ! $this->context ? $this->singular : $this->context . "\4" . $this->singular;
+			// Standardize on \n line endings.
+			$key = str_replace( array( "\r\n", "\r" ), "\n", $key );
+
+			return $key;
+		}
+
+		/**
+		 * @param object $other
+		 */
+		function merge_with( &$other ) {
+			$this->flags      = array_unique( array_merge( $this->flags, $other->flags ) );
+			$this->references = array_unique( array_merge( $this->references, $other->references ) );
+			if ( $this->extracted_comments != $other->extracted_comments ) {
+				$this->extracted_comments .= $other->extracted_comments;
+			}
+
+		}
+	}
+endif;
+
+The file mo.php contains:
+<?php
+/**
+ * Class for working with MO files
+ *
+ * @version $Id: mo.php 1157 2015-11-20 04:30:11Z dd32 $
+ * @package pomo
+ * @subpackage mo
+ */
+
+require_once __DIR__ . '/translations.php';
+require_once __DIR__ . '/streams.php';
+
+if ( ! class_exists( 'MO', false ) ) :
+	class MO extends Gettext_Translations {
+
+		public $_nplurals = 2;
+
+		/**
+		 * Loaded MO file.
+		 *
+		 * @var string
+		 */
+		private $filename = '';
+
+		/**
+		 * Returns the loaded MO file.
+		 *
+		 * @return string The loaded MO file.
+		 */
+		public function get_filename() {
+			return $this->filename;
+		}
+
+		/**
+		 * Fills up with the entries from MO file $filename
+		 *
+		 * @param string $filename MO file to load
+		 * @return bool True if the import from file was successful, otherwise false.
+		 */
+		function import_from_file( $filename ) {
+			$reader = new POMO_FileReader( $filename );
+
+			if ( ! $reader->is_resource() ) {
+				return false;
+			}
+
+			$this->filename = (string) $filename;
+
+			return $this->import_from_reader( $reader );
+		}
+
+		/**
+		 * @param string $filename
+		 * @return bool
+		 */
+		function export_to_file( $filename ) {
+			$fh = fopen( $filename, 'wb' );
+			if ( ! $fh ) {
+				return false;
+			}
+			$res = $this->export_to_file_handle( $fh );
+			fclose( $fh );
+			return $res;
+		}
+
+		/**
+		 * @return string|false
+		 */
+		function export() {
+			$tmp_fh = fopen( 'php://temp', 'r+' );
+			if ( ! $tmp_fh ) {
+				return false;
+			}
+			$this->export_to_file_handle( $tmp_fh );
+			rewind( $tmp_fh );
+			return stream_get_contents( $tmp_fh );
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @return bool
+		 */
+		function is_entry_good_for_export( $entry ) {
+			if ( empty( $entry->translations ) ) {
+				return false;
+			}
+
+			if ( ! array_filter( $entry->translations ) ) {
+				return false;
+			}
+
+			return true;
+		}
+
+		/**
+		 * @param resource $fh
+		 * @return true
+		 */
+		function export_to_file_handle( $fh ) {
+			$entries = array_filter( $this->entries, array( $this, 'is_entry_good_for_export' ) );
+			ksort( $entries );
+			$magic                     = 0x950412de;
+			$revision                  = 0;
+			$total                     = count( $entries ) + 1; // All the headers are one entry.
+			$originals_lenghts_addr    = 28;
+			$translations_lenghts_addr = $originals_lenghts_addr + 8 * $total;
+			$size_of_hash              = 0;
+			$hash_addr                 = $translations_lenghts_addr + 8 * $total;
+			$current_addr              = $hash_addr;
+			fwrite(
+				$fh,
+				pack(
+					'V*',
+					$magic,
+					$revision,
+					$total,
+					$originals_lenghts_addr,
+					$translations_lenghts_addr,
+					$size_of_hash,
+					$hash_addr
+				)
+			);
+			fseek( $fh, $originals_lenghts_addr );
+
+			// Headers' msgid is an empty string.
+			fwrite( $fh, pack( 'VV', 0, $current_addr ) );
+			$current_addr++;
+			$originals_table = "\0";
+
+			$reader = new POMO_Reader();
+
+			foreach ( $entries as $entry ) {
+				$originals_table .= $this->export_original( $entry ) . "\0";
+				$length           = $reader->strlen( $this->export_original( $entry ) );
+				fwrite( $fh, pack( 'VV', $length, $current_addr ) );
+				$current_addr += $length + 1; // Account for the NULL byte after.
+			}
+
+			$exported_headers = $this->export_headers();
+			fwrite( $fh, pack( 'VV', $reader->strlen( $exported_headers ), $current_addr ) );
+			$current_addr      += strlen( $exported_headers ) + 1;
+			$translations_table = $exported_headers . "\0";
+
+			foreach ( $entries as $entry ) {
+				$translations_table .= $this->export_translations( $entry ) . "\0";
+				$length              = $reader->strlen( $this->export_translations( $entry ) );
+				fwrite( $fh, pack( 'VV', $length, $current_addr ) );
+				$current_addr += $length + 1;
+			}
+
+			fwrite( $fh, $originals_table );
+			fwrite( $fh, $translations_table );
+			return true;
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @return string
+		 */
+		function export_original( $entry ) {
+			// TODO: Warnings for control characters.
+			$exported = $entry->singular;
+			if ( $entry->is_plural ) {
+				$exported .= "\0" . $entry->plural;
+			}
+			if ( $entry->context ) {
+				$exported = $entry->context . "\4" . $exported;
+			}
+			return $exported;
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @return string
+		 */
+		function export_translations( $entry ) {
+			// TODO: Warnings for control characters.
+			return $entry->is_plural ? implode( "\0", $entry->translations ) : $entry->translations[0];
+		}
+
+		/**
+		 * @return string
+		 */
+		function export_headers() {
+			$exported = '';
+			foreach ( $this->headers as $header => $value ) {
+				$exported .= "$header: $value\n";
+			}
+			return $exported;
+		}
+
+		/**
+		 * @param int $magic
+		 * @return string|false
+		 */
+		function get_byteorder( $magic ) {
+			// The magic is 0x950412de.
+
+			// bug in PHP 5.0.2, see https://savannah.nongnu.org/bugs/?func=detailitem&item_id=10565
+			$magic_little    = (int) - 1794895138;
+			$magic_little_64 = (int) 2500072158;
+			// 0xde120495
+			$magic_big = ( (int) - 569244523 ) & 0xFFFFFFFF;
+			if ( $magic_little == $magic || $magic_little_64 == $magic ) {
+				return 'little';
+			} elseif ( $magic_big == $magic ) {
+				return 'big';
+			} else {
+				return false;
+			}
+		}
+
+		/**
+		 * @param POMO_FileReader $reader
+		 * @return bool True if the import was successful, otherwise false.
+		 */
+		function import_from_reader( $reader ) {
+			$endian_string = MO::get_byteorder( $reader->readint32() );
+			if ( false === $endian_string ) {
+				return false;
+			}
+			$reader->setEndian( $endian_string );
+
+			$endian = ( 'big' === $endian_string ) ? 'N' : 'V';
+
+			$header = $reader->read( 24 );
+			if ( $reader->strlen( $header ) != 24 ) {
+				return false;
+			}
+
+			// Parse header.
+			$header = unpack( "{$endian}revision/{$endian}total/{$endian}originals_lenghts_addr/{$endian}translations_lenghts_addr/{$endian}hash_length/{$endian}hash_addr", $header );
+			if ( ! is_array( $header ) ) {
+				return false;
+			}
+
+			// Support revision 0 of MO format specs, only.
+			if ( 0 != $header['revision'] ) {
+				return false;
+			}
+
+			// Seek to data blocks.
+			$reader->seekto( $header['originals_lenghts_addr'] );
+
+			// Read originals' indices.
+			$originals_lengths_length = $header['translations_lenghts_addr'] - $header['originals_lenghts_addr'];
+			if ( $originals_lengths_length != $header['total'] * 8 ) {
+				return false;
+			}
+
+			$originals = $reader->read( $originals_lengths_length );
+			if ( $reader->strlen( $originals ) != $originals_lengths_length ) {
+				return false;
+			}
+
+			// Read translations' indices.
+			$translations_lenghts_length = $header['hash_addr'] - $header['translations_lenghts_addr'];
+			if ( $translations_lenghts_length != $header['total'] * 8 ) {
+				return false;
+			}
+
+			$translations = $reader->read( $translations_lenghts_length );
+			if ( $reader->strlen( $translations ) != $translations_lenghts_length ) {
+				return false;
+			}
+
+			// Transform raw data into set of indices.
+			$originals    = $reader->str_split( $originals, 8 );
+			$translations = $reader->str_split( $translations, 8 );
+
+			// Skip hash table.
+			$strings_addr = $header['hash_addr'] + $header['hash_length'] * 4;
+
+			$reader->seekto( $strings_addr );
+
+			$strings = $reader->read_all();
+			$reader->close();
+
+			for ( $i = 0; $i < $header['total']; $i++ ) {
+				$o = unpack( "{$endian}length/{$endian}pos", $originals[ $i ] );
+				$t = unpack( "{$endian}length/{$endian}pos", $translations[ $i ] );
+				if ( ! $o || ! $t ) {
+					return false;
+				}
+
+				// Adjust offset due to reading strings to separate space before.
+				$o['pos'] -= $strings_addr;
+				$t['pos'] -= $strings_addr;
+
+				$original    = $reader->substr( $strings, $o['pos'], $o['length'] );
+				$translation = $reader->substr( $strings, $t['pos'], $t['length'] );
+
+				if ( '' === $original ) {
+					$this->set_headers( $this->make_headers( $translation ) );
+				} else {
+					$entry                          = &$this->make_entry( $original, $translation );
+					$this->entries[ $entry->key() ] = &$entry;
+				}
+			}
+			return true;
+		}
+
+		/**
+		 * Build a Translation_Entry from original string and translation strings,
+		 * found in a MO file
+		 *
+		 * @static
+		 * @param string $original original string to translate from MO file. Might contain
+		 *  0x04 as context separator or 0x00 as singular/plural separator
+		 * @param string $translation translation string from MO file. Might contain
+		 *  0x00 as a plural translations separator
+		 * @return Translation_Entry Entry instance.
+		 */
+		function &make_entry( $original, $translation ) {
+			$entry = new Translation_Entry();
+			// Look for context, separated by \4.
+			$parts = explode( "\4", $original );
+			if ( isset( $parts[1] ) ) {
+				$original       = $parts[1];
+				$entry->context = $parts[0];
+			}
+			// Look for plural original.
+			$parts           = explode( "\0", $original );
+			$entry->singular = $parts[0];
+			if ( isset( $parts[1] ) ) {
+				$entry->is_plural = true;
+				$entry->plural    = $parts[1];
+			}
+			// Plural translations are also separated by \0.
+			$entry->translations = explode( "\0", $translation );
+			return $entry;
+		}
+
+		/**
+		 * @param int $count
+		 * @return string
+		 */
+		function select_plural_form( $count ) {
+			return $this->gettext_select_plural_form( $count );
+		}
+
+		/**
+		 * @return int
+		 */
+		function get_plural_forms_count() {
+			return $this->_nplurals;
+		}
+	}
+endif;
+
+The file plural-forms.php contains:
+<?php
+
+/**
+ * A gettext Plural-Forms parser.
+ *
+ * @since 4.9.0
+ */
+if ( ! class_exists( 'Plural_Forms', false ) ) :
+	class Plural_Forms {
+		/**
+		 * Operator characters.
+		 *
+		 * @since 4.9.0
+		 * @var string OP_CHARS Operator characters.
+		 */
+		const OP_CHARS = '|&><!=%?:';
+
+		/**
+		 * Valid number characters.
+		 *
+		 * @since 4.9.0
+		 * @var string NUM_CHARS Valid number characters.
+		 */
+		const NUM_CHARS = '0123456789';
+
+		/**
+		 * Operator precedence.
+		 *
+		 * Operator precedence from highest to lowest. Higher numbers indicate
+		 * higher precedence, and are executed first.
+		 *
+		 * @see https://en.wikipedia.org/wiki/Operators_in_C_and_C%2B%2B#Operator_precedence
+		 *
+		 * @since 4.9.0
+		 * @var array $op_precedence Operator precedence from highest to lowest.
+		 */
+		protected static $op_precedence = array(
+			'%'  => 6,
+
+			'<'  => 5,
+			'<=' => 5,
+			'>'  => 5,
+			'>=' => 5,
+
+			'==' => 4,
+			'!=' => 4,
+
+			'&&' => 3,
+
+			'||' => 2,
+
+			'?:' => 1,
+			'?'  => 1,
+
+			'('  => 0,
+			')'  => 0,
+		);
+
+		/**
+		 * Tokens generated from the string.
+		 *
+		 * @since 4.9.0
+		 * @var array $tokens List of tokens.
+		 */
+		protected $tokens = array();
+
+		/**
+		 * Cache for repeated calls to the function.
+		 *
+		 * @since 4.9.0
+		 * @var array $cache Map of $n => $result
+		 */
+		protected $cache = array();
+
+		/**
+		 * Constructor.
+		 *
+		 * @since 4.9.0
+		 *
+		 * @param string $str Plural function (just the bit after `plural=` from Plural-Forms)
+		 */
+		public function __construct( $str ) {
+			$this->parse( $str );
+		}
+
+		/**
+		 * Parse a Plural-Forms string into tokens.
+		 *
+		 * Uses the shunting-yard algorithm to convert the string to Reverse Polish
+		 * Notation tokens.
+		 *
+		 * @since 4.9.0
+		 *
+		 * @throws Exception If there is a syntax or parsing error with the string.
+		 *
+		 * @param string $str String to parse.
+		 */
+		protected function parse( $str ) {
+			$pos = 0;
+			$len = strlen( $str );
+
+			// Convert infix operators to postfix using the shunting-yard algorithm.
+			$output = array();
+			$stack  = array();
+			while ( $pos < $len ) {
+				$next = substr( $str, $pos, 1 );
+
+				switch ( $next ) {
+					// Ignore whitespace.
+					case ' ':
+					case "\t":
+						$pos++;
+						break;
+
+					// Variable (n).
+					case 'n':
+						$output[] = array( 'var' );
+						$pos++;
+						break;
+
+					// Parentheses.
+					case '(':
+						$stack[] = $next;
+						$pos++;
+						break;
+
+					case ')':
+						$found = false;
+						while ( ! empty( $stack ) ) {
+							$o2 = $stack[ count( $stack ) - 1 ];
+							if ( '(' !== $o2 ) {
+								$output[] = array( 'op', array_pop( $stack ) );
+								continue;
+							}
+
+							// Discard open paren.
+							array_pop( $stack );
+							$found = true;
+							break;
+						}
+
+						if ( ! $found ) {
+							throw new Exception( 'Mismatched parentheses' );
+						}
+
+						$pos++;
+						break;
+
+					// Operators.
+					case '|':
+					case '&':
+					case '>':
+					case '<':
+					case '!':
+					case '=':
+					case '%':
+					case '?':
+						$end_operator = strspn( $str, self::OP_CHARS, $pos );
+						$operator     = substr( $str, $pos, $end_operator );
+						if ( ! array_key_exists( $operator, self::$op_precedence ) ) {
+							throw new Exception( sprintf( 'Unknown operator "%s"', $operator ) );
+						}
+
+						while ( ! empty( $stack ) ) {
+							$o2 = $stack[ count( $stack ) - 1 ];
+
+							// Ternary is right-associative in C.
+							if ( '?:' === $operator || '?' === $operator ) {
+								if ( self::$op_precedence[ $operator ] >= self::$op_precedence[ $o2 ] ) {
+									break;
+								}
+							} elseif ( self::$op_precedence[ $operator ] > self::$op_precedence[ $o2 ] ) {
+								break;
+							}
+
+							$output[] = array( 'op', array_pop( $stack ) );
+						}
+						$stack[] = $operator;
+
+						$pos += $end_operator;
+						break;
+
+					// Ternary "else".
+					case ':':
+						$found = false;
+						$s_pos = count( $stack ) - 1;
+						while ( $s_pos >= 0 ) {
+							$o2 = $stack[ $s_pos ];
+							if ( '?' !== $o2 ) {
+								$output[] = array( 'op', array_pop( $stack ) );
+								$s_pos--;
+								continue;
+							}
+
+							// Replace.
+							$stack[ $s_pos ] = '?:';
+							$found           = true;
+							break;
+						}
+
+						if ( ! $found ) {
+							throw new Exception( 'Missing starting "?" ternary operator' );
+						}
+						$pos++;
+						break;
+
+					// Default - number or invalid.
+					default:
+						if ( $next >= '0' && $next <= '9' ) {
+							$span     = strspn( $str, self::NUM_CHARS, $pos );
+							$output[] = array( 'value', intval( substr( $str, $pos, $span ) ) );
+							$pos     += $span;
+							break;
+						}
+
+						throw new Exception( sprintf( 'Unknown symbol "%s"', $next ) );
+				}
+			}
+
+			while ( ! empty( $stack ) ) {
+				$o2 = array_pop( $stack );
+				if ( '(' === $o2 || ')' === $o2 ) {
+					throw new Exception( 'Mismatched parentheses' );
+				}
+
+				$output[] = array( 'op', $o2 );
+			}
+
+			$this->tokens = $output;
+		}
+
+		/**
+		 * Get the plural form for a number.
+		 *
+		 * Caches the value for repeated calls.
+		 *
+		 * @since 4.9.0
+		 *
+		 * @param int $num Number to get plural form for.
+		 * @return int Plural form value.
+		 */
+		public function get( $num ) {
+			if ( isset( $this->cache[ $num ] ) ) {
+				return $this->cache[ $num ];
+			}
+			$this->cache[ $num ] = $this->execute( $num );
+			return $this->cache[ $num ];
+		}
+
+		/**
+		 * Execute the plural form function.
+		 *
+		 * @since 4.9.0
+		 *
+		 * @throws Exception If the plural form value cannot be calculated.
+		 *
+		 * @param int $n Variable "n" to substitute.
+		 * @return int Plural form value.
+		 */
+		public function execute( $n ) {
+			$stack = array();
+			$i     = 0;
+			$total = count( $this->tokens );
+			while ( $i < $total ) {
+				$next = $this->tokens[ $i ];
+				$i++;
+				if ( 'var' === $next[0] ) {
+					$stack[] = $n;
+					continue;
+				} elseif ( 'value' === $next[0] ) {
+					$stack[] = $next[1];
+					continue;
+				}
+
+				// Only operators left.
+				switch ( $next[1] ) {
+					case '%':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 % $v2;
+						break;
+
+					case '||':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 || $v2;
+						break;
+
+					case '&&':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 && $v2;
+						break;
+
+					case '<':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 < $v2;
+						break;
+
+					case '<=':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 <= $v2;
+						break;
+
+					case '>':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 > $v2;
+						break;
+
+					case '>=':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 >= $v2;
+						break;
+
+					case '!=':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 != $v2;
+						break;
+
+					case '==':
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 == $v2;
+						break;
+
+					case '?:':
+						$v3      = array_pop( $stack );
+						$v2      = array_pop( $stack );
+						$v1      = array_pop( $stack );
+						$stack[] = $v1 ? $v2 : $v3;
+						break;
+
+					default:
+						throw new Exception( sprintf( 'Unknown operator "%s"', $next[1] ) );
+				}
+			}
+
+			if ( count( $stack ) !== 1 ) {
+				throw new Exception( 'Too many values remaining on the stack' );
+			}
+
+			return (int) $stack[0];
+		}
+	}
+endif;
+
+The file po.php contains:
+<?php
+/**
+ * Class for working with PO files
+ *
+ * @version $Id: po.php 1158 2015-11-20 04:31:23Z dd32 $
+ * @package pomo
+ * @subpackage po
+ */
+
+require_once __DIR__ . '/translations.php';
+
+if ( ! defined( 'PO_MAX_LINE_LEN' ) ) {
+	define( 'PO_MAX_LINE_LEN', 79 );
+}
+
+ini_set( 'auto_detect_line_endings', 1 );
+
+/**
+ * Routines for working with PO files
+ */
+if ( ! class_exists( 'PO', false ) ) :
+	class PO extends Gettext_Translations {
+
+		public $comments_before_headers = '';
+
+		/**
+		 * Exports headers to a PO entry
+		 *
+		 * @return string msgid/msgstr PO entry for this PO file headers, doesn't contain newline at the end
+		 */
+		function export_headers() {
+			$header_string = '';
+			foreach ( $this->headers as $header => $value ) {
+				$header_string .= "$header: $value\n";
+			}
+			$poified = PO::poify( $header_string );
+			if ( $this->comments_before_headers ) {
+				$before_headers = $this->prepend_each_line( rtrim( $this->comments_before_headers ) . "\n", '# ' );
+			} else {
+				$before_headers = '';
+			}
+			return rtrim( "{$before_headers}msgid \"\"\nmsgstr $poified" );
+		}
+
+		/**
+		 * Exports all entries to PO format
+		 *
+		 * @return string sequence of mgsgid/msgstr PO strings, doesn't containt newline at the end
+		 */
+		function export_entries() {
+			// TODO: Sorting.
+			return implode( "\n\n", array_map( array( 'PO', 'export_entry' ), $this->entries ) );
+		}
+
+		/**
+		 * Exports the whole PO file as a string
+		 *
+		 * @param bool $include_headers whether to include the headers in the export
+		 * @return string ready for inclusion in PO file string for headers and all the enrtries
+		 */
+		function export( $include_headers = true ) {
+			$res = '';
+			if ( $include_headers ) {
+				$res .= $this->export_headers();
+				$res .= "\n\n";
+			}
+			$res .= $this->export_entries();
+			return $res;
+		}
+
+		/**
+		 * Same as {@link export}, but writes the result to a file
+		 *
+		 * @param string $filename        Where to write the PO string.
+		 * @param bool   $include_headers Whether to include the headers in the export.
+		 * @return bool true on success, false on error
+		 */
+		function export_to_file( $filename, $include_headers = true ) {
+			$fh = fopen( $filename, 'w' );
+			if ( false === $fh ) {
+				return false;
+			}
+			$export = $this->export( $include_headers );
+			$res    = fwrite( $fh, $export );
+			if ( false === $res ) {
+				return false;
+			}
+			return fclose( $fh );
+		}
+
+		/**
+		 * Text to include as a comment before the start of the PO contents
+		 *
+		 * Doesn't need to include # in the beginning of lines, these are added automatically
+		 *
+		 * @param string $text Text to include as a comment.
+		 */
+		function set_comment_before_headers( $text ) {
+			$this->comments_before_headers = $text;
+		}
+
+		/**
+		 * Formats a string in PO-style
+		 *
+		 * @param string $string the string to format
+		 * @return string the poified string
+		 */
+		public static function poify( $string ) {
+			$quote   = '"';
+			$slash   = '\\';
+			$newline = "\n";
+
+			$replaces = array(
+				"$slash" => "$slash$slash",
+				"$quote" => "$slash$quote",
+				"\t"     => '\t',
+			);
+
+			$string = str_replace( array_keys( $replaces ), array_values( $replaces ), $string );
+
+			$po = $quote . implode( "${slash}n$quote$newline$quote", explode( $newline, $string ) ) . $quote;
+			// Add empty string on first line for readbility.
+			if ( false !== strpos( $string, $newline ) &&
+				( substr_count( $string, $newline ) > 1 || substr( $string, -strlen( $newline ) ) !== $newline ) ) {
+				$po = "$quote$quote$newline$po";
+			}
+			// Remove empty strings.
+			$po = str_replace( "$newline$quote$quote", '', $po );
+			return $po;
+		}
+
+		/**
+		 * Gives back the original string from a PO-formatted string
+		 *
+		 * @param string $string PO-formatted string
+		 * @return string enascaped string
+		 */
+		public static function unpoify( $string ) {
+			$escapes               = array(
+				't'  => "\t",
+				'n'  => "\n",
+				'r'  => "\r",
+				'\\' => '\\',
+			);
+			$lines                 = array_map( 'trim', explode( "\n", $string ) );
+			$lines                 = array_map( array( 'PO', 'trim_quotes' ), $lines );
+			$unpoified             = '';
+			$previous_is_backslash = false;
+			foreach ( $lines as $line ) {
+				preg_match_all( '/./u', $line, $chars );
+				$chars = $chars[0];
+				foreach ( $chars as $char ) {
+					if ( ! $previous_is_backslash ) {
+						if ( '\\' === $char ) {
+							$previous_is_backslash = true;
+						} else {
+							$unpoified .= $char;
+						}
+					} else {
+						$previous_is_backslash = false;
+						$unpoified            .= isset( $escapes[ $char ] ) ? $escapes[ $char ] : $char;
+					}
+				}
+			}
+
+			// Standardise the line endings on imported content, technically PO files shouldn't contain \r.
+			$unpoified = str_replace( array( "\r\n", "\r" ), "\n", $unpoified );
+
+			return $unpoified;
+		}
+
+		/**
+		 * Inserts $with in the beginning of every new line of $string and
+		 * returns the modified string
+		 *
+		 * @param string $string prepend lines in this string
+		 * @param string $with prepend lines with this string
+		 */
+		public static function prepend_each_line( $string, $with ) {
+			$lines  = explode( "\n", $string );
+			$append = '';
+			if ( "\n" === substr( $string, -1 ) && '' === end( $lines ) ) {
+				/*
+				 * Last line might be empty because $string was terminated
+				 * with a newline, remove it from the $lines array,
+				 * we'll restore state by re-terminating the string at the end.
+				 */
+				array_pop( $lines );
+				$append = "\n";
+			}
+			foreach ( $lines as &$line ) {
+				$line = $with . $line;
+			}
+			unset( $line );
+			return implode( "\n", $lines ) . $append;
+		}
+
+		/**
+		 * Prepare a text as a comment -- wraps the lines and prepends #
+		 * and a special character to each line
+		 *
+		 * @access private
+		 * @param string $text the comment text
+		 * @param string $char character to denote a special PO comment,
+		 *  like :, default is a space
+		 */
+		public static function comment_block( $text, $char = ' ' ) {
+			$text = wordwrap( $text, PO_MAX_LINE_LEN - 3 );
+			return PO::prepend_each_line( $text, "#$char " );
+		}
+
+		/**
+		 * Builds a string from the entry for inclusion in PO file
+		 *
+		 * @param Translation_Entry $entry the entry to convert to po string.
+		 * @return string|false PO-style formatted string for the entry or
+		 *  false if the entry is empty
+		 */
+		public static function export_entry( $entry ) {
+			if ( null === $entry->singular || '' === $entry->singular ) {
+				return false;
+			}
+			$po = array();
+			if ( ! empty( $entry->translator_comments ) ) {
+				$po[] = PO::comment_block( $entry->translator_comments );
+			}
+			if ( ! empty( $entry->extracted_comments ) ) {
+				$po[] = PO::comment_block( $entry->extracted_comments, '.' );
+			}
+			if ( ! empty( $entry->references ) ) {
+				$po[] = PO::comment_block( implode( ' ', $entry->references ), ':' );
+			}
+			if ( ! empty( $entry->flags ) ) {
+				$po[] = PO::comment_block( implode( ', ', $entry->flags ), ',' );
+			}
+			if ( $entry->context ) {
+				$po[] = 'msgctxt ' . PO::poify( $entry->context );
+			}
+			$po[] = 'msgid ' . PO::poify( $entry->singular );
+			if ( ! $entry->is_plural ) {
+				$translation = empty( $entry->translations ) ? '' : $entry->translations[0];
+				$translation = PO::match_begin_and_end_newlines( $translation, $entry->singular );
+				$po[]        = 'msgstr ' . PO::poify( $translation );
+			} else {
+				$po[]         = 'msgid_plural ' . PO::poify( $entry->plural );
+				$translations = empty( $entry->translations ) ? array( '', '' ) : $entry->translations;
+				foreach ( $translations as $i => $translation ) {
+					$translation = PO::match_begin_and_end_newlines( $translation, $entry->plural );
+					$po[]        = "msgstr[$i] " . PO::poify( $translation );
+				}
+			}
+			return implode( "\n", $po );
+		}
+
+		public static function match_begin_and_end_newlines( $translation, $original ) {
+			if ( '' === $translation ) {
+				return $translation;
+			}
+
+			$original_begin    = "\n" === substr( $original, 0, 1 );
+			$original_end      = "\n" === substr( $original, -1 );
+			$translation_begin = "\n" === substr( $translation, 0, 1 );
+			$translation_end   = "\n" === substr( $translation, -1 );
+
+			if ( $original_begin ) {
+				if ( ! $translation_begin ) {
+					$translation = "\n" . $translation;
+				}
+			} elseif ( $translation_begin ) {
+				$translation = ltrim( $translation, "\n" );
+			}
+
+			if ( $original_end ) {
+				if ( ! $translation_end ) {
+					$translation .= "\n";
+				}
+			} elseif ( $translation_end ) {
+				$translation = rtrim( $translation, "\n" );
+			}
+
+			return $translation;
+		}
+
+		/**
+		 * @param string $filename
+		 * @return bool
+		 */
+		function import_from_file( $filename ) {
+			$f = fopen( $filename, 'r' );
+			if ( ! $f ) {
+				return false;
+			}
+			$lineno = 0;
+			while ( true ) {
+				$res = $this->read_entry( $f, $lineno );
+				if ( ! $res ) {
+					break;
+				}
+				if ( '' === $res['entry']->singular ) {
+					$this->set_headers( $this->make_headers( $res['entry']->translations[0] ) );
+				} else {
+					$this->add_entry( $res['entry'] );
+				}
+			}
+			PO::read_line( $f, 'clear' );
+			if ( false === $res ) {
+				return false;
+			}
+			if ( ! $this->headers && ! $this->entries ) {
+				return false;
+			}
+			return true;
+		}
+
+		/**
+		 * Helper function for read_entry
+		 *
+		 * @param string $context
+		 * @return bool
+		 */
+		protected static function is_final( $context ) {
+			return ( 'msgstr' === $context ) || ( 'msgstr_plural' === $context );
+		}
+
+		/**
+		 * @param resource $f
+		 * @param int      $lineno
+		 * @return null|false|array
+		 */
+		function read_entry( $f, $lineno = 0 ) {
+			$entry = new Translation_Entry();
+			// Where were we in the last step.
+			// Can be: comment, msgctxt, msgid, msgid_plural, msgstr, msgstr_plural.
+			$context      = '';
+			$msgstr_index = 0;
+			while ( true ) {
+				$lineno++;
+				$line = PO::read_line( $f );
+				if ( ! $line ) {
+					if ( feof( $f ) ) {
+						if ( self::is_final( $context ) ) {
+							break;
+						} elseif ( ! $context ) { // We haven't read a line and EOF came.
+							return null;
+						} else {
+							return false;
+						}
+					} else {
+						return false;
+					}
+				}
+				if ( "\n" === $line ) {
+					continue;
+				}
+				$line = trim( $line );
+				if ( preg_match( '/^#/', $line, $m ) ) {
+					// The comment is the start of a new entry.
+					if ( self::is_final( $context ) ) {
+						PO::read_line( $f, 'put-back' );
+						$lineno--;
+						break;
+					}
+					// Comments have to be at the beginning.
+					if ( $context && 'comment' !== $context ) {
+						return false;
+					}
+					// Add comment.
+					$this->add_comment_to_entry( $entry, $line );
+				} elseif ( preg_match( '/^msgctxt\s+(".*")/', $line, $m ) ) {
+					if ( self::is_final( $context ) ) {
+						PO::read_line( $f, 'put-back' );
+						$lineno--;
+						break;
+					}
+					if ( $context && 'comment' !== $context ) {
+						return false;
+					}
+					$context         = 'msgctxt';
+					$entry->context .= PO::unpoify( $m[1] );
+				} elseif ( preg_match( '/^msgid\s+(".*")/', $line, $m ) ) {
+					if ( self::is_final( $context ) ) {
+						PO::read_line( $f, 'put-back' );
+						$lineno--;
+						break;
+					}
+					if ( $context && 'msgctxt' !== $context && 'comment' !== $context ) {
+						return false;
+					}
+					$context          = 'msgid';
+					$entry->singular .= PO::unpoify( $m[1] );
+				} elseif ( preg_match( '/^msgid_plural\s+(".*")/', $line, $m ) ) {
+					if ( 'msgid' !== $context ) {
+						return false;
+					}
+					$context          = 'msgid_plural';
+					$entry->is_plural = true;
+					$entry->plural   .= PO::unpoify( $m[1] );
+				} elseif ( preg_match( '/^msgstr\s+(".*")/', $line, $m ) ) {
+					if ( 'msgid' !== $context ) {
+						return false;
+					}
+					$context             = 'msgstr';
+					$entry->translations = array( PO::unpoify( $m[1] ) );
+				} elseif ( preg_match( '/^msgstr\[(\d+)\]\s+(".*")/', $line, $m ) ) {
+					if ( 'msgid_plural' !== $context && 'msgstr_plural' !== $context ) {
+						return false;
+					}
+					$context                      = 'msgstr_plural';
+					$msgstr_index                 = $m[1];
+					$entry->translations[ $m[1] ] = PO::unpoify( $m[2] );
+				} elseif ( preg_match( '/^".*"$/', $line ) ) {
+					$unpoified = PO::unpoify( $line );
+					switch ( $context ) {
+						case 'msgid':
+							$entry->singular .= $unpoified;
+							break;
+						case 'msgctxt':
+							$entry->context .= $unpoified;
+							break;
+						case 'msgid_plural':
+							$entry->plural .= $unpoified;
+							break;
+						case 'msgstr':
+							$entry->translations[0] .= $unpoified;
+							break;
+						case 'msgstr_plural':
+							$entry->translations[ $msgstr_index ] .= $unpoified;
+							break;
+						default:
+							return false;
+					}
+				} else {
+					return false;
+				}
+			}
+
+			$have_translations = false;
+			foreach ( $entry->translations as $t ) {
+				if ( $t || ( '0' === $t ) ) {
+					$have_translations = true;
+					break;
+				}
+			}
+			if ( false === $have_translations ) {
+				$entry->translations = array();
+			}
+
+			return array(
+				'entry'  => $entry,
+				'lineno' => $lineno,
+			);
+		}
+
+		/**
+		 * @param resource $f
+		 * @param string   $action
+		 * @return bool
+		 */
+		function read_line( $f, $action = 'read' ) {
+			static $last_line     = '';
+			static $use_last_line = false;
+			if ( 'clear' === $action ) {
+				$last_line = '';
+				return true;
+			}
+			if ( 'put-back' === $action ) {
+				$use_last_line = true;
+				return true;
+			}
+			$line          = $use_last_line ? $last_line : fgets( $f );
+			$line          = ( "\r\n" === substr( $line, -2 ) ) ? rtrim( $line, "\r\n" ) . "\n" : $line;
+			$last_line     = $line;
+			$use_last_line = false;
+			return $line;
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @param string            $po_comment_line
+		 */
+		function add_comment_to_entry( &$entry, $po_comment_line ) {
+			$first_two = substr( $po_comment_line, 0, 2 );
+			$comment   = trim( substr( $po_comment_line, 2 ) );
+			if ( '#:' === $first_two ) {
+				$entry->references = array_merge( $entry->references, preg_split( '/\s+/', $comment ) );
+			} elseif ( '#.' === $first_two ) {
+				$entry->extracted_comments = trim( $entry->extracted_comments . "\n" . $comment );
+			} elseif ( '#,' === $first_two ) {
+				$entry->flags = array_merge( $entry->flags, preg_split( '/,\s*/', $comment ) );
+			} else {
+				$entry->translator_comments = trim( $entry->translator_comments . "\n" . $comment );
+			}
+		}
+
+		/**
+		 * @param string $s
+		 * @return string
+		 */
+		public static function trim_quotes( $s ) {
+			if ( '"' === substr( $s, 0, 1 ) ) {
+				$s = substr( $s, 1 );
+			}
+			if ( '"' === substr( $s, -1, 1 ) ) {
+				$s = substr( $s, 0, -1 );
+			}
+			return $s;
+		}
+	}
+endif;
+
+The file streams.php contains:
+<?php
+/**
+ * Classes, which help reading streams of data from files.
+ * Based on the classes from Danilo Segan <danilo@kvota.net>
+ *
+ * @version $Id: streams.php 1157 2015-11-20 04:30:11Z dd32 $
+ * @package pomo
+ * @subpackage streams
+ */
+
+if ( ! class_exists( 'POMO_Reader', false ) ) :
+	class POMO_Reader {
+
+		public $endian = 'little';
+		public $_post  = '';
+
+		/**
+		 * PHP5 constructor.
+		 */
+		function __construct() {
+			$this->is_overloaded = ( ( ini_get( 'mbstring.func_overload' ) & 2 ) != 0 ) && function_exists( 'mb_substr' ); // phpcs:ignore PHPCompatibility.IniDirectives.RemovedIniDirectives.mbstring_func_overloadDeprecated
+			$this->_pos          = 0;
+		}
+
+		/**
+		 * PHP4 constructor.
+		 *
+		 * @deprecated 5.4.0 Use __construct() instead.
+		 *
+		 * @see POMO_Reader::__construct()
+		 */
+		public function POMO_Reader() {
+			_deprecated_constructor( self::class, '5.4.0', static::class );
+			self::__construct();
+		}
+
+		/**
+		 * Sets the endianness of the file.
+		 *
+		 * @param string $endian Set the endianness of the file. Accepts 'big', or 'little'.
+		 */
+		function setEndian( $endian ) { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+			$this->endian = $endian;
+		}
+
+		/**
+		 * Reads a 32bit Integer from the Stream
+		 *
+		 * @return mixed The integer, corresponding to the next 32 bits from
+		 *  the stream of false if there are not enough bytes or on error
+		 */
+		function readint32() {
+			$bytes = $this->read( 4 );
+			if ( 4 != $this->strlen( $bytes ) ) {
+				return false;
+			}
+			$endian_letter = ( 'big' === $this->endian ) ? 'N' : 'V';
+			$int           = unpack( $endian_letter, $bytes );
+			return reset( $int );
+		}
+
+		/**
+		 * Reads an array of 32-bit Integers from the Stream
+		 *
+		 * @param int $count How many elements should be read
+		 * @return mixed Array of integers or false if there isn't
+		 *  enough data or on error
+		 */
+		function readint32array( $count ) {
+			$bytes = $this->read( 4 * $count );
+			if ( 4 * $count != $this->strlen( $bytes ) ) {
+				return false;
+			}
+			$endian_letter = ( 'big' === $this->endian ) ? 'N' : 'V';
+			return unpack( $endian_letter . $count, $bytes );
+		}
+
+		/**
+		 * @param string $string
+		 * @param int    $start
+		 * @param int    $length
+		 * @return string
+		 */
+		function substr( $string, $start, $length ) {
+			if ( $this->is_overloaded ) {
+				return mb_substr( $string, $start, $length, 'ascii' );
+			} else {
+				return substr( $string, $start, $length );
+			}
+		}
+
+		/**
+		 * @param string $string
+		 * @return int
+		 */
+		function strlen( $string ) {
+			if ( $this->is_overloaded ) {
+				return mb_strlen( $string, 'ascii' );
+			} else {
+				return strlen( $string );
+			}
+		}
+
+		/**
+		 * @param string $string
+		 * @param int    $chunk_size
+		 * @return array
+		 */
+		function str_split( $string, $chunk_size ) {
+			if ( ! function_exists( 'str_split' ) ) {
+				$length = $this->strlen( $string );
+				$out    = array();
+				for ( $i = 0; $i < $length; $i += $chunk_size ) {
+					$out[] = $this->substr( $string, $i, $chunk_size );
+				}
+				return $out;
+			} else {
+				return str_split( $string, $chunk_size );
+			}
+		}
+
+		/**
+		 * @return int
+		 */
+		function pos() {
+			return $this->_pos;
+		}
+
+		/**
+		 * @return true
+		 */
+		function is_resource() {
+			return true;
+		}
+
+		/**
+		 * @return true
+		 */
+		function close() {
+			return true;
+		}
+	}
+endif;
+
+if ( ! class_exists( 'POMO_FileReader', false ) ) :
+	class POMO_FileReader extends POMO_Reader {
+
+		/**
+		 * @param string $filename
+		 */
+		function __construct( $filename ) {
+			parent::__construct();
+			$this->_f = fopen( $filename, 'rb' );
+		}
+
+		/**
+		 * PHP4 constructor.
+		 *
+		 * @deprecated 5.4.0 Use __construct() instead.
+		 *
+		 * @see POMO_FileReader::__construct()
+		 */
+		public function POMO_FileReader( $filename ) {
+			_deprecated_constructor( self::class, '5.4.0', static::class );
+			self::__construct( $filename );
+		}
+
+		/**
+		 * @param int $bytes
+		 * @return string|false Returns read string, otherwise false.
+		 */
+		function read( $bytes ) {
+			return fread( $this->_f, $bytes );
+		}
+
+		/**
+		 * @param int $pos
+		 * @return bool
+		 */
+		function seekto( $pos ) {
+			if ( -1 == fseek( $this->_f, $pos, SEEK_SET ) ) {
+				return false;
+			}
+			$this->_pos = $pos;
+			return true;
+		}
+
+		/**
+		 * @return bool
+		 */
+		function is_resource() {
+			return is_resource( $this->_f );
+		}
+
+		/**
+		 * @return bool
+		 */
+		function feof() {
+			return feof( $this->_f );
+		}
+
+		/**
+		 * @return bool
+		 */
+		function close() {
+			return fclose( $this->_f );
+		}
+
+		/**
+		 * @return string
+		 */
+		function read_all() {
+			$all = '';
+			while ( ! $this->feof() ) {
+				$all .= $this->read( 4096 );
+			}
+			return $all;
+		}
+	}
+endif;
+
+if ( ! class_exists( 'POMO_StringReader', false ) ) :
+	/**
+	 * Provides file-like methods for manipulating a string instead
+	 * of a physical file.
+	 */
+	class POMO_StringReader extends POMO_Reader {
+
+		public $_str = '';
+
+		/**
+		 * PHP5 constructor.
+		 */
+		function __construct( $str = '' ) {
+			parent::__construct();
+			$this->_str = $str;
+			$this->_pos = 0;
+		}
+
+		/**
+		 * PHP4 constructor.
+		 *
+		 * @deprecated 5.4.0 Use __construct() instead.
+		 *
+		 * @see POMO_StringReader::__construct()
+		 */
+		public function POMO_StringReader( $str = '' ) {
+			_deprecated_constructor( self::class, '5.4.0', static::class );
+			self::__construct( $str );
+		}
+
+		/**
+		 * @param string $bytes
+		 * @return string
+		 */
+		function read( $bytes ) {
+			$data        = $this->substr( $this->_str, $this->_pos, $bytes );
+			$this->_pos += $bytes;
+			if ( $this->strlen( $this->_str ) < $this->_pos ) {
+				$this->_pos = $this->strlen( $this->_str );
+			}
+			return $data;
+		}
+
+		/**
+		 * @param int $pos
+		 * @return int
+		 */
+		function seekto( $pos ) {
+			$this->_pos = $pos;
+			if ( $this->strlen( $this->_str ) < $this->_pos ) {
+				$this->_pos = $this->strlen( $this->_str );
+			}
+			return $this->_pos;
+		}
+
+		/**
+		 * @return int
+		 */
+		function length() {
+			return $this->strlen( $this->_str );
+		}
+
+		/**
+		 * @return string
+		 */
+		function read_all() {
+			return $this->substr( $this->_str, $this->_pos, $this->strlen( $this->_str ) );
+		}
+
+	}
+endif;
+
+if ( ! class_exists( 'POMO_CachedFileReader', false ) ) :
+	/**
+	 * Reads the contents of the file in the beginning.
+	 */
+	class POMO_CachedFileReader extends POMO_StringReader {
+		/**
+		 * PHP5 constructor.
+		 */
+		function __construct( $filename ) {
+			parent::__construct();
+			$this->_str = file_get_contents( $filename );
+			if ( false === $this->_str ) {
+				return false;
+			}
+			$this->_pos = 0;
+		}
+
+		/**
+		 * PHP4 constructor.
+		 *
+		 * @deprecated 5.4.0 Use __construct() instead.
+		 *
+		 * @see POMO_CachedFileReader::__construct()
+		 */
+		public function POMO_CachedFileReader( $filename ) {
+			_deprecated_constructor( self::class, '5.4.0', static::class );
+			self::__construct( $filename );
+		}
+	}
+endif;
+
+if ( ! class_exists( 'POMO_CachedIntFileReader', false ) ) :
+	/**
+	 * Reads the contents of the file in the beginning.
+	 */
+	class POMO_CachedIntFileReader extends POMO_CachedFileReader {
+		/**
+		 * PHP5 constructor.
+		 */
+		public function __construct( $filename ) {
+			parent::__construct( $filename );
+		}
+
+		/**
+		 * PHP4 constructor.
+		 *
+		 * @deprecated 5.4.0 Use __construct() instead.
+		 *
+		 * @see POMO_CachedIntFileReader::__construct()
+		 */
+		function POMO_CachedIntFileReader( $filename ) {
+			_deprecated_constructor( self::class, '5.4.0', static::class );
+			self::__construct( $filename );
+		}
+	}
+endif;
+
+
+The file translations.php contains:
+<?php
+/**
+ * Class for a set of entries for translation and their associated headers
+ *
+ * @version $Id: translations.php 1157 2015-11-20 04:30:11Z dd32 $
+ * @package pomo
+ * @subpackage translations
+ */
+
+require_once __DIR__ . '/plural-forms.php';
+require_once __DIR__ . '/entry.php';
+
+if ( ! class_exists( 'Translations', false ) ) :
+	class Translations {
+		public $entries = array();
+		public $headers = array();
+
+		/**
+		 * Add entry to the PO structure
+		 *
+		 * @param array|Translation_Entry $entry
+		 * @return bool true on success, false if the entry doesn't have a key
+		 */
+		function add_entry( $entry ) {
+			if ( is_array( $entry ) ) {
+				$entry = new Translation_Entry( $entry );
+			}
+			$key = $entry->key();
+			if ( false === $key ) {
+				return false;
+			}
+			$this->entries[ $key ] = &$entry;
+			return true;
+		}
+
+		/**
+		 * @param array|Translation_Entry $entry
+		 * @return bool
+		 */
+		function add_entry_or_merge( $entry ) {
+			if ( is_array( $entry ) ) {
+				$entry = new Translation_Entry( $entry );
+			}
+			$key = $entry->key();
+			if ( false === $key ) {
+				return false;
+			}
+			if ( isset( $this->entries[ $key ] ) ) {
+				$this->entries[ $key ]->merge_with( $entry );
+			} else {
+				$this->entries[ $key ] = &$entry;
+			}
+			return true;
+		}
+
+		/**
+		 * Sets $header PO header to $value
+		 *
+		 * If the header already exists, it will be overwritten
+		 *
+		 * TODO: this should be out of this class, it is gettext specific
+		 *
+		 * @param string $header header name, without trailing :
+		 * @param string $value header value, without trailing \n
+		 */
+		function set_header( $header, $value ) {
+			$this->headers[ $header ] = $value;
+		}
+
+		/**
+		 * @param array $headers
+		 */
+		function set_headers( $headers ) {
+			foreach ( $headers as $header => $value ) {
+				$this->set_header( $header, $value );
+			}
+		}
+
+		/**
+		 * @param string $header
+		 */
+		function get_header( $header ) {
+			return isset( $this->headers[ $header ] ) ? $this->headers[ $header ] : false;
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 */
+		function translate_entry( &$entry ) {
+			$key = $entry->key();
+			return isset( $this->entries[ $key ] ) ? $this->entries[ $key ] : false;
+		}
+
+		/**
+		 * @param string $singular
+		 * @param string $context
+		 * @return string
+		 */
+		function translate( $singular, $context = null ) {
+			$entry      = new Translation_Entry(
+				array(
+					'singular' => $singular,
+					'context'  => $context,
+				)
+			);
+			$translated = $this->translate_entry( $entry );
+			return ( $translated && ! empty( $translated->translations ) ) ? $translated->translations[0] : $singular;
+		}
+
+		/**
+		 * Given the number of items, returns the 0-based index of the plural form to use
+		 *
+		 * Here, in the base Translations class, the common logic for English is implemented:
+		 *  0 if there is one element, 1 otherwise
+		 *
+		 * This function should be overridden by the subclasses. For example MO/PO can derive the logic
+		 * from their headers.
+		 *
+		 * @param int $count number of items
+		 */
+		function select_plural_form( $count ) {
+			return 1 == $count ? 0 : 1;
+		}
+
+		/**
+		 * @return int
+		 */
+		function get_plural_forms_count() {
+			return 2;
+		}
+
+		/**
+		 * @param string $singular
+		 * @param string $plural
+		 * @param int    $count
+		 * @param string $context
+		 */
+		function translate_plural( $singular, $plural, $count, $context = null ) {
+			$entry              = new Translation_Entry(
+				array(
+					'singular' => $singular,
+					'plural'   => $plural,
+					'context'  => $context,
+				)
+			);
+			$translated         = $this->translate_entry( $entry );
+			$index              = $this->select_plural_form( $count );
+			$total_plural_forms = $this->get_plural_forms_count();
+			if ( $translated && 0 <= $index && $index < $total_plural_forms &&
+				is_array( $translated->translations ) &&
+				isset( $translated->translations[ $index ] ) ) {
+				return $translated->translations[ $index ];
+			} else {
+				return 1 == $count ? $singular : $plural;
+			}
+		}
+
+		/**
+		 * Merge $other in the current object.
+		 *
+		 * @param Object $other Another Translation object, whose translations will be merged in this one (passed by reference).
+		 * @return void
+		 */
+		function merge_with( &$other ) {
+			foreach ( $other->entries as $entry ) {
+				$this->entries[ $entry->key() ] = $entry;
+			}
+		}
+
+		/**
+		 * @param object $other
+		 */
+		function merge_originals_with( &$other ) {
+			foreach ( $other->entries as $entry ) {
+				if ( ! isset( $this->entries[ $entry->key() ] ) ) {
+					$this->entries[ $entry->key() ] = $entry;
+				} else {
+					$this->entries[ $entry->key() ]->merge_with( $entry );
+				}
+			}
+		}
+	}
+
+	class Gettext_Translations extends Translations {
+		/**
+		 * The gettext implementation of select_plural_form.
+		 *
+		 * It lives in this class, because there are more than one descendand, which will use it and
+		 * they can't share it effectively.
+		 *
+		 * @param int $count
+		 */
+		function gettext_select_plural_form( $count ) {
+			if ( ! isset( $this->_gettext_select_plural_form ) || is_null( $this->_gettext_select_plural_form ) ) {
+				list( $nplurals, $expression )     = $this->nplurals_and_expression_from_header( $this->get_header( 'Plural-Forms' ) );
+				$this->_nplurals                   = $nplurals;
+				$this->_gettext_select_plural_form = $this->make_plural_form_function( $nplurals, $expression );
+			}
+			return call_user_func( $this->_gettext_select_plural_form, $count );
+		}
+
+		/**
+		 * @param string $header
+		 * @return array
+		 */
+		function nplurals_and_expression_from_header( $header ) {
+			if ( preg_match( '/^\s*nplurals\s*=\s*(\d+)\s*;\s+plural\s*=\s*(.+)$/', $header, $matches ) ) {
+				$nplurals   = (int) $matches[1];
+				$expression = trim( $matches[2] );
+				return array( $nplurals, $expression );
+			} else {
+				return array( 2, 'n != 1' );
+			}
+		}
+
+		/**
+		 * Makes a function, which will return the right translation index, according to the
+		 * plural forms header
+		 *
+		 * @param int    $nplurals
+		 * @param string $expression
+		 */
+		function make_plural_form_function( $nplurals, $expression ) {
+			try {
+				$handler = new Plural_Forms( rtrim( $expression, ';' ) );
+				return array( $handler, 'get' );
+			} catch ( Exception $e ) {
+				// Fall back to default plural-form function.
+				return $this->make_plural_form_function( 2, 'n != 1' );
+			}
+		}
+
+		/**
+		 * Adds parentheses to the inner parts of ternary operators in
+		 * plural expressions, because PHP evaluates ternary oerators from left to right
+		 *
+		 * @param string $expression the expression without parentheses
+		 * @return string the expression with parentheses added
+		 */
+		function parenthesize_plural_exression( $expression ) {
+			$expression .= ';';
+			$res         = '';
+			$depth       = 0;
+			for ( $i = 0; $i < strlen( $expression ); ++$i ) {
+				$char = $expression[ $i ];
+				switch ( $char ) {
+					case '?':
+						$res .= ' ? (';
+						$depth++;
+						break;
+					case ':':
+						$res .= ') : (';
+						break;
+					case ';':
+						$res  .= str_repeat( ')', $depth ) . ';';
+						$depth = 0;
+						break;
+					default:
+						$res .= $char;
+				}
+			}
+			return rtrim( $res, ';' );
+		}
+
+		/**
+		 * @param string $translation
+		 * @return array
+		 */
+		function make_headers( $translation ) {
+			$headers = array();
+			// Sometimes \n's are used instead of real new lines.
+			$translation = str_replace( '\n', "\n", $translation );
+			$lines       = explode( "\n", $translation );
+			foreach ( $lines as $line ) {
+				$parts = explode( ':', $line, 2 );
+				if ( ! isset( $parts[1] ) ) {
+					continue;
+				}
+				$headers[ trim( $parts[0] ) ] = trim( $parts[1] );
+			}
+			return $headers;
+		}
+
+		/**
+		 * @param string $header
+		 * @param string $value
+		 */
+		function set_header( $header, $value ) {
+			parent::set_header( $header, $value );
+			if ( 'Plural-Forms' === $header ) {
+				list( $nplurals, $expression )     = $this->nplurals_and_expression_from_header( $this->get_header( 'Plural-Forms' ) );
+				$this->_nplurals                   = $nplurals;
+				$this->_gettext_select_plural_form = $this->make_plural_form_function( $nplurals, $expression );
+			}
+		}
+	}
+endif;
+
+if ( ! class_exists( 'NOOP_Translations', false ) ) :
+	/**
+	 * Provides the same interface as Translations, but doesn't do anything
+	 */
+	class NOOP_Translations {
+		public $entries = array();
+		public $headers = array();
+
+		function add_entry( $entry ) {
+			return true;
+		}
+
+		/**
+		 * @param string $header
+		 * @param string $value
+		 */
+		function set_header( $header, $value ) {
+		}
+
+		/**
+		 * @param array $headers
+		 */
+		function set_headers( $headers ) {
+		}
+
+		/**
+		 * @param string $header
+		 * @return false
+		 */
+		function get_header( $header ) {
+			return false;
+		}
+
+		/**
+		 * @param Translation_Entry $entry
+		 * @return false
+		 */
+		function translate_entry( &$entry ) {
+			return false;
+		}
+
+		/**
+		 * @param string $singular
+		 * @param string $context
+		 */
+		function translate( $singular, $context = null ) {
+			return $singular;
+		}
+
+		/**
+		 * @param int $count
+		 * @return bool
+		 */
+		function select_plural_form( $count ) {
+			return 1 == $count ? 0 : 1;
+		}
+
+		/**
+		 * @return int
+		 */
+		function get_plural_forms_count() {
+			return 2;
+		}
+
+		/**
+		 * @param string $singular
+		 * @param string $plural
+		 * @param int    $count
+		 * @param string $context
+		 */
+		function translate_plural( $singular, $plural, $count, $context = null ) {
+			return 1 == $count ? $singular : $plural;
+		}
+
+		/**
+		 * @param object $other
+		 */
+		function merge_with( &$other ) {
+		}
+	}
+endif;
+

@@ -1,0 +1,849 @@
+The file customize-helpers.js contains:
+/**
+ * Get luminance from a HEX color.
+ *
+ * @param {string} hex - The hex color.
+ *
+ * @return {number} - Returns the luminance, number between 0 and 255.
+ */
+function twentytwentyoneGetHexLum( hex ) { // jshint ignore:line
+	var rgb = twentytwentyoneGetRgbFromHex( hex );
+	return Math.round( ( 0.2126 * rgb.r ) + ( 0.7152 * rgb.g ) + ( 0.0722 * rgb.b ) );
+}
+
+/**
+ * Get RGB from HEX.
+ *
+ * @param {string} hex - The hex color.
+ *
+ * @return {Object} - Returns an object {r, g, b}
+ */
+function twentytwentyoneGetRgbFromHex( hex ) {
+	var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i,
+		result;
+
+	// Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF").
+	hex = hex.replace( shorthandRegex, function( m, r, g, b ) {
+		return r.toString() + r.toString() + g.toString() + g.toString() + b.toString() + b.toString();
+	} );
+
+	result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec( hex );
+	return result ? {
+		r: parseInt( result[1], 16 ),
+		g: parseInt( result[2], 16 ),
+		b: parseInt( result[3], 16 )
+	} : null;
+}
+
+The file customize-preview.js contains:
+/* global twentytwentyoneGetHexLum, jQuery */
+( function() {
+	// Add listener for the "background_color" control.
+	wp.customize( 'background_color', function( value ) {
+		value.bind( function( to ) {
+			var lum = twentytwentyoneGetHexLum( to ),
+				isDark = 127 > lum,
+				textColor = ! isDark ? 'var(--global--color-dark-gray)' : 'var(--global--color-light-gray)',
+				tableColor = ! isDark ? 'var(--global--color-light-gray)' : 'var(--global--color-dark-gray)',
+				stylesheetID = 'twentytwentyone-customizer-inline-styles',
+				stylesheet,
+				styles;
+
+			// Modify the html & body classes depending on whether this is a dark background or not.
+			if ( isDark ) {
+				document.body.classList.add( 'is-dark-theme' );
+				document.documentElement.classList.add( 'is-dark-theme' );
+				document.body.classList.remove( 'is-light-theme' );
+				document.documentElement.classList.remove( 'is-light-theme' );
+				document.documentElement.classList.remove( 'respect-color-scheme-preference' );
+			} else {
+				document.body.classList.remove( 'is-dark-theme' );
+				document.documentElement.classList.remove( 'is-dark-theme' );
+				document.body.classList.add( 'is-light-theme' );
+				document.documentElement.classList.add( 'is-light-theme' );
+				if ( wp.customize( 'respect_user_color_preference' ).get() ) {
+					document.documentElement.classList.add( 'respect-color-scheme-preference' );
+				}
+			}
+
+			// Toggle the white background class.
+			if ( 225 <= lum ) {
+				document.body.classList.add( 'has-background-white' );
+			} else {
+				document.body.classList.remove( 'has-background-white' );
+			}
+
+			stylesheet = jQuery( '#' + stylesheetID );
+			styles = '';
+			// If the stylesheet doesn't exist, create it and append it to <head>.
+			if ( ! stylesheet.length ) {
+				jQuery( '#twenty-twenty-one-style-inline-css' ).after( '<style id="' + stylesheetID + '"></style>' );
+				stylesheet = jQuery( '#' + stylesheetID );
+			}
+
+			// Generate the styles.
+			styles += '--global--color-primary:' + textColor + ';';
+			styles += '--global--color-secondary:' + textColor + ';';
+			styles += '--global--color-background:' + to + ';';
+
+			styles += '--button--color-background:' + textColor + ';';
+			styles += '--button--color-text:' + to + ';';
+			styles += '--button--color-text-hover:' + textColor + ';';
+
+			styles += '--table--stripes-border-color:' + tableColor + ';';
+			styles += '--table--stripes-background-color:' + tableColor + ';';
+
+			// Add the styles.
+			stylesheet.html( ':root{' + styles + '}' );
+		} );
+	} );
+}() );
+
+The file customize.js contains:
+/* global twentytwentyoneGetHexLum */
+
+( function() {
+	// Wait until the customizer has finished loading.
+	wp.customize.bind( 'ready', function() {
+		// Hide the "respect_user_color_preference" setting if the background-color is dark.
+		if ( 127 > twentytwentyoneGetHexLum( wp.customize( 'background_color' ).get() ) ) {
+			wp.customize.control( 'respect_user_color_preference' ).deactivate();
+			wp.customize.control( 'respect_user_color_preference_notice' ).deactivate();
+		}
+
+		// Handle changes to the background-color.
+		wp.customize( 'background_color', function( setting ) {
+			setting.bind( function( value ) {
+				if ( 127 > twentytwentyoneGetHexLum( value ) ) {
+					wp.customize.control( 'respect_user_color_preference' ).deactivate();
+					wp.customize.control( 'respect_user_color_preference_notice' ).activate();
+				} else {
+					wp.customize.control( 'respect_user_color_preference' ).activate();
+					wp.customize.control( 'respect_user_color_preference_notice' ).deactivate();
+				}
+			} );
+		} );
+	} );
+}() );
+
+The file dark-mode-toggler.js contains:
+function toggleDarkMode() { // jshint ignore:line
+	var toggler = document.getElementById( 'dark-mode-toggler' );
+
+	if ( 'false' === toggler.getAttribute( 'aria-pressed' ) ) {
+		toggler.setAttribute( 'aria-pressed', 'true' );
+		document.documentElement.classList.add( 'is-dark-theme' );
+		document.body.classList.add( 'is-dark-theme' );
+		window.localStorage.setItem( 'twentytwentyoneDarkMode', 'yes' );
+	} else {
+		toggler.setAttribute( 'aria-pressed', 'false' );
+		document.documentElement.classList.remove( 'is-dark-theme' );
+		document.body.classList.remove( 'is-dark-theme' );
+		window.localStorage.setItem( 'twentytwentyoneDarkMode', 'no' );
+	}
+}
+
+function twentytwentyoneIsDarkMode() {
+	var isDarkMode = window.matchMedia( '(prefers-color-scheme: dark)' ).matches;
+
+	if ( 'yes' === window.localStorage.getItem( 'twentytwentyoneDarkMode' ) ) {
+		isDarkMode = true;
+	} else if ( 'no' === window.localStorage.getItem( 'twentytwentyoneDarkMode' ) ) {
+		isDarkMode = false;
+	}
+
+	return isDarkMode;
+}
+
+function darkModeInitialLoad() {
+	var toggler = document.getElementById( 'dark-mode-toggler' ),
+		isDarkMode = twentytwentyoneIsDarkMode();
+
+	if ( isDarkMode ) {
+		document.documentElement.classList.add( 'is-dark-theme' );
+		document.body.classList.add( 'is-dark-theme' );
+	} else {
+		document.documentElement.classList.remove( 'is-dark-theme' );
+		document.body.classList.remove( 'is-dark-theme' );
+	}
+
+	if ( toggler && isDarkMode ) {
+		toggler.setAttribute( 'aria-pressed', 'true' );
+	}
+}
+
+function darkModeRepositionTogglerOnScroll() {
+
+	var toggler = document.getElementById( 'dark-mode-toggler' ),
+		prevScroll = window.scrollY || document.documentElement.scrollTop,
+		currentScroll,
+
+		checkScroll = function() {
+			currentScroll = window.scrollY || document.documentElement.scrollTop;
+			if (
+				currentScroll + ( window.innerHeight * 1.5 ) > document.body.clientHeight ||
+				currentScroll < prevScroll
+			) {
+				toggler.classList.remove( 'hide' );
+			} else if ( currentScroll > prevScroll && 250 < currentScroll ) {
+				toggler.classList.add( 'hide' );
+			}
+			prevScroll = currentScroll;
+		};
+
+	if ( toggler ) {
+		window.addEventListener( 'scroll', checkScroll );
+	}
+}
+
+darkModeInitialLoad();
+darkModeRepositionTogglerOnScroll();
+
+The file editor-dark-mode-support.js contains:
+/* global twentytwentyoneIsDarkMode, setTimeout */
+
+// Check the color scheme preference and inject the classes if necessary.
+if ( document.body.classList.contains( 'twentytwentyone-supports-dark-theme' ) ) {
+	twentytwentyoneDarkModeEditorInit();
+}
+
+/**
+ * Once the editor loads, add the dark mode class.
+ *
+ * Wait for the editor to load by periodically checking for an element, then we add the classes.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param {number} attempt Track the number of tries
+ * @return {void}
+ */
+function twentytwentyoneDarkModeEditorInit( attempt ) {
+	var container = document.querySelector( '.block-editor__typewriter' ),
+		maxAttempts = 8;
+
+	// Set the initial attempt if it's undefined.
+	attempt = attempt || 0;
+
+	if ( twentytwentyoneIsDarkMode() ) {
+		if ( null === container ) {
+			// Try again.
+			if ( attempt < maxAttempts ) {
+				setTimeout(
+					function() {
+						twentytwentyoneDarkModeEditorInit( attempt + 1 );
+					},
+					// Double the delay, give the server some time to breathe.
+					25 * Math.pow( 2, attempt )
+				);
+			}
+			return;
+		}
+
+		document.body.classList.add( 'is-dark-theme' );
+		document.documentElement.classList.add( 'is-dark-theme' );
+		container.classList.add( 'is-dark-theme' );
+	}
+}
+
+The file editor.js contains:
+/* global setTimeout */
+wp.domReady( function() {
+	// Unregister "Wide" Separator Style.
+	wp.blocks.unregisterBlockStyle( 'core/separator', 'wide' );
+
+	// Add to ".block-editor__typewriter" the "is-dark-theme" class if needed.
+	function twentytwentyoneCopyDarkThemeClass() {
+		var editor,
+			attemptDelay = 25,
+			attempt = 0,
+			maxAttempts = 10;
+
+		if ( ! document.body.classList.contains( 'is-dark-theme' ) ) {
+			return;
+		}
+
+		editor = document.querySelector( '.block-editor__typewriter' );
+		if ( null === editor ) {
+			// Try again.
+			if ( attempt < maxAttempts ) {
+				setTimeout( function() {
+					twentytwentyoneCopyDarkThemeClass();
+				}, attemptDelay );
+
+				// Increment the attempts counter.
+				attempt++;
+
+				// Double the delay, give the server some time to breathe.
+				attemptDelay *= 2;
+			}
+			return;
+		}
+
+		editor.classList.add( 'is-dark-theme' );
+	}
+
+	twentytwentyoneCopyDarkThemeClass();
+} );
+
+The file my-directory-list.txt contains:
+The file customize-helpers.js contains:
+/**
+ * Get luminance from a HEX color.
+ *
+ * @param {string} hex - The hex color.
+ *
+ * @return {number} - Returns the luminance, number between 0 and 255.
+ */
+function twentytwentyoneGetHexLum( hex ) { // jshint ignore:line
+	var rgb = twentytwentyoneGetRgbFromHex( hex );
+	return Math.round( ( 0.2126 * rgb.r ) + ( 0.7152 * rgb.g ) + ( 0.0722 * rgb.b ) );
+}
+
+/**
+ * Get RGB from HEX.
+ *
+ * @param {string} hex - The hex color.
+ *
+ * @return {Object} - Returns an object {r, g, b}
+ */
+function twentytwentyoneGetRgbFromHex( hex ) {
+	var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i,
+		result;
+
+	// Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF").
+	hex = hex.replace( shorthandRegex, function( m, r, g, b ) {
+		return r.toString() + r.toString() + g.toString() + g.toString() + b.toString() + b.toString();
+	} );
+
+	result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec( hex );
+	return result ? {
+		r: parseInt( result[1], 16 ),
+		g: parseInt( result[2], 16 ),
+		b: parseInt( result[3], 16 )
+	} : null;
+}
+
+The file customize-preview.js contains:
+/* global twentytwentyoneGetHexLum, jQuery */
+( function() {
+	// Add listener for the "background_color" control.
+	wp.customize( 'background_color', function( value ) {
+		value.bind( function( to ) {
+			var lum = twentytwentyoneGetHexLum( to ),
+				isDark = 127 > lum,
+				textColor = ! isDark ? 'var(--global--color-dark-gray)' : 'var(--global--color-light-gray)',
+				tableColor = ! isDark ? 'var(--global--color-light-gray)' : 'var(--global--color-dark-gray)',
+				stylesheetID = 'twentytwentyone-customizer-inline-styles',
+				stylesheet,
+				styles;
+
+			// Modify the html & body classes depending on whether this is a dark background or not.
+			if ( isDark ) {
+				document.body.classList.add( 'is-dark-theme' );
+				document.documentElement.classList.add( 'is-dark-theme' );
+				document.body.classList.remove( 'is-light-theme' );
+				document.documentElement.classList.remove( 'is-light-theme' );
+				document.documentElement.classList.remove( 'respect-color-scheme-preference' );
+			} else {
+				document.body.classList.remove( 'is-dark-theme' );
+				document.documentElement.classList.remove( 'is-dark-theme' );
+				document.body.classList.add( 'is-light-theme' );
+				document.documentElement.classList.add( 'is-light-theme' );
+				if ( wp.customize( 'respect_user_color_preference' ).get() ) {
+					document.documentElement.classList.add( 'respect-color-scheme-preference' );
+				}
+			}
+
+			// Toggle the white background class.
+			if ( 225 <= lum ) {
+				document.body.classList.add( 'has-background-white' );
+			} else {
+				document.body.classList.remove( 'has-background-white' );
+			}
+
+			stylesheet = jQuery( '#' + stylesheetID );
+			styles = '';
+			// If the stylesheet doesn't exist, create it and append it to <head>.
+			if ( ! stylesheet.length ) {
+				jQuery( '#twenty-twenty-one-style-inline-css' ).after( '<style id="' + stylesheetID + '"></style>' );
+				stylesheet = jQuery( '#' + stylesheetID );
+			}
+
+			// Generate the styles.
+			styles += '--global--color-primary:' + textColor + ';';
+			styles += '--global--color-secondary:' + textColor + ';';
+			styles += '--global--color-background:' + to + ';';
+
+			styles += '--button--color-background:' + textColor + ';';
+			styles += '--button--color-text:' + to + ';';
+			styles += '--button--color-text-hover:' + textColor + ';';
+
+			styles += '--table--stripes-border-color:' + tableColor + ';';
+			styles += '--table--stripes-background-color:' + tableColor + ';';
+
+			// Add the styles.
+			stylesheet.html( ':root{' + styles + '}' );
+		} );
+	} );
+}() );
+
+The file customize.js contains:
+/* global twentytwentyoneGetHexLum */
+
+( function() {
+	// Wait until the customizer has finished loading.
+	wp.customize.bind( 'ready', function() {
+		// Hide the "respect_user_color_preference" setting if the background-color is dark.
+		if ( 127 > twentytwentyoneGetHexLum( wp.customize( 'background_color' ).get() ) ) {
+			wp.customize.control( 'respect_user_color_preference' ).deactivate();
+			wp.customize.control( 'respect_user_color_preference_notice' ).deactivate();
+		}
+
+		// Handle changes to the background-color.
+		wp.customize( 'background_color', function( setting ) {
+			setting.bind( function( value ) {
+				if ( 127 > twentytwentyoneGetHexLum( value ) ) {
+					wp.customize.control( 'respect_user_color_preference' ).deactivate();
+					wp.customize.control( 'respect_user_color_preference_notice' ).activate();
+				} else {
+					wp.customize.control( 'respect_user_color_preference' ).activate();
+					wp.customize.control( 'respect_user_color_preference_notice' ).deactivate();
+				}
+			} );
+		} );
+	} );
+}() );
+
+The file dark-mode-toggler.js contains:
+function toggleDarkMode() { // jshint ignore:line
+	var toggler = document.getElementById( 'dark-mode-toggler' );
+
+	if ( 'false' === toggler.getAttribute( 'aria-pressed' ) ) {
+		toggler.setAttribute( 'aria-pressed', 'true' );
+		document.documentElement.classList.add( 'is-dark-theme' );
+		document.body.classList.add( 'is-dark-theme' );
+		window.localStorage.setItem( 'twentytwentyoneDarkMode', 'yes' );
+	} else {
+		toggler.setAttribute( 'aria-pressed', 'false' );
+		document.documentElement.classList.remove( 'is-dark-theme' );
+		document.body.classList.remove( 'is-dark-theme' );
+		window.localStorage.setItem( 'twentytwentyoneDarkMode', 'no' );
+	}
+}
+
+function twentytwentyoneIsDarkMode() {
+	var isDarkMode = window.matchMedia( '(prefers-color-scheme: dark)' ).matches;
+
+	if ( 'yes' === window.localStorage.getItem( 'twentytwentyoneDarkMode' ) ) {
+		isDarkMode = true;
+	} else if ( 'no' === window.localStorage.getItem( 'twentytwentyoneDarkMode' ) ) {
+		isDarkMode = false;
+	}
+
+	return isDarkMode;
+}
+
+function darkModeInitialLoad() {
+	var toggler = document.getElementById( 'dark-mode-toggler' ),
+		isDarkMode = twentytwentyoneIsDarkMode();
+
+	if ( isDarkMode ) {
+		document.documentElement.classList.add( 'is-dark-theme' );
+		document.body.classList.add( 'is-dark-theme' );
+	} else {
+		document.documentElement.classList.remove( 'is-dark-theme' );
+		document.body.classList.remove( 'is-dark-theme' );
+	}
+
+	if ( toggler && isDarkMode ) {
+		toggler.setAttribute( 'aria-pressed', 'true' );
+	}
+}
+
+function darkModeRepositionTogglerOnScroll() {
+
+	var toggler = document.getElementById( 'dark-mode-toggler' ),
+		prevScroll = window.scrollY || document.documentElement.scrollTop,
+		currentScroll,
+
+		checkScroll = function() {
+			currentScroll = window.scrollY || document.documentElement.scrollTop;
+			if (
+				currentScroll + ( window.innerHeight * 1.5 ) > document.body.clientHeight ||
+				currentScroll < prevScroll
+			) {
+				toggler.classList.remove( 'hide' );
+			} else if ( currentScroll > prevScroll && 250 < currentScroll ) {
+				toggler.classList.add( 'hide' );
+			}
+			prevScroll = currentScroll;
+		};
+
+	if ( toggler ) {
+		window.addEventListener( 'scroll', checkScroll );
+	}
+}
+
+darkModeInitialLoad();
+darkModeRepositionTogglerOnScroll();
+
+The file editor-dark-mode-support.js contains:
+
+The file palette-colorpicker.js contains:
+/**
+ * Script for our custom colorpicker control.
+ *
+ * This is copied from wp-admin/js/customize-controls.js
+ * with a few tweaks:
+ * 		Removed the hue picker script because we don't use it here
+ * 		Added the "palettes" argument in wpColorPicker().
+ */
+wp.customize.controlConstructor['twenty-twenty-one-color'] = wp.customize.Control.extend( {
+	ready: function() {
+		var control = this,
+			updating = false,
+			picker;
+
+		picker = this.container.find( '.color-picker-hex' );
+		picker.val( control.setting() ).wpColorPicker( {
+			palettes: control.params.palette,
+			change: function() {
+				updating = true;
+				control.setting.set( picker.wpColorPicker( 'color' ) );
+				updating = false;
+			},
+			clear: function() {
+				updating = true;
+				control.setting.set( '' );
+				updating = false;
+			}
+		} );
+
+		control.setting.bind( function( value ) {
+			// Bail if the update came from the control itself.
+			if ( updating ) {
+				return;
+			}
+			picker.val( value );
+			picker.wpColorPicker( 'color', value );
+		} );
+
+		// Collapse color picker when hitting Esc instead of collapsing the current section.
+		control.container.on( 'keydown', function( event ) {
+			var pickerContainer;
+			if ( 27 !== event.which ) { // Esc.
+				return;
+			}
+			pickerContainer = control.container.find( '.wp-picker-container' );
+			if ( pickerContainer.hasClass( 'wp-picker-active' ) ) {
+				picker.wpColorPicker( 'close' );
+				control.container.find( '.wp-color-result' ).focus();
+				event.stopPropagation(); // Prevent section from being collapsed.
+			}
+		} );
+	}
+} );
+
+The file polyfills.js contains:
+/**
+ * File polyfills.js.
+ *
+ * Polyfills for IE11.
+ */
+
+/**
+ * Polyfill for Element.closest() because we need to support IE11.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Element/closest
+ */
+if ( ! Element.prototype.matches ) {
+	Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+}
+
+if ( ! Element.prototype.closest ) {
+	Element.prototype.closest = function( s ) {
+		var el = this;
+		do {
+			if ( Element.prototype.matches.call( el, s ) ) {
+				return el;
+			}
+			el = el.parentElement || el.parentNode;
+		} while ( el !== null && el.nodeType === 1 );
+		return null;
+	};
+}
+
+/**
+ * Polyfill for NodeList.foreach() because we need to support IE11.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/NodeList/forEach
+ */
+if ( window.NodeList && ! NodeList.prototype.forEach ) {
+	NodeList.prototype.forEach = function( callback, thisArg ) {
+		var i;
+		thisArg = thisArg || window;
+		for ( i = 0; i < this.length; i++ ) {
+			callback.call( thisArg, this[i], i, this );
+		}
+	};
+}
+
+The file primary-navigation.js contains:
+/**
+ * File primary-navigation.js.
+ *
+ * Required to open and close the mobile navigation.
+ */
+
+/**
+ * Toggle an attribute's value
+ *
+ * @param {Element} el - The element.
+ * @param {boolean} withListeners - Whether we want to add/remove listeners or not.
+ * @since Twenty Twenty-One 1.0
+ */
+function twentytwentyoneToggleAriaExpanded( el, withListeners ) {
+	if ( 'true' !== el.getAttribute( 'aria-expanded' ) ) {
+		el.setAttribute( 'aria-expanded', 'true' );
+		twentytwentyoneSubmenuPosition( el.parentElement );
+		if ( withListeners ) {
+			document.addEventListener( 'click', twentytwentyoneCollapseMenuOnClickOutside );
+		}
+	} else {
+		el.setAttribute( 'aria-expanded', 'false' );
+		if ( withListeners ) {
+			document.removeEventListener( 'click', twentytwentyoneCollapseMenuOnClickOutside );
+		}
+	}
+}
+
+function twentytwentyoneCollapseMenuOnClickOutside( event ) {
+	if ( ! document.getElementById( 'site-navigation' ).contains( event.target ) ) {
+		document.getElementById( 'site-navigation' ).querySelectorAll( '.sub-menu-toggle' ).forEach( function( button ) {
+			button.setAttribute( 'aria-expanded', 'false' );
+		} );
+	}
+}
+
+/**
+ * Changes the position of submenus so they always fit the screen horizontally.
+ *
+ * @param {Element} li - The li element.
+ */
+function twentytwentyoneSubmenuPosition( li ) {
+	var subMenu = li.querySelector( 'ul.sub-menu' ),
+		rect,
+		right,
+		left,
+		windowWidth;
+
+	if ( ! subMenu ) {
+		return;
+	}
+
+	rect = subMenu.getBoundingClientRect();
+	right = Math.round( rect.right );
+	left = Math.round( rect.left );
+	windowWidth = Math.round( window.innerWidth );
+
+	if ( right > windowWidth ) {
+		subMenu.classList.add( 'submenu-reposition-right' );
+	} else if ( document.body.classList.contains( 'rtl' ) && left < 0 ) {
+		subMenu.classList.add( 'submenu-reposition-left' );
+	}
+}
+
+/**
+ * Handle clicks on submenu toggles.
+ *
+ * @param {Element} el - The element.
+ */
+function twentytwentyoneExpandSubMenu( el ) { // jshint ignore:line
+	// Close other expanded items.
+	el.closest( 'nav' ).querySelectorAll( '.sub-menu-toggle' ).forEach( function( button ) {
+		if ( button !== el ) {
+			button.setAttribute( 'aria-expanded', 'false' );
+		}
+	} );
+
+	// Toggle aria-expanded on the button.
+	twentytwentyoneToggleAriaExpanded( el, true );
+
+	// On tab-away collapse the menu.
+	el.parentNode.querySelectorAll( 'ul > li:last-child > a' ).forEach( function( linkEl ) {
+		linkEl.addEventListener( 'blur', function( event ) {
+			if ( ! el.parentNode.contains( event.relatedTarget ) ) {
+				el.setAttribute( 'aria-expanded', 'false' );
+			}
+		} );
+	} );
+}
+
+( function() {
+	/**
+	 * Menu Toggle Behaviors
+	 *
+	 * @param {string} id - The ID.
+	 */
+	var navMenu = function( id ) {
+		var wrapper = document.body, // this is the element to which a CSS class is added when a mobile nav menu is open
+			mobileButton = document.getElementById( id + '-mobile-menu' );
+
+		if ( mobileButton ) {
+			mobileButton.onclick = function() {
+				wrapper.classList.toggle( id + '-navigation-open' );
+				wrapper.classList.toggle( 'lock-scrolling' );
+				twentytwentyoneToggleAriaExpanded( mobileButton );
+				mobileButton.focus();
+			};
+		}
+		/**
+		 * Trap keyboard navigation in the menu modal.
+		 * Adapted from TwentyTwenty
+		 */
+		document.addEventListener( 'keydown', function( event ) {
+			var modal, elements, selectors, lastEl, firstEl, activeEl, tabKey, shiftKey, escKey;
+			if ( ! wrapper.classList.contains( id + '-navigation-open' ) ) {
+				return;
+			}
+
+			modal = document.querySelector( '.' + id + '-navigation' );
+			selectors = 'input, a, button';
+			elements = modal.querySelectorAll( selectors );
+			elements = Array.prototype.slice.call( elements );
+			tabKey = event.keyCode === 9;
+			shiftKey = event.shiftKey;
+			escKey = event.keyCode === 27;
+			activeEl = document.activeElement; // eslint-disable-line @wordpress/no-global-active-element
+			lastEl = elements[ elements.length - 1 ];
+			firstEl = elements[0];
+
+			if ( escKey ) {
+				event.preventDefault();
+				wrapper.classList.remove( id + '-navigation-open', 'lock-scrolling' );
+				twentytwentyoneToggleAriaExpanded( mobileButton );
+				mobileButton.focus();
+			}
+
+			if ( ! shiftKey && tabKey && lastEl === activeEl ) {
+				event.preventDefault();
+				firstEl.focus();
+			}
+
+			if ( shiftKey && tabKey && firstEl === activeEl ) {
+				event.preventDefault();
+				lastEl.focus();
+			}
+
+			// If there are no elements in the menu, don't move the focus
+			if ( tabKey && firstEl === lastEl ) {
+				event.preventDefault();
+			}
+		} );
+
+		/**
+		 * Close menu and scroll to anchor when an anchor link is clicked.
+		 * Adapted from TwentyTwenty.
+		 */
+		document.addEventListener( 'click', function( event ) {
+			// If target onclick is <a> with # within the href attribute
+			if ( event.target.hash && event.target.hash.includes( '#' ) ) {
+				wrapper.classList.remove( id + '-navigation-open', 'lock-scrolling' );
+				twentytwentyoneToggleAriaExpanded( mobileButton );
+				// Wait 550 and scroll to the anchor.
+				setTimeout(function () {
+					var anchor = document.getElementById(event.target.hash.slice(1));
+					anchor.scrollIntoView();
+				}, 550);
+			}
+		} );
+
+		document.getElementById( 'site-navigation' ).querySelectorAll( '.menu-wrapper > .menu-item-has-children' ).forEach( function( li ) {
+			li.addEventListener( 'mouseenter', function() {
+				this.querySelector( '.sub-menu-toggle' ).setAttribute( 'aria-expanded', 'true' );
+				twentytwentyoneSubmenuPosition( li );
+			} );
+			li.addEventListener( 'mouseleave', function() {
+				this.querySelector( '.sub-menu-toggle' ).setAttribute( 'aria-expanded', 'false' );
+			} );
+		} );
+	};
+
+	window.addEventListener( 'load', function() {
+		new navMenu( 'primary' );
+	} );
+}() );
+
+The file responsive-embeds.js contains:
+/**
+ * File responsive-embeds.js.
+ *
+ * Make embeds responsive so they don't overflow their container.
+ */
+
+/**
+ * Add max-width & max-height to <iframe> elements, depending on their width & height props.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return {void}
+ */
+function twentytwentyoneResponsiveEmbeds() {
+	var proportion, parentWidth;
+
+	// Loop iframe elements.
+	document.querySelectorAll( 'iframe' ).forEach( function( iframe ) {
+		// Only continue if the iframe has a width & height defined.
+		if ( iframe.width && iframe.height ) {
+			// Calculate the proportion/ratio based on the width & height.
+			proportion = parseFloat( iframe.width ) / parseFloat( iframe.height );
+			// Get the parent element's width.
+			parentWidth = parseFloat( window.getComputedStyle( iframe.parentElement, null ).width.replace( 'px', '' ) );
+			// Set the max-width & height.
+			iframe.style.maxWidth = '100%';
+			iframe.style.maxHeight = Math.round( parentWidth / proportion ).toString() + 'px';
+		}
+	} );
+}
+
+// Run on initial load.
+twentytwentyoneResponsiveEmbeds();
+
+// Run on resize.
+window.onresize = twentytwentyoneResponsiveEmbeds;
+
+The file skip-link-focus-fix.js contains:
+/**
+ * File skip-link-focus-fix.js.
+ *
+ * Helps with accessibility for keyboard only users.
+ *
+ * This is the source file for what is minified in the twenty_twenty_one_skip_link_focus_fix() PHP function.
+ *
+ * Learn more: https://git.io/vWdr2
+ */
+( function() {
+	var isIe = /(trident|msie)/i.test( navigator.userAgent );
+
+	if ( isIe && document.getElementById && window.addEventListener ) {
+		window.addEventListener( 'hashchange', function() {
+			var id = location.hash.substring( 1 ),
+				element;
+
+			if ( ! ( /^[A-z0-9_-]+$/.test( id ) ) ) {
+				return;
+			}
+
+			element = document.getElementById( id );
+
+			if ( element ) {
+				if ( ! ( /^(?:a|select|input|button|textarea)$/i.test( element.tagName ) ) ) {
+					element.tabIndex = -1;
+				}
+
+				element.focus();
+			}
+		}, false );
+	}
+}() );
+

@@ -1,0 +1,68 @@
+The file author-bio.php contains:
+<?php
+/**
+ * The template for displaying Author info
+ *
+ * @package WordPress
+ * @subpackage Twenty_Nineteen
+ * @since Twenty Nineteen 1.0
+ */
+
+if ( (bool) get_the_author_meta( 'description' ) ) : ?>
+<div class="author-bio">
+	<h2 class="author-title">
+		<span class="author-heading">
+			<?php
+			printf(
+				/* translators: %s: Post author. */
+				__( 'Published by %s', 'twentynineteen' ),
+				esc_html( get_the_author() )
+			);
+			?>
+		</span>
+	</h2>
+	<p class="author-description">
+		<?php the_author_meta( 'description' ); ?>
+		<a class="author-link" href="<?php echo esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ); ?>" rel="author">
+			<?php _e( 'View more posts', 'twentynineteen' ); ?>
+		</a>
+	</p><!-- .author-description -->
+</div><!-- .author-bio -->
+<?php endif; ?>
+
+The file discussion-meta.php contains:
+<?php
+/**
+ * The template for displaying Current Discussion on posts
+ *
+ * @package WordPress
+ * @subpackage Twenty_Nineteen
+ * @since Twenty Nineteen 1.0
+ */
+
+/* Get data from current discussion on post. */
+$discussion    = twentynineteen_get_discussion_data();
+$has_responses = $discussion->responses > 0;
+
+if ( $has_responses ) {
+	/* translators: %d: Number of comments. */
+	$meta_label = sprintf( _n( '%d Comment', '%d Comments', $discussion->responses, 'twentynineteen' ), $discussion->responses );
+} else {
+	$meta_label = __( 'No comments', 'twentynineteen' );
+}
+?>
+
+<div class="discussion-meta">
+	<?php
+	if ( $has_responses ) {
+		twentynineteen_discussion_avatars_list( $discussion->authors );
+	}
+	?>
+	<p class="discussion-meta-info">
+		<?php echo twentynineteen_get_icon_svg( 'comment', 24 ); ?>
+		<span><?php echo esc_html( $meta_label ); ?></span>
+	</p>
+</div><!-- .discussion-meta -->
+
+The file my-directory-list.txt contains:
+

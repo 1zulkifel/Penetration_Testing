@@ -1,0 +1,205 @@
+The file excerpt-aside.php contains:
+<?php
+/**
+ * Show the appropriate content for the Aside post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+// Print the full content.
+the_content();
+
+The file excerpt-audio.php contains:
+<?php
+/**
+ * Show the appropriate content for the Audio post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+$content = get_the_content();
+
+if ( has_block( 'core/audio', $content ) ) {
+	twenty_twenty_one_print_first_instance_of_block( 'core/audio', $content );
+} elseif ( has_block( 'core/embed', $content ) ) {
+	twenty_twenty_one_print_first_instance_of_block( 'core/embed', $content );
+} else {
+	twenty_twenty_one_print_first_instance_of_block( 'core-embed/*', $content );
+}
+
+// Add the excerpt.
+the_excerpt();
+
+The file excerpt-chat.php contains:
+<?php
+/**
+ * Show the appropriate content for the Chat post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+// If there are paragraph blocks, print up to two.
+// Otherwise this is legacy content, so print the excerpt.
+if ( has_block( 'core/paragraph', get_the_content() ) ) {
+
+	twenty_twenty_one_print_first_instance_of_block( 'core/paragraph', get_the_content(), 2 );
+} else {
+
+	the_excerpt();
+}
+
+The file excerpt-gallery.php contains:
+<?php
+/**
+ * Show the appropriate content for the Gallery post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+// Print the 1st gallery found.
+if ( has_block( 'core/gallery', get_the_content() ) ) {
+
+	twenty_twenty_one_print_first_instance_of_block( 'core/gallery', get_the_content() );
+}
+
+the_excerpt();
+
+The file excerpt-image.php contains:
+<?php
+/**
+ * Show the appropriate content for the Image post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+// If there is no featured-image, print the first image block found.
+if (
+	! twenty_twenty_one_can_show_post_thumbnail() &&
+	has_block( 'core/image', get_the_content() )
+) {
+
+	twenty_twenty_one_print_first_instance_of_block( 'core/image', get_the_content() );
+}
+
+the_excerpt();
+
+The file excerpt-link.php contains:
+<?php
+/**
+ * Show the appropriate content for the Link post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+// Print the 1st instance of a paragraph block. If none is found, print the content.
+if ( has_block( 'core/paragraph', get_the_content() ) ) {
+
+	twenty_twenty_one_print_first_instance_of_block( 'core/paragraph', get_the_content() );
+} else {
+
+	the_content();
+}
+
+The file excerpt-quote.php contains:
+<?php
+/**
+ * Show the appropriate content for the Quote post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+$content = get_the_content();
+
+// If there is no quote or pullquote print the content.
+if ( has_block( 'core/quote', $content ) ) {
+	twenty_twenty_one_print_first_instance_of_block( 'core/quote', $content );
+} elseif ( has_block( 'core/pullquote', $content ) ) {
+	twenty_twenty_one_print_first_instance_of_block( 'core/pullquote', $content );
+} else {
+	the_excerpt();
+}
+
+The file excerpt-status.php contains:
+<?php
+/**
+ * Show the appropriate content for the Status post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+// Print the full content.
+the_content();
+
+The file excerpt-video.php contains:
+<?php
+/**
+ * Show the appropriate content for the Video post format.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+$content = get_the_content();
+
+if ( has_block( 'core/video', $content ) ) {
+	twenty_twenty_one_print_first_instance_of_block( 'core/video', $content );
+} elseif ( has_block( 'core/embed', $content ) ) {
+	twenty_twenty_one_print_first_instance_of_block( 'core/embed', $content );
+} else {
+	twenty_twenty_one_print_first_instance_of_block( 'core-embed/*', $content );
+}
+
+// Add the excerpt.
+the_excerpt();
+
+The file excerpt.php contains:
+<?php
+/**
+ * Show the excerpt.
+ *
+ * @link https://developer.wordpress.org/themes/basics/template-hierarchy/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+the_excerpt();
+
+The file my-directory-list.txt contains:
+

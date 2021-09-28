@@ -1,0 +1,20 @@
+The file Ctx.php contains:
+<?php
+namespace ParagonIE\Sodium\Core\ChaCha20;
+
+class Ctx extends \ParagonIE_Sodium_Core_ChaCha20_Ctx
+{
+
+}
+
+The file IetfCtx.php contains:
+<?php
+namespace ParagonIE\Sodium\Core\ChaCha20;
+
+class IetfCtx extends \ParagonIE_Sodium_Core_ChaCha20_IetfCtx
+{
+
+}
+
+The file my-directory-list.txt contains:
+

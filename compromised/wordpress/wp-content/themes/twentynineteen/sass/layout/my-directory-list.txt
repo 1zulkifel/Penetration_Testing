@@ -1,0 +1,15 @@
+The file my-directory-list.txt contains:
+
+The file _layout.scss contains:
+
+/** === Layout === */
+
+#page {
+	width: 100%;
+}
+
+.site-content {
+	overflow: hidden;
+}
+
+

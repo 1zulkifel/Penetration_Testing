@@ -1,0 +1,45 @@
+The file my-directory-list.txt contains:
+
+The file _editor.scss contains:
+.wp-block-social-links {
+
+	// Social icons are horizontal, so they don't need vertical spacing.
+	[data-block] {
+		margin-top: 0;
+		margin-bottom: 0;
+	}
+
+	&.is-style-twentytwentyone-social-icons-color {
+
+		button {
+			color: var(--global--color-primary);
+		}
+
+		.wp-social-link {
+			background: none;
+		}
+	}
+
+}
+
+The file _style.scss contains:
+.wp-block-social-links {
+
+	a:focus {
+		color: var(--global--color-primary);
+	}
+
+	&.is-style-twentytwentyone-social-icons-color {
+
+		a {
+			color: var(--global--color-primary);
+		}
+
+		.wp-social-link,
+		&.has-icon-background-color.has-icon-background-color .wp-social-link {
+			background: none;
+		}
+
+	}
+}
+

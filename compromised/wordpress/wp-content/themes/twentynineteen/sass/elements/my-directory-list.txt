@@ -1,0 +1,146 @@
+The file my-directory-list.txt contains:
+
+The file _elements.scss contains:
+html {
+	box-sizing: border-box;
+}
+
+::-moz-selection {
+	background-color: $color__background_selection;
+}
+
+::selection {
+	background-color: $color__background_selection;
+}
+
+*,
+*:before,
+*:after {
+	box-sizing: inherit;
+}
+
+body {
+	background-color: $color__background-body;
+}
+
+a {
+	@include link-transition;
+	color: $color__link;
+}
+
+a:visited {
+
+}
+
+a:hover,
+a:active {
+	color: $color__link-hover;
+	outline: 0;
+	text-decoration: none;
+}
+
+a:focus {
+	outline: thin;
+	outline-style: dotted;
+	text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	clear: both;
+	margin: $size__spacing-unit 0;
+}
+
+h1:not(.site-title),
+h2 {
+	@include post-section-dash;
+}
+
+hr {
+	background-color: $color__text-light;
+	border: 0;
+	height: 2px;
+}
+
+@import "lists";
+
+img {
+	height: auto;
+	max-width: 100%;
+	position: relative;
+}
+
+figure {
+	margin: 0;
+}
+
+blockquote {
+	border-left: 2px solid $color__link;
+	margin-left: 0;
+	padding: 0 0 0 $size__spacing-unit;
+
+	> p {
+		margin: 0 0 $size__spacing-unit;
+	}
+
+	cite {
+		color: $color__text-light;
+	}
+}
+
+@import "tables";
+
+The file _lists.scss contains:
+ul,
+ol {
+	padding-left: ( 1 * $size__spacing-unit );
+}
+
+ul {
+	list-style: disc;
+
+	ul {
+		list-style-type: circle;
+	}
+}
+
+ol {
+	list-style: decimal;
+}
+
+li {
+	line-height: $font__line-height-body;
+}
+
+li > ul,
+li > ol {
+	padding-left: ( 2 * $size__spacing-unit );
+}
+
+dt {
+	font-weight: bold;
+}
+
+dd {
+	margin: 0 $size__spacing-unit $size__spacing-unit;
+}
+
+The file _tables.scss contains:
+table {
+	margin: 0 0 $size__spacing-unit;
+	border-collapse: collapse;
+	width: 100%;
+	@include font-family( $font__heading );
+
+	td,
+	th {
+		padding: 0.5em;
+		border: 1px solid $color__text-light;
+		word-break: break-all;
+	}
+}
+

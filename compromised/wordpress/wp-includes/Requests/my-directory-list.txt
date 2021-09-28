@@ -1,0 +1,5372 @@
+The file Auth.php contains:
+<?php
+/**
+ * Authentication provider interface
+ *
+ * @package Requests
+ * @subpackage Authentication
+ */
+
+/**
+ * Authentication provider interface
+ *
+ * Implement this interface to act as an authentication provider.
+ *
+ * Parameters should be passed via the constructor where possible, as this
+ * makes it much easier for users to use your provider.
+ *
+ * @see Requests_Hooks
+ * @package Requests
+ * @subpackage Authentication
+ */
+interface Requests_Auth {
+	/**
+	 * Register hooks as needed
+	 *
+	 * This method is called in {@see Requests::request} when the user has set
+	 * an instance as the 'auth' option. Use this callback to register all the
+	 * hooks you'll need.
+	 *
+	 * @see Requests_Hooks::register
+	 * @param Requests_Hooks $hooks Hook system
+	 */
+	public function register(Requests_Hooks &$hooks);
+}
+The file Cookie.php contains:
+<?php
+/**
+ * Cookie storage object
+ *
+ * @package Requests
+ * @subpackage Cookies
+ */
+
+/**
+ * Cookie storage object
+ *
+ * @package Requests
+ * @subpackage Cookies
+ */
+class Requests_Cookie {
+	/**
+	 * Cookie name.
+	 *
+	 * @var string
+	 */
+	public $name;
+
+	/**
+	 * Cookie value.
+	 *
+	 * @var string
+	 */
+	public $value;
+
+	/**
+	 * Cookie attributes
+	 *
+	 * Valid keys are (currently) path, domain, expires, max-age, secure and
+	 * httponly.
+	 *
+	 * @var Requests_Utility_CaseInsensitiveDictionary|array Array-like object
+	 */
+	public $attributes = array();
+
+	/**
+	 * Cookie flags
+	 *
+	 * Valid keys are (currently) creation, last-access, persistent and
+	 * host-only.
+	 *
+	 * @var array
+	 */
+	public $flags = array();
+
+	/**
+	 * Reference time for relative calculations
+	 *
+	 * This is used in place of `time()` when calculating Max-Age expiration and
+	 * checking time validity.
+	 *
+	 * @var int
+	 */
+	public $reference_time = 0;
+
+	/**
+	 * Create a new cookie object
+	 *
+	 * @param string $name
+	 * @param string $value
+	 * @param array|Requests_Utility_CaseInsensitiveDictionary $attributes Associative array of attribute data
+	 */
+	public function __construct($name, $value, $attributes = array(), $flags = array(), $reference_time = null) {
+		$this->name = $name;
+		$this->value = $value;
+		$this->attributes = $attributes;
+		$default_flags = array(
+			'creation' => time(),
+			'last-access' => time(),
+			'persistent' => false,
+			'host-only' => true,
+		);
+		$this->flags = array_merge($default_flags, $flags);
+
+		$this->reference_time = time();
+		if ($reference_time !== null) {
+			$this->reference_time = $reference_time;
+		}
+
+		$this->normalize();
+	}
+
+	/**
+	 * Check if a cookie is expired.
+	 *
+	 * Checks the age against $this->reference_time to determine if the cookie
+	 * is expired.
+	 *
+	 * @return boolean True if expired, false if time is valid.
+	 */
+	public function is_expired() {
+		// RFC6265, s. 4.1.2.2:
+		// If a cookie has both the Max-Age and the Expires attribute, the Max-
+		// Age attribute has precedence and controls the expiration date of the
+		// cookie.
+		if (isset($this->attributes['max-age'])) {
+			$max_age = $this->attributes['max-age'];
+			return $max_age < $this->reference_time;
+		}
+
+		if (isset($this->attributes['expires'])) {
+			$expires = $this->attributes['expires'];
+			return $expires < $this->reference_time;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check if a cookie is valid for a given URI
+	 *
+	 * @param Requests_IRI $uri URI to check
+	 * @return boolean Whether the cookie is valid for the given URI
+	 */
+	public function uri_matches(Requests_IRI $uri) {
+		if (!$this->domain_matches($uri->host)) {
+			return false;
+		}
+
+		if (!$this->path_matches($uri->path)) {
+			return false;
+		}
+
+		return empty($this->attributes['secure']) || $uri->scheme === 'https';
+	}
+
+	/**
+	 * Check if a cookie is valid for a given domain
+	 *
+	 * @param string $string Domain to check
+	 * @return boolean Whether the cookie is valid for the given domain
+	 */
+	public function domain_matches($string) {
+		if (!isset($this->attributes['domain'])) {
+			// Cookies created manually; cookies created by Requests will set
+			// the domain to the requested domain
+			return true;
+		}
+
+		$domain_string = $this->attributes['domain'];
+		if ($domain_string === $string) {
+			// The domain string and the string are identical.
+			return true;
+		}
+
+		// If the cookie is marked as host-only and we don't have an exact
+		// match, reject the cookie
+		if ($this->flags['host-only'] === true) {
+			return false;
+		}
+
+		if (strlen($string) <= strlen($domain_string)) {
+			// For obvious reasons, the string cannot be a suffix if the domain
+			// is shorter than the domain string
+			return false;
+		}
+
+		if (substr($string, -1 * strlen($domain_string)) !== $domain_string) {
+			// The domain string should be a suffix of the string.
+			return false;
+		}
+
+		$prefix = substr($string, 0, strlen($string) - strlen($domain_string));
+		if (substr($prefix, -1) !== '.') {
+			// The last character of the string that is not included in the
+			// domain string should be a %x2E (".") character.
+			return false;
+		}
+
+		// The string should be a host name (i.e., not an IP address).
+		return !preg_match('#^(.+\.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$#', $string);
+	}
+
+	/**
+	 * Check if a cookie is valid for a given path
+	 *
+	 * From the path-match check in RFC 6265 section 5.1.4
+	 *
+	 * @param string $request_path Path to check
+	 * @return boolean Whether the cookie is valid for the given path
+	 */
+	public function path_matches($request_path) {
+		if (empty($request_path)) {
+			// Normalize empty path to root
+			$request_path = '/';
+		}
+
+		if (!isset($this->attributes['path'])) {
+			// Cookies created manually; cookies created by Requests will set
+			// the path to the requested path
+			return true;
+		}
+
+		$cookie_path = $this->attributes['path'];
+
+		if ($cookie_path === $request_path) {
+			// The cookie-path and the request-path are identical.
+			return true;
+		}
+
+		if (strlen($request_path) > strlen($cookie_path) && substr($request_path, 0, strlen($cookie_path)) === $cookie_path) {
+			if (substr($cookie_path, -1) === '/') {
+				// The cookie-path is a prefix of the request-path, and the last
+				// character of the cookie-path is %x2F ("/").
+				return true;
+			}
+
+			if (substr($request_path, strlen($cookie_path), 1) === '/') {
+				// The cookie-path is a prefix of the request-path, and the
+				// first character of the request-path that is not included in
+				// the cookie-path is a %x2F ("/") character.
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Normalize cookie and attributes
+	 *
+	 * @return boolean Whether the cookie was successfully normalized
+	 */
+	public function normalize() {
+		foreach ($this->attributes as $key => $value) {
+			$orig_value = $value;
+			$value = $this->normalize_attribute($key, $value);
+			if ($value === null) {
+				unset($this->attributes[$key]);
+				continue;
+			}
+
+			if ($value !== $orig_value) {
+				$this->attributes[$key] = $value;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Parse an individual cookie attribute
+	 *
+	 * Handles parsing individual attributes from the cookie values.
+	 *
+	 * @param string $name Attribute name
+	 * @param string|boolean $value Attribute value (string value, or true if empty/flag)
+	 * @return mixed Value if available, or null if the attribute value is invalid (and should be skipped)
+	 */
+	protected function normalize_attribute($name, $value) {
+		switch (strtolower($name)) {
+			case 'expires':
+				// Expiration parsing, as per RFC 6265 section 5.2.1
+				if (is_int($value)) {
+					return $value;
+				}
+
+				$expiry_time = strtotime($value);
+				if ($expiry_time === false) {
+					return null;
+				}
+
+				return $expiry_time;
+
+			case 'max-age':
+				// Expiration parsing, as per RFC 6265 section 5.2.2
+				if (is_int($value)) {
+					return $value;
+				}
+
+				// Check that we have a valid age
+				if (!preg_match('/^-?\d+$/', $value)) {
+					return null;
+				}
+
+				$delta_seconds = (int) $value;
+				if ($delta_seconds <= 0) {
+					$expiry_time = 0;
+				}
+				else {
+					$expiry_time = $this->reference_time + $delta_seconds;
+				}
+
+				return $expiry_time;
+
+			case 'domain':
+				// Domains are not required as per RFC 6265 section 5.2.3
+				if (empty($value)) {
+					return null;
+				}
+
+				// Domain normalization, as per RFC 6265 section 5.2.3
+				if ($value[0] === '.') {
+					$value = substr($value, 1);
+				}
+
+				return $value;
+
+			default:
+				return $value;
+		}
+	}
+
+	/**
+	 * Format a cookie for a Cookie header
+	 *
+	 * This is used when sending cookies to a server.
+	 *
+	 * @return string Cookie formatted for Cookie header
+	 */
+	public function format_for_header() {
+		return sprintf('%s=%s', $this->name, $this->value);
+	}
+
+	/**
+	 * Format a cookie for a Cookie header
+	 *
+	 * @codeCoverageIgnore
+	 * @deprecated Use {@see Requests_Cookie::format_for_header}
+	 * @return string
+	 */
+	public function formatForHeader() {
+		return $this->format_for_header();
+	}
+
+	/**
+	 * Format a cookie for a Set-Cookie header
+	 *
+	 * This is used when sending cookies to clients. This isn't really
+	 * applicable to client-side usage, but might be handy for debugging.
+	 *
+	 * @return string Cookie formatted for Set-Cookie header
+	 */
+	public function format_for_set_cookie() {
+		$header_value = $this->format_for_header();
+		if (!empty($this->attributes)) {
+			$parts = array();
+			foreach ($this->attributes as $key => $value) {
+				// Ignore non-associative attributes
+				if (is_numeric($key)) {
+					$parts[] = $value;
+				}
+				else {
+					$parts[] = sprintf('%s=%s', $key, $value);
+				}
+			}
+
+			$header_value .= '; ' . implode('; ', $parts);
+		}
+		return $header_value;
+	}
+
+	/**
+	 * Format a cookie for a Set-Cookie header
+	 *
+	 * @codeCoverageIgnore
+	 * @deprecated Use {@see Requests_Cookie::format_for_set_cookie}
+	 * @return string
+	 */
+	public function formatForSetCookie() {
+		return $this->format_for_set_cookie();
+	}
+
+	/**
+	 * Get the cookie value
+	 *
+	 * Attributes and other data can be accessed via methods.
+	 */
+	public function __toString() {
+		return $this->value;
+	}
+
+	/**
+	 * Parse a cookie string into a cookie object
+	 *
+	 * Based on Mozilla's parsing code in Firefox and related projects, which
+	 * is an intentional deviation from RFC 2109 and RFC 2616. RFC 6265
+	 * specifies some of this handling, but not in a thorough manner.
+	 *
+	 * @param string Cookie header value (from a Set-Cookie header)
+	 * @return Requests_Cookie Parsed cookie object
+	 */
+	public static function parse($string, $name = '', $reference_time = null) {
+		$parts = explode(';', $string);
+		$kvparts = array_shift($parts);
+
+		if (!empty($name)) {
+			$value = $string;
+		}
+		elseif (strpos($kvparts, '=') === false) {
+			// Some sites might only have a value without the equals separator.
+			// Deviate from RFC 6265 and pretend it was actually a blank name
+			// (`=foo`)
+			//
+			// https://bugzilla.mozilla.org/show_bug.cgi?id=169091
+			$name = '';
+			$value = $kvparts;
+		}
+		else {
+			list($name, $value) = explode('=', $kvparts, 2);
+		}
+		$name = trim($name);
+		$value = trim($value);
+
+		// Attribute key are handled case-insensitively
+		$attributes = new Requests_Utility_CaseInsensitiveDictionary();
+
+		if (!empty($parts)) {
+			foreach ($parts as $part) {
+				if (strpos($part, '=') === false) {
+					$part_key = $part;
+					$part_value = true;
+				}
+				else {
+					list($part_key, $part_value) = explode('=', $part, 2);
+					$part_value = trim($part_value);
+				}
+
+				$part_key = trim($part_key);
+				$attributes[$part_key] = $part_value;
+			}
+		}
+
+		return new Requests_Cookie($name, $value, $attributes, array(), $reference_time);
+	}
+
+	/**
+	 * Parse all Set-Cookie headers from request headers
+	 *
+	 * @param Requests_Response_Headers $headers Headers to parse from
+	 * @param Requests_IRI|null $origin URI for comparing cookie origins
+	 * @param int|null $time Reference time for expiration calculation
+	 * @return array
+	 */
+	public static function parse_from_headers(Requests_Response_Headers $headers, Requests_IRI $origin = null, $time = null) {
+		$cookie_headers = $headers->getValues('Set-Cookie');
+		if (empty($cookie_headers)) {
+			return array();
+		}
+
+		$cookies = array();
+		foreach ($cookie_headers as $header) {
+			$parsed = self::parse($header, '', $time);
+
+			// Default domain/path attributes
+			if (empty($parsed->attributes['domain']) && !empty($origin)) {
+				$parsed->attributes['domain'] = $origin->host;
+				$parsed->flags['host-only'] = true;
+			}
+			else {
+				$parsed->flags['host-only'] = false;
+			}
+
+			$path_is_valid = (!empty($parsed->attributes['path']) && $parsed->attributes['path'][0] === '/');
+			if (!$path_is_valid && !empty($origin)) {
+				$path = $origin->path;
+
+				// Default path normalization as per RFC 6265 section 5.1.4
+				if (substr($path, 0, 1) !== '/') {
+					// If the uri-path is empty or if the first character of
+					// the uri-path is not a %x2F ("/") character, output
+					// %x2F ("/") and skip the remaining steps.
+					$path = '/';
+				}
+				elseif (substr_count($path, '/') === 1) {
+					// If the uri-path contains no more than one %x2F ("/")
+					// character, output %x2F ("/") and skip the remaining
+					// step.
+					$path = '/';
+				}
+				else {
+					// Output the characters of the uri-path from the first
+					// character up to, but not including, the right-most
+					// %x2F ("/").
+					$path = substr($path, 0, strrpos($path, '/'));
+				}
+				$parsed->attributes['path'] = $path;
+			}
+
+			// Reject invalid cookie domains
+			if (!empty($origin) && !$parsed->domain_matches($origin->host)) {
+				continue;
+			}
+
+			$cookies[$parsed->name] = $parsed;
+		}
+
+		return $cookies;
+	}
+
+	/**
+	 * Parse all Set-Cookie headers from request headers
+	 *
+	 * @codeCoverageIgnore
+	 * @deprecated Use {@see Requests_Cookie::parse_from_headers}
+	 * @return string
+	 */
+	public static function parseFromHeaders(Requests_Response_Headers $headers) {
+		return self::parse_from_headers($headers);
+	}
+}
+
+The file Exception.php contains:
+<?php
+/**
+ * Exception for HTTP requests
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for HTTP requests
+ *
+ * @package Requests
+ */
+class Requests_Exception extends Exception {
+	/**
+	 * Type of exception
+	 *
+	 * @var string
+	 */
+	protected $type;
+
+	/**
+	 * Data associated with the exception
+	 *
+	 * @var mixed
+	 */
+	protected $data;
+
+	/**
+	 * Create a new exception
+	 *
+	 * @param string $message Exception message
+	 * @param string $type Exception type
+	 * @param mixed $data Associated data
+	 * @param integer $code Exception numerical code, if applicable
+	 */
+	public function __construct($message, $type, $data = null, $code = 0) {
+		parent::__construct($message, $code);
+
+		$this->type = $type;
+		$this->data = $data;
+	}
+
+	/**
+	 * Like {@see getCode()}, but a string code.
+	 *
+	 * @codeCoverageIgnore
+	 * @return string
+	 */
+	public function getType() {
+		return $this->type;
+	}
+
+	/**
+	 * Gives any relevant data
+	 *
+	 * @codeCoverageIgnore
+	 * @return mixed
+	 */
+	public function getData() {
+		return $this->data;
+	}
+}
+The file Hooker.php contains:
+<?php
+/**
+ * Event dispatcher
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * Event dispatcher
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+interface Requests_Hooker {
+	/**
+	 * Register a callback for a hook
+	 *
+	 * @param string $hook Hook name
+	 * @param callback $callback Function/method to call on event
+	 * @param int $priority Priority number. <0 is executed earlier, >0 is executed later
+	 */
+	public function register($hook, $callback, $priority = 0);
+
+	/**
+	 * Dispatch a message
+	 *
+	 * @param string $hook Hook name
+	 * @param array $parameters Parameters to pass to callbacks
+	 * @return boolean Successfulness
+	 */
+	public function dispatch($hook, $parameters = array());
+}
+The file Hooks.php contains:
+<?php
+/**
+ * Handles adding and dispatching events
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * Handles adding and dispatching events
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+class Requests_Hooks implements Requests_Hooker {
+	/**
+	 * Registered callbacks for each hook
+	 *
+	 * @var array
+	 */
+	protected $hooks = array();
+
+	/**
+	 * Constructor
+	 */
+	public function __construct() {
+		// pass
+	}
+
+	/**
+	 * Register a callback for a hook
+	 *
+	 * @param string $hook Hook name
+	 * @param callback $callback Function/method to call on event
+	 * @param int $priority Priority number. <0 is executed earlier, >0 is executed later
+	 */
+	public function register($hook, $callback, $priority = 0) {
+		if (!isset($this->hooks[$hook])) {
+			$this->hooks[$hook] = array();
+		}
+		if (!isset($this->hooks[$hook][$priority])) {
+			$this->hooks[$hook][$priority] = array();
+		}
+
+		$this->hooks[$hook][$priority][] = $callback;
+	}
+
+	/**
+	 * Dispatch a message
+	 *
+	 * @param string $hook Hook name
+	 * @param array $parameters Parameters to pass to callbacks
+	 * @return boolean Successfulness
+	 */
+	public function dispatch($hook, $parameters = array()) {
+		if (empty($this->hooks[$hook])) {
+			return false;
+		}
+
+		foreach ($this->hooks[$hook] as $priority => $hooked) {
+			foreach ($hooked as $callback) {
+				call_user_func_array($callback, $parameters);
+			}
+		}
+
+		return true;
+	}
+}
+The file IDNAEncoder.php contains:
+<?php
+
+/**
+ * IDNA URL encoder
+ *
+ * Note: Not fully compliant, as nameprep does nothing yet.
+ *
+ * @package Requests
+ * @subpackage Utilities
+ * @see https://tools.ietf.org/html/rfc3490 IDNA specification
+ * @see https://tools.ietf.org/html/rfc3492 Punycode/Bootstrap specification
+ */
+class Requests_IDNAEncoder {
+	/**
+	 * ACE prefix used for IDNA
+	 *
+	 * @see https://tools.ietf.org/html/rfc3490#section-5
+	 * @var string
+	 */
+	const ACE_PREFIX = 'xn--';
+
+	/**#@+
+	 * Bootstrap constant for Punycode
+	 *
+	 * @see https://tools.ietf.org/html/rfc3492#section-5
+	 * @var int
+	 */
+	const BOOTSTRAP_BASE         = 36;
+	const BOOTSTRAP_TMIN         = 1;
+	const BOOTSTRAP_TMAX         = 26;
+	const BOOTSTRAP_SKEW         = 38;
+	const BOOTSTRAP_DAMP         = 700;
+	const BOOTSTRAP_INITIAL_BIAS = 72;
+	const BOOTSTRAP_INITIAL_N    = 128;
+	/**#@-*/
+
+	/**
+	 * Encode a hostname using Punycode
+	 *
+	 * @param string $string Hostname
+	 * @return string Punycode-encoded hostname
+	 */
+	public static function encode($string) {
+		$parts = explode('.', $string);
+		foreach ($parts as &$part) {
+			$part = self::to_ascii($part);
+		}
+		return implode('.', $parts);
+	}
+
+	/**
+	 * Convert a UTF-8 string to an ASCII string using Punycode
+	 *
+	 * @throws Requests_Exception Provided string longer than 64 ASCII characters (`idna.provided_too_long`)
+	 * @throws Requests_Exception Prepared string longer than 64 ASCII characters (`idna.prepared_too_long`)
+	 * @throws Requests_Exception Provided string already begins with xn-- (`idna.provided_is_prefixed`)
+	 * @throws Requests_Exception Encoded string longer than 64 ASCII characters (`idna.encoded_too_long`)
+	 *
+	 * @param string $string ASCII or UTF-8 string (max length 64 characters)
+	 * @return string ASCII string
+	 */
+	public static function to_ascii($string) {
+		// Step 1: Check if the string is already ASCII
+		if (self::is_ascii($string)) {
+			// Skip to step 7
+			if (strlen($string) < 64) {
+				return $string;
+			}
+
+			throw new Requests_Exception('Provided string is too long', 'idna.provided_too_long', $string);
+		}
+
+		// Step 2: nameprep
+		$string = self::nameprep($string);
+
+		// Step 3: UseSTD3ASCIIRules is false, continue
+		// Step 4: Check if it's ASCII now
+		if (self::is_ascii($string)) {
+			// Skip to step 7
+			if (strlen($string) < 64) {
+				return $string;
+			}
+
+			throw new Requests_Exception('Prepared string is too long', 'idna.prepared_too_long', $string);
+		}
+
+		// Step 5: Check ACE prefix
+		if (strpos($string, self::ACE_PREFIX) === 0) {
+			throw new Requests_Exception('Provided string begins with ACE prefix', 'idna.provided_is_prefixed', $string);
+		}
+
+		// Step 6: Encode with Punycode
+		$string = self::punycode_encode($string);
+
+		// Step 7: Prepend ACE prefix
+		$string = self::ACE_PREFIX . $string;
+
+		// Step 8: Check size
+		if (strlen($string) < 64) {
+			return $string;
+		}
+
+		throw new Requests_Exception('Encoded string is too long', 'idna.encoded_too_long', $string);
+	}
+
+	/**
+	 * Check whether a given string contains only ASCII characters
+	 *
+	 * @internal (Testing found regex was the fastest implementation)
+	 *
+	 * @param string $string
+	 * @return bool Is the string ASCII-only?
+	 */
+	protected static function is_ascii($string) {
+		return (preg_match('/(?:[^\x00-\x7F])/', $string) !== 1);
+	}
+
+	/**
+	 * Prepare a string for use as an IDNA name
+	 *
+	 * @todo Implement this based on RFC 3491 and the newer 5891
+	 * @param string $string
+	 * @return string Prepared string
+	 */
+	protected static function nameprep($string) {
+		return $string;
+	}
+
+	/**
+	 * Convert a UTF-8 string to a UCS-4 codepoint array
+	 *
+	 * Based on Requests_IRI::replace_invalid_with_pct_encoding()
+	 *
+	 * @throws Requests_Exception Invalid UTF-8 codepoint (`idna.invalidcodepoint`)
+	 * @param string $input
+	 * @return array Unicode code points
+	 */
+	protected static function utf8_to_codepoints($input) {
+		$codepoints = array();
+
+		// Get number of bytes
+		$strlen = strlen($input);
+
+		for ($position = 0; $position < $strlen; $position++) {
+			$value = ord($input[$position]);
+
+			// One byte sequence:
+			if ((~$value & 0x80) === 0x80) {
+				$character = $value;
+				$length = 1;
+				$remaining = 0;
+			}
+			// Two byte sequence:
+			elseif (($value & 0xE0) === 0xC0) {
+				$character = ($value & 0x1F) << 6;
+				$length = 2;
+				$remaining = 1;
+			}
+			// Three byte sequence:
+			elseif (($value & 0xF0) === 0xE0) {
+				$character = ($value & 0x0F) << 12;
+				$length = 3;
+				$remaining = 2;
+			}
+			// Four byte sequence:
+			elseif (($value & 0xF8) === 0xF0) {
+				$character = ($value & 0x07) << 18;
+				$length = 4;
+				$remaining = 3;
+			}
+			// Invalid byte:
+			else {
+				throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $value);
+			}
+
+			if ($remaining > 0) {
+				if ($position + $length > $strlen) {
+					throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $character);
+				}
+				for ($position++; $remaining > 0; $position++) {
+					$value = ord($input[$position]);
+
+					// If it is invalid, count the sequence as invalid and reprocess the current byte:
+					if (($value & 0xC0) !== 0x80) {
+						throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $character);
+					}
+
+					$character |= ($value & 0x3F) << (--$remaining * 6);
+				}
+				$position--;
+			}
+
+			if (
+				// Non-shortest form sequences are invalid
+				   $length > 1 && $character <= 0x7F
+				|| $length > 2 && $character <= 0x7FF
+				|| $length > 3 && $character <= 0xFFFF
+				// Outside of range of ucschar codepoints
+				// Noncharacters
+				|| ($character & 0xFFFE) === 0xFFFE
+				|| $character >= 0xFDD0 && $character <= 0xFDEF
+				|| (
+					// Everything else not in ucschar
+					   $character > 0xD7FF && $character < 0xF900
+					|| $character < 0x20
+					|| $character > 0x7E && $character < 0xA0
+					|| $character > 0xEFFFD
+				)
+			) {
+				throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $character);
+			}
+
+			$codepoints[] = $character;
+		}
+
+		return $codepoints;
+	}
+
+	/**
+	 * RFC3492-compliant encoder
+	 *
+	 * @internal Pseudo-code from Section 6.3 is commented with "#" next to relevant code
+	 * @throws Requests_Exception On character outside of the domain (never happens with Punycode) (`idna.character_outside_domain`)
+	 *
+	 * @param string $input UTF-8 encoded string to encode
+	 * @return string Punycode-encoded string
+	 */
+	public static function punycode_encode($input) {
+		$output = '';
+#		let n = initial_n
+		$n = self::BOOTSTRAP_INITIAL_N;
+#		let delta = 0
+		$delta = 0;
+#		let bias = initial_bias
+		$bias = self::BOOTSTRAP_INITIAL_BIAS;
+#		let h = b = the number of basic code points in the input
+		$h = $b = 0; // see loop
+#		copy them to the output in order
+		$codepoints = self::utf8_to_codepoints($input);
+		$extended = array();
+
+		foreach ($codepoints as $char) {
+			if ($char < 128) {
+				// Character is valid ASCII
+				// TODO: this should also check if it's valid for a URL
+				$output .= chr($char);
+				$h++;
+			}
+			// Check if the character is non-ASCII, but below initial n
+			// This never occurs for Punycode, so ignore in coverage
+			// @codeCoverageIgnoreStart
+			elseif ($char < $n) {
+				throw new Requests_Exception('Invalid character', 'idna.character_outside_domain', $char);
+			}
+			// @codeCoverageIgnoreEnd
+			else {
+				$extended[$char] = true;
+			}
+		}
+		$extended = array_keys($extended);
+		sort($extended);
+		$b = $h;
+#		[copy them] followed by a delimiter if b > 0
+		if (strlen($output) > 0) {
+			$output .= '-';
+		}
+#		{if the input contains a non-basic code point < n then fail}
+#		while h < length(input) do begin
+		while ($h < count($codepoints)) {
+#			let m = the minimum code point >= n in the input
+			$m = array_shift($extended);
+			//printf('next code point to insert is %s' . PHP_EOL, dechex($m));
+#			let delta = delta + (m - n) * (h + 1), fail on overflow
+			$delta += ($m - $n) * ($h + 1);
+#			let n = m
+			$n = $m;
+#			for each code point c in the input (in order) do begin
+			for ($num = 0; $num < count($codepoints); $num++) {
+				$c = $codepoints[$num];
+#				if c < n then increment delta, fail on overflow
+				if ($c < $n) {
+					$delta++;
+				}
+#				if c == n then begin
+				elseif ($c === $n) {
+#					let q = delta
+					$q = $delta;
+#					for k = base to infinity in steps of base do begin
+					for ($k = self::BOOTSTRAP_BASE; ; $k += self::BOOTSTRAP_BASE) {
+#						let t = tmin if k <= bias {+ tmin}, or
+#								tmax if k >= bias + tmax, or k - bias otherwise
+						if ($k <= ($bias + self::BOOTSTRAP_TMIN)) {
+							$t = self::BOOTSTRAP_TMIN;
+						}
+						elseif ($k >= ($bias + self::BOOTSTRAP_TMAX)) {
+							$t = self::BOOTSTRAP_TMAX;
+						}
+						else {
+							$t = $k - $bias;
+						}
+#						if q < t then break
+						if ($q < $t) {
+							break;
+						}
+#						output the code point for digit t + ((q - t) mod (base - t))
+						$digit = $t + (($q - $t) % (self::BOOTSTRAP_BASE - $t));
+						$output .= self::digit_to_char($digit);
+#						let q = (q - t) div (base - t)
+						$q = floor(($q - $t) / (self::BOOTSTRAP_BASE - $t));
+#					end
+					}
+#					output the code point for digit q
+					$output .= self::digit_to_char($q);
+#					let bias = adapt(delta, h + 1, test h equals b?)
+					$bias = self::adapt($delta, $h + 1, $h === $b);
+#					let delta = 0
+					$delta = 0;
+#					increment h
+					$h++;
+#				end
+				}
+#			end
+			}
+#			increment delta and n
+			$delta++;
+			$n++;
+#		end
+		}
+
+		return $output;
+	}
+
+	/**
+	 * Convert a digit to its respective character
+	 *
+	 * @see https://tools.ietf.org/html/rfc3492#section-5
+	 * @throws Requests_Exception On invalid digit (`idna.invalid_digit`)
+	 *
+	 * @param int $digit Digit in the range 0-35
+	 * @return string Single character corresponding to digit
+	 */
+	protected static function digit_to_char($digit) {
+		// @codeCoverageIgnoreStart
+		// As far as I know, this never happens, but still good to be sure.
+		if ($digit < 0 || $digit > 35) {
+			throw new Requests_Exception(sprintf('Invalid digit %d', $digit), 'idna.invalid_digit', $digit);
+		}
+		// @codeCoverageIgnoreEnd
+		$digits = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		return substr($digits, $digit, 1);
+	}
+
+	/**
+	 * Adapt the bias
+	 *
+	 * @see https://tools.ietf.org/html/rfc3492#section-6.1
+	 * @param int $delta
+	 * @param int $numpoints
+	 * @param bool $firsttime
+	 * @return int New bias
+	 */
+	protected static function adapt($delta, $numpoints, $firsttime) {
+#	function adapt(delta,numpoints,firsttime):
+#		if firsttime then let delta = delta div damp
+		if ($firsttime) {
+			$delta = floor($delta / self::BOOTSTRAP_DAMP);
+		}
+#		else let delta = delta div 2
+		else {
+			$delta = floor($delta / 2);
+		}
+#		let delta = delta + (delta div numpoints)
+		$delta += floor($delta / $numpoints);
+#		let k = 0
+		$k = 0;
+#		while delta > ((base - tmin) * tmax) div 2 do begin
+		$max = floor(((self::BOOTSTRAP_BASE - self::BOOTSTRAP_TMIN) * self::BOOTSTRAP_TMAX) / 2);
+		while ($delta > $max) {
+#			let delta = delta div (base - tmin)
+			$delta = floor($delta / (self::BOOTSTRAP_BASE - self::BOOTSTRAP_TMIN));
+#			let k = k + base
+			$k += self::BOOTSTRAP_BASE;
+#		end
+		}
+#		return k + (((base - tmin + 1) * delta) div (delta + skew))
+		return $k + floor(((self::BOOTSTRAP_BASE - self::BOOTSTRAP_TMIN + 1) * $delta) / ($delta + self::BOOTSTRAP_SKEW));
+	}
+}
+The file IPv6.php contains:
+<?php
+/**
+ * Class to validate and to work with IPv6 addresses
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * Class to validate and to work with IPv6 addresses
+ *
+ * This was originally based on the PEAR class of the same name, but has been
+ * entirely rewritten.
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+class Requests_IPv6 {
+	/**
+	 * Uncompresses an IPv6 address
+	 *
+	 * RFC 4291 allows you to compress consecutive zero pieces in an address to
+	 * '::'. This method expects a valid IPv6 address and expands the '::' to
+	 * the required number of zero pieces.
+	 *
+	 * Example:  FF01::101   ->  FF01:0:0:0:0:0:0:101
+	 *           ::1         ->  0:0:0:0:0:0:0:1
+	 *
+	 * @author Alexander Merz <alexander.merz@web.de>
+	 * @author elfrink at introweb dot nl
+	 * @author Josh Peck <jmp at joshpeck dot org>
+	 * @copyright 2003-2005 The PHP Group
+	 * @license http://www.opensource.org/licenses/bsd-license.php
+	 * @param string $ip An IPv6 address
+	 * @return string The uncompressed IPv6 address
+	 */
+	public static function uncompress($ip) {
+		if (substr_count($ip, '::') !== 1) {
+			return $ip;
+		}
+
+		list($ip1, $ip2) = explode('::', $ip);
+		$c1 = ($ip1 === '') ? -1 : substr_count($ip1, ':');
+		$c2 = ($ip2 === '') ? -1 : substr_count($ip2, ':');
+
+		if (strpos($ip2, '.') !== false) {
+			$c2++;
+		}
+		// ::
+		if ($c1 === -1 && $c2 === -1) {
+			$ip = '0:0:0:0:0:0:0:0';
+		}
+		// ::xxx
+		else if ($c1 === -1) {
+			$fill = str_repeat('0:', 7 - $c2);
+			$ip = str_replace('::', $fill, $ip);
+		}
+		// xxx::
+		else if ($c2 === -1) {
+			$fill = str_repeat(':0', 7 - $c1);
+			$ip = str_replace('::', $fill, $ip);
+		}
+		// xxx::xxx
+		else {
+			$fill = ':' . str_repeat('0:', 6 - $c2 - $c1);
+			$ip = str_replace('::', $fill, $ip);
+		}
+		return $ip;
+	}
+
+	/**
+	 * Compresses an IPv6 address
+	 *
+	 * RFC 4291 allows you to compress consecutive zero pieces in an address to
+	 * '::'. This method expects a valid IPv6 address and compresses consecutive
+	 * zero pieces to '::'.
+	 *
+	 * Example:  FF01:0:0:0:0:0:0:101   ->  FF01::101
+	 *           0:0:0:0:0:0:0:1        ->  ::1
+	 *
+	 * @see uncompress()
+	 * @param string $ip An IPv6 address
+	 * @return string The compressed IPv6 address
+	 */
+	public static function compress($ip) {
+		// Prepare the IP to be compressed
+		$ip = self::uncompress($ip);
+		$ip_parts = self::split_v6_v4($ip);
+
+		// Replace all leading zeros
+		$ip_parts[0] = preg_replace('/(^|:)0+([0-9])/', '\1\2', $ip_parts[0]);
+
+		// Find bunches of zeros
+		if (preg_match_all('/(?:^|:)(?:0(?::|$))+/', $ip_parts[0], $matches, PREG_OFFSET_CAPTURE)) {
+			$max = 0;
+			$pos = null;
+			foreach ($matches[0] as $match) {
+				if (strlen($match[0]) > $max) {
+					$max = strlen($match[0]);
+					$pos = $match[1];
+				}
+			}
+
+			$ip_parts[0] = substr_replace($ip_parts[0], '::', $pos, $max);
+		}
+
+		if ($ip_parts[1] !== '') {
+			return implode(':', $ip_parts);
+		}
+		else {
+			return $ip_parts[0];
+		}
+	}
+
+	/**
+	 * Splits an IPv6 address into the IPv6 and IPv4 representation parts
+	 *
+	 * RFC 4291 allows you to represent the last two parts of an IPv6 address
+	 * using the standard IPv4 representation
+	 *
+	 * Example:  0:0:0:0:0:0:13.1.68.3
+	 *           0:0:0:0:0:FFFF:129.144.52.38
+	 *
+	 * @param string $ip An IPv6 address
+	 * @return string[] [0] contains the IPv6 represented part, and [1] the IPv4 represented part
+	 */
+	protected static function split_v6_v4($ip) {
+		if (strpos($ip, '.') !== false) {
+			$pos = strrpos($ip, ':');
+			$ipv6_part = substr($ip, 0, $pos);
+			$ipv4_part = substr($ip, $pos + 1);
+			return array($ipv6_part, $ipv4_part);
+		}
+		else {
+			return array($ip, '');
+		}
+	}
+
+	/**
+	 * Checks an IPv6 address
+	 *
+	 * Checks if the given IP is a valid IPv6 address
+	 *
+	 * @param string $ip An IPv6 address
+	 * @return bool true if $ip is a valid IPv6 address
+	 */
+	public static function check_ipv6($ip) {
+		$ip = self::uncompress($ip);
+		list($ipv6, $ipv4) = self::split_v6_v4($ip);
+		$ipv6 = explode(':', $ipv6);
+		$ipv4 = explode('.', $ipv4);
+		if (count($ipv6) === 8 && count($ipv4) === 1 || count($ipv6) === 6 && count($ipv4) === 4) {
+			foreach ($ipv6 as $ipv6_part) {
+				// The section can't be empty
+				if ($ipv6_part === '') {
+					return false;
+				}
+
+				// Nor can it be over four characters
+				if (strlen($ipv6_part) > 4) {
+					return false;
+				}
+
+				// Remove leading zeros (this is safe because of the above)
+				$ipv6_part = ltrim($ipv6_part, '0');
+				if ($ipv6_part === '') {
+					$ipv6_part = '0';
+				}
+
+				// Check the value is valid
+				$value = hexdec($ipv6_part);
+				if (dechex($value) !== strtolower($ipv6_part) || $value < 0 || $value > 0xFFFF) {
+					return false;
+				}
+			}
+			if (count($ipv4) === 4) {
+				foreach ($ipv4 as $ipv4_part) {
+					$value = (int) $ipv4_part;
+					if ((string) $value !== $ipv4_part || $value < 0 || $value > 0xFF) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+}
+
+The file IRI.php contains:
+<?php
+/**
+ * IRI parser/serialiser/normaliser
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * IRI parser/serialiser/normaliser
+ *
+ * Copyright (c) 2007-2010, Geoffrey Sneddon and Steve Minutillo.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimer.
+ *
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *       this list of conditions and the following disclaimer in the documentation
+ *       and/or other materials provided with the distribution.
+ *
+ *  * Neither the name of the SimplePie Team nor the names of its contributors
+ *       may be used to endorse or promote products derived from this software
+ *       without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package Requests
+ * @subpackage Utilities
+ * @author Geoffrey Sneddon
+ * @author Steve Minutillo
+ * @copyright 2007-2009 Geoffrey Sneddon and Steve Minutillo
+ * @license http://www.opensource.org/licenses/bsd-license.php
+ * @link http://hg.gsnedders.com/iri/
+ *
+ * @property string $iri IRI we're working with
+ * @property-read string $uri IRI in URI form, {@see to_uri}
+ * @property string $scheme Scheme part of the IRI
+ * @property string $authority Authority part, formatted for a URI (userinfo + host + port)
+ * @property string $iauthority Authority part of the IRI (userinfo + host + port)
+ * @property string $userinfo Userinfo part, formatted for a URI (after '://' and before '@')
+ * @property string $iuserinfo Userinfo part of the IRI (after '://' and before '@')
+ * @property string $host Host part, formatted for a URI
+ * @property string $ihost Host part of the IRI
+ * @property string $port Port part of the IRI (after ':')
+ * @property string $path Path part, formatted for a URI (after first '/')
+ * @property string $ipath Path part of the IRI (after first '/')
+ * @property string $query Query part, formatted for a URI (after '?')
+ * @property string $iquery Query part of the IRI (after '?')
+ * @property string $fragment Fragment, formatted for a URI (after '#')
+ * @property string $ifragment Fragment part of the IRI (after '#')
+ */
+class Requests_IRI {
+	/**
+	 * Scheme
+	 *
+	 * @var string
+	 */
+	protected $scheme = null;
+
+	/**
+	 * User Information
+	 *
+	 * @var string
+	 */
+	protected $iuserinfo = null;
+
+	/**
+	 * ihost
+	 *
+	 * @var string
+	 */
+	protected $ihost = null;
+
+	/**
+	 * Port
+	 *
+	 * @var string
+	 */
+	protected $port = null;
+
+	/**
+	 * ipath
+	 *
+	 * @var string
+	 */
+	protected $ipath = '';
+
+	/**
+	 * iquery
+	 *
+	 * @var string
+	 */
+	protected $iquery = null;
+
+	/**
+	 * ifragment
+	 *
+	 * @var string
+	 */
+	protected $ifragment = null;
+
+	/**
+	 * Normalization database
+	 *
+	 * Each key is the scheme, each value is an array with each key as the IRI
+	 * part and value as the default value for that part.
+	 */
+	protected $normalization = array(
+		'acap' => array(
+			'port' => 674
+		),
+		'dict' => array(
+			'port' => 2628
+		),
+		'file' => array(
+			'ihost' => 'localhost'
+		),
+		'http' => array(
+			'port' => 80,
+		),
+		'https' => array(
+			'port' => 443,
+		),
+	);
+
+	/**
+	 * Return the entire IRI when you try and read the object as a string
+	 *
+	 * @return string
+	 */
+	public function __toString() {
+		return $this->get_iri();
+	}
+
+	/**
+	 * Overload __set() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 * @param mixed $value Property value
+	 */
+	public function __set($name, $value) {
+		if (method_exists($this, 'set_' . $name)) {
+			call_user_func(array($this, 'set_' . $name), $value);
+		}
+		elseif (
+			   $name === 'iauthority'
+			|| $name === 'iuserinfo'
+			|| $name === 'ihost'
+			|| $name === 'ipath'
+			|| $name === 'iquery'
+			|| $name === 'ifragment'
+		) {
+			call_user_func(array($this, 'set_' . substr($name, 1)), $value);
+		}
+	}
+
+	/**
+	 * Overload __get() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 * @return mixed
+	 */
+	public function __get($name) {
+		// isset() returns false for null, we don't want to do that
+		// Also why we use array_key_exists below instead of isset()
+		$props = get_object_vars($this);
+
+		if (
+			$name === 'iri' ||
+			$name === 'uri' ||
+			$name === 'iauthority' ||
+			$name === 'authority'
+		) {
+			$method = 'get_' . $name;
+			$return = $this->$method();
+		}
+		elseif (array_key_exists($name, $props)) {
+			$return = $this->$name;
+		}
+		// host -> ihost
+		elseif (($prop = 'i' . $name) && array_key_exists($prop, $props)) {
+			$name = $prop;
+			$return = $this->$prop;
+		}
+		// ischeme -> scheme
+		elseif (($prop = substr($name, 1)) && array_key_exists($prop, $props)) {
+			$name = $prop;
+			$return = $this->$prop;
+		}
+		else {
+			trigger_error('Undefined property: ' . get_class($this) . '::' . $name, E_USER_NOTICE);
+			$return = null;
+		}
+
+		if ($return === null && isset($this->normalization[$this->scheme][$name])) {
+			return $this->normalization[$this->scheme][$name];
+		}
+		else {
+			return $return;
+		}
+	}
+
+	/**
+	 * Overload __isset() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 * @return bool
+	 */
+	public function __isset($name) {
+		return (method_exists($this, 'get_' . $name) || isset($this->$name));
+	}
+
+	/**
+	 * Overload __unset() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 */
+	public function __unset($name) {
+		if (method_exists($this, 'set_' . $name)) {
+			call_user_func(array($this, 'set_' . $name), '');
+		}
+	}
+
+	/**
+	 * Create a new IRI object, from a specified string
+	 *
+	 * @param string|null $iri
+	 */
+	public function __construct($iri = null) {
+		$this->set_iri($iri);
+	}
+
+	/**
+	 * Create a new IRI object by resolving a relative IRI
+	 *
+	 * Returns false if $base is not absolute, otherwise an IRI.
+	 *
+	 * @param IRI|string $base (Absolute) Base IRI
+	 * @param IRI|string $relative Relative IRI
+	 * @return IRI|false
+	 */
+	public static function absolutize($base, $relative) {
+		if (!($relative instanceof Requests_IRI)) {
+			$relative = new Requests_IRI($relative);
+		}
+		if (!$relative->is_valid()) {
+			return false;
+		}
+		elseif ($relative->scheme !== null) {
+			return clone $relative;
+		}
+
+		if (!($base instanceof Requests_IRI)) {
+			$base = new Requests_IRI($base);
+		}
+		if ($base->scheme === null || !$base->is_valid()) {
+			return false;
+		}
+
+		if ($relative->get_iri() !== '') {
+			if ($relative->iuserinfo !== null || $relative->ihost !== null || $relative->port !== null) {
+				$target = clone $relative;
+				$target->scheme = $base->scheme;
+			}
+			else {
+				$target = new Requests_IRI;
+				$target->scheme = $base->scheme;
+				$target->iuserinfo = $base->iuserinfo;
+				$target->ihost = $base->ihost;
+				$target->port = $base->port;
+				if ($relative->ipath !== '') {
+					if ($relative->ipath[0] === '/') {
+						$target->ipath = $relative->ipath;
+					}
+					elseif (($base->iuserinfo !== null || $base->ihost !== null || $base->port !== null) && $base->ipath === '') {
+						$target->ipath = '/' . $relative->ipath;
+					}
+					elseif (($last_segment = strrpos($base->ipath, '/')) !== false) {
+						$target->ipath = substr($base->ipath, 0, $last_segment + 1) . $relative->ipath;
+					}
+					else {
+						$target->ipath = $relative->ipath;
+					}
+					$target->ipath = $target->remove_dot_segments($target->ipath);
+					$target->iquery = $relative->iquery;
+				}
+				else {
+					$target->ipath = $base->ipath;
+					if ($relative->iquery !== null) {
+						$target->iquery = $relative->iquery;
+					}
+					elseif ($base->iquery !== null) {
+						$target->iquery = $base->iquery;
+					}
+				}
+				$target->ifragment = $relative->ifragment;
+			}
+		}
+		else {
+			$target = clone $base;
+			$target->ifragment = null;
+		}
+		$target->scheme_normalization();
+		return $target;
+	}
+
+	/**
+	 * Parse an IRI into scheme/authority/path/query/fragment segments
+	 *
+	 * @param string $iri
+	 * @return array
+	 */
+	protected function parse_iri($iri) {
+		$iri = trim($iri, "\x20\x09\x0A\x0C\x0D");
+		$has_match = preg_match('/^((?P<scheme>[^:\/?#]+):)?(\/\/(?P<authority>[^\/?#]*))?(?P<path>[^?#]*)(\?(?P<query>[^#]*))?(#(?P<fragment>.*))?$/', $iri, $match);
+		if (!$has_match) {
+			throw new Requests_Exception('Cannot parse supplied IRI', 'iri.cannot_parse', $iri);
+		}
+
+		if ($match[1] === '') {
+			$match['scheme'] = null;
+		}
+		if (!isset($match[3]) || $match[3] === '') {
+			$match['authority'] = null;
+		}
+		if (!isset($match[5])) {
+			$match['path'] = '';
+		}
+		if (!isset($match[6]) || $match[6] === '') {
+			$match['query'] = null;
+		}
+		if (!isset($match[8]) || $match[8] === '') {
+			$match['fragment'] = null;
+		}
+		return $match;
+	}
+
+	/**
+	 * Remove dot segments from a path
+	 *
+	 * @param string $input
+	 * @return string
+	 */
+	protected function remove_dot_segments($input) {
+		$output = '';
+		while (strpos($input, './') !== false || strpos($input, '/.') !== false || $input === '.' || $input === '..') {
+			// A: If the input buffer begins with a prefix of "../" or "./",
+			// then remove that prefix from the input buffer; otherwise,
+			if (strpos($input, '../') === 0) {
+				$input = substr($input, 3);
+			}
+			elseif (strpos($input, './') === 0) {
+				$input = substr($input, 2);
+			}
+			// B: if the input buffer begins with a prefix of "/./" or "/.",
+			// where "." is a complete path segment, then replace that prefix
+			// with "/" in the input buffer; otherwise,
+			elseif (strpos($input, '/./') === 0) {
+				$input = substr($input, 2);
+			}
+			elseif ($input === '/.') {
+				$input = '/';
+			}
+			// C: if the input buffer begins with a prefix of "/../" or "/..",
+			// where ".." is a complete path segment, then replace that prefix
+			// with "/" in the input buffer and remove the last segment and its
+			// preceding "/" (if any) from the output buffer; otherwise,
+			elseif (strpos($input, '/../') === 0) {
+				$input = substr($input, 3);
+				$output = substr_replace($output, '', strrpos($output, '/'));
+			}
+			elseif ($input === '/..') {
+				$input = '/';
+				$output = substr_replace($output, '', strrpos($output, '/'));
+			}
+			// D: if the input buffer consists only of "." or "..", then remove
+			// that from the input buffer; otherwise,
+			elseif ($input === '.' || $input === '..') {
+				$input = '';
+			}
+			// E: move the first path segment in the input buffer to the end of
+			// the output buffer, including the initial "/" character (if any)
+			// and any subsequent characters up to, but not including, the next
+			// "/" character or the end of the input buffer
+			elseif (($pos = strpos($input, '/', 1)) !== false) {
+				$output .= substr($input, 0, $pos);
+				$input = substr_replace($input, '', 0, $pos);
+			}
+			else {
+				$output .= $input;
+				$input = '';
+			}
+		}
+		return $output . $input;
+	}
+
+	/**
+	 * Replace invalid character with percent encoding
+	 *
+	 * @param string $string Input string
+	 * @param string $extra_chars Valid characters not in iunreserved or
+	 *                            iprivate (this is ASCII-only)
+	 * @param bool $iprivate Allow iprivate
+	 * @return string
+	 */
+	protected function replace_invalid_with_pct_encoding($string, $extra_chars, $iprivate = false) {
+		// Normalize as many pct-encoded sections as possible
+		$string = preg_replace_callback('/(?:%[A-Fa-f0-9]{2})+/', array(&$this, 'remove_iunreserved_percent_encoded'), $string);
+
+		// Replace invalid percent characters
+		$string = preg_replace('/%(?![A-Fa-f0-9]{2})/', '%25', $string);
+
+		// Add unreserved and % to $extra_chars (the latter is safe because all
+		// pct-encoded sections are now valid).
+		$extra_chars .= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~%';
+
+		// Now replace any bytes that aren't allowed with their pct-encoded versions
+		$position = 0;
+		$strlen = strlen($string);
+		while (($position += strspn($string, $extra_chars, $position)) < $strlen) {
+			$value = ord($string[$position]);
+
+			// Start position
+			$start = $position;
+
+			// By default we are valid
+			$valid = true;
+
+			// No one byte sequences are valid due to the while.
+			// Two byte sequence:
+			if (($value & 0xE0) === 0xC0) {
+				$character = ($value & 0x1F) << 6;
+				$length = 2;
+				$remaining = 1;
+			}
+			// Three byte sequence:
+			elseif (($value & 0xF0) === 0xE0) {
+				$character = ($value & 0x0F) << 12;
+				$length = 3;
+				$remaining = 2;
+			}
+			// Four byte sequence:
+			elseif (($value & 0xF8) === 0xF0) {
+				$character = ($value & 0x07) << 18;
+				$length = 4;
+				$remaining = 3;
+			}
+			// Invalid byte:
+			else {
+				$valid = false;
+				$length = 1;
+				$remaining = 0;
+			}
+
+			if ($remaining) {
+				if ($position + $length <= $strlen) {
+					for ($position++; $remaining; $position++) {
+						$value = ord($string[$position]);
+
+						// Check that the byte is valid, then add it to the character:
+						if (($value & 0xC0) === 0x80) {
+							$character |= ($value & 0x3F) << (--$remaining * 6);
+						}
+						// If it is invalid, count the sequence as invalid and reprocess the current byte:
+						else {
+							$valid = false;
+							$position--;
+							break;
+						}
+					}
+				}
+				else {
+					$position = $strlen - 1;
+					$valid = false;
+				}
+			}
+
+			// Percent encode anything invalid or not in ucschar
+			if (
+				// Invalid sequences
+				!$valid
+				// Non-shortest form sequences are invalid
+				|| $length > 1 && $character <= 0x7F
+				|| $length > 2 && $character <= 0x7FF
+				|| $length > 3 && $character <= 0xFFFF
+				// Outside of range of ucschar codepoints
+				// Noncharacters
+				|| ($character & 0xFFFE) === 0xFFFE
+				|| $character >= 0xFDD0 && $character <= 0xFDEF
+				|| (
+					// Everything else not in ucschar
+					   $character > 0xD7FF && $character < 0xF900
+					|| $character < 0xA0
+					|| $character > 0xEFFFD
+				)
+				&& (
+					// Everything not in iprivate, if it applies
+					   !$iprivate
+					|| $character < 0xE000
+					|| $character > 0x10FFFD
+				)
+			) {
+				// If we were a character, pretend we weren't, but rather an error.
+				if ($valid) {
+					$position--;
+				}
+
+				for ($j = $start; $j <= $position; $j++) {
+					$string = substr_replace($string, sprintf('%%%02X', ord($string[$j])), $j, 1);
+					$j += 2;
+					$position += 2;
+					$strlen += 2;
+				}
+			}
+		}
+
+		return $string;
+	}
+
+	/**
+	 * Callback function for preg_replace_callback.
+	 *
+	 * Removes sequences of percent encoded bytes that represent UTF-8
+	 * encoded characters in iunreserved
+	 *
+	 * @param array $match PCRE match
+	 * @return string Replacement
+	 */
+	protected function remove_iunreserved_percent_encoded($match) {
+		// As we just have valid percent encoded sequences we can just explode
+		// and ignore the first member of the returned array (an empty string).
+		$bytes = explode('%', $match[0]);
+
+		// Initialize the new string (this is what will be returned) and that
+		// there are no bytes remaining in the current sequence (unsurprising
+		// at the first byte!).
+		$string = '';
+		$remaining = 0;
+
+		// Loop over each and every byte, and set $value to its value
+		for ($i = 1, $len = count($bytes); $i < $len; $i++) {
+			$value = hexdec($bytes[$i]);
+
+			// If we're the first byte of sequence:
+			if (!$remaining) {
+				// Start position
+				$start = $i;
+
+				// By default we are valid
+				$valid = true;
+
+				// One byte sequence:
+				if ($value <= 0x7F) {
+					$character = $value;
+					$length = 1;
+				}
+				// Two byte sequence:
+				elseif (($value & 0xE0) === 0xC0) {
+					$character = ($value & 0x1F) << 6;
+					$length = 2;
+					$remaining = 1;
+				}
+				// Three byte sequence:
+				elseif (($value & 0xF0) === 0xE0) {
+					$character = ($value & 0x0F) << 12;
+					$length = 3;
+					$remaining = 2;
+				}
+				// Four byte sequence:
+				elseif (($value & 0xF8) === 0xF0) {
+					$character = ($value & 0x07) << 18;
+					$length = 4;
+					$remaining = 3;
+				}
+				// Invalid byte:
+				else {
+					$valid = false;
+					$remaining = 0;
+				}
+			}
+			// Continuation byte:
+			else {
+				// Check that the byte is valid, then add it to the character:
+				if (($value & 0xC0) === 0x80) {
+					$remaining--;
+					$character |= ($value & 0x3F) << ($remaining * 6);
+				}
+				// If it is invalid, count the sequence as invalid and reprocess the current byte as the start of a sequence:
+				else {
+					$valid = false;
+					$remaining = 0;
+					$i--;
+				}
+			}
+
+			// If we've reached the end of the current byte sequence, append it to Unicode::$data
+			if (!$remaining) {
+				// Percent encode anything invalid or not in iunreserved
+				if (
+					// Invalid sequences
+					!$valid
+					// Non-shortest form sequences are invalid
+					|| $length > 1 && $character <= 0x7F
+					|| $length > 2 && $character <= 0x7FF
+					|| $length > 3 && $character <= 0xFFFF
+					// Outside of range of iunreserved codepoints
+					|| $character < 0x2D
+					|| $character > 0xEFFFD
+					// Noncharacters
+					|| ($character & 0xFFFE) === 0xFFFE
+					|| $character >= 0xFDD0 && $character <= 0xFDEF
+					// Everything else not in iunreserved (this is all BMP)
+					|| $character === 0x2F
+					|| $character > 0x39 && $character < 0x41
+					|| $character > 0x5A && $character < 0x61
+					|| $character > 0x7A && $character < 0x7E
+					|| $character > 0x7E && $character < 0xA0
+					|| $character > 0xD7FF && $character < 0xF900
+				) {
+					for ($j = $start; $j <= $i; $j++) {
+						$string .= '%' . strtoupper($bytes[$j]);
+					}
+				}
+				else {
+					for ($j = $start; $j <= $i; $j++) {
+						$string .= chr(hexdec($bytes[$j]));
+					}
+				}
+			}
+		}
+
+		// If we have any bytes left over they are invalid (i.e., we are
+		// mid-way through a multi-byte sequence)
+		if ($remaining) {
+			for ($j = $start; $j < $len; $j++) {
+				$string .= '%' . strtoupper($bytes[$j]);
+			}
+		}
+
+		return $string;
+	}
+
+	protected function scheme_normalization() {
+		if (isset($this->normalization[$this->scheme]['iuserinfo']) && $this->iuserinfo === $this->normalization[$this->scheme]['iuserinfo']) {
+			$this->iuserinfo = null;
+		}
+		if (isset($this->normalization[$this->scheme]['ihost']) && $this->ihost === $this->normalization[$this->scheme]['ihost']) {
+			$this->ihost = null;
+		}
+		if (isset($this->normalization[$this->scheme]['port']) && $this->port === $this->normalization[$this->scheme]['port']) {
+			$this->port = null;
+		}
+		if (isset($this->normalization[$this->scheme]['ipath']) && $this->ipath === $this->normalization[$this->scheme]['ipath']) {
+			$this->ipath = '';
+		}
+		if (isset($this->ihost) && empty($this->ipath)) {
+			$this->ipath = '/';
+		}
+		if (isset($this->normalization[$this->scheme]['iquery']) && $this->iquery === $this->normalization[$this->scheme]['iquery']) {
+			$this->iquery = null;
+		}
+		if (isset($this->normalization[$this->scheme]['ifragment']) && $this->ifragment === $this->normalization[$this->scheme]['ifragment']) {
+			$this->ifragment = null;
+		}
+	}
+
+	/**
+	 * Check if the object represents a valid IRI. This needs to be done on each
+	 * call as some things change depending on another part of the IRI.
+	 *
+	 * @return bool
+	 */
+	public function is_valid() {
+		$isauthority = $this->iuserinfo !== null || $this->ihost !== null || $this->port !== null;
+		if ($this->ipath !== '' &&
+			(
+				$isauthority && $this->ipath[0] !== '/' ||
+				(
+					$this->scheme === null &&
+					!$isauthority &&
+					strpos($this->ipath, ':') !== false &&
+					(strpos($this->ipath, '/') === false ? true : strpos($this->ipath, ':') < strpos($this->ipath, '/'))
+				)
+			)
+		) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Set the entire IRI. Returns true on success, false on failure (if there
+	 * are any invalid characters).
+	 *
+	 * @param string $iri
+	 * @return bool
+	 */
+	protected function set_iri($iri) {
+		static $cache;
+		if (!$cache) {
+			$cache = array();
+		}
+
+		if ($iri === null) {
+			return true;
+		}
+		if (isset($cache[$iri])) {
+			list($this->scheme,
+				 $this->iuserinfo,
+				 $this->ihost,
+				 $this->port,
+				 $this->ipath,
+				 $this->iquery,
+				 $this->ifragment,
+				 $return) = $cache[$iri];
+			return $return;
+		}
+
+		$parsed = $this->parse_iri((string) $iri);
+
+		$return = $this->set_scheme($parsed['scheme'])
+			&& $this->set_authority($parsed['authority'])
+			&& $this->set_path($parsed['path'])
+			&& $this->set_query($parsed['query'])
+			&& $this->set_fragment($parsed['fragment']);
+
+		$cache[$iri] = array($this->scheme,
+							 $this->iuserinfo,
+							 $this->ihost,
+							 $this->port,
+							 $this->ipath,
+							 $this->iquery,
+							 $this->ifragment,
+							 $return);
+		return $return;
+	}
+
+	/**
+	 * Set the scheme. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $scheme
+	 * @return bool
+	 */
+	protected function set_scheme($scheme) {
+		if ($scheme === null) {
+			$this->scheme = null;
+		}
+		elseif (!preg_match('/^[A-Za-z][0-9A-Za-z+\-.]*$/', $scheme)) {
+			$this->scheme = null;
+			return false;
+		}
+		else {
+			$this->scheme = strtolower($scheme);
+		}
+		return true;
+	}
+
+	/**
+	 * Set the authority. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $authority
+	 * @return bool
+	 */
+	protected function set_authority($authority) {
+		static $cache;
+		if (!$cache) {
+			$cache = array();
+		}
+
+		if ($authority === null) {
+			$this->iuserinfo = null;
+			$this->ihost = null;
+			$this->port = null;
+			return true;
+		}
+		if (isset($cache[$authority])) {
+			list($this->iuserinfo,
+				 $this->ihost,
+				 $this->port,
+				 $return) = $cache[$authority];
+
+			return $return;
+		}
+
+		$remaining = $authority;
+		if (($iuserinfo_end = strrpos($remaining, '@')) !== false) {
+			$iuserinfo = substr($remaining, 0, $iuserinfo_end);
+			$remaining = substr($remaining, $iuserinfo_end + 1);
+		}
+		else {
+			$iuserinfo = null;
+		}
+		if (($port_start = strpos($remaining, ':', strpos($remaining, ']'))) !== false) {
+			$port = substr($remaining, $port_start + 1);
+			if ($port === false || $port === '') {
+				$port = null;
+			}
+			$remaining = substr($remaining, 0, $port_start);
+		}
+		else {
+			$port = null;
+		}
+
+		$return = $this->set_userinfo($iuserinfo) &&
+				  $this->set_host($remaining) &&
+				  $this->set_port($port);
+
+		$cache[$authority] = array($this->iuserinfo,
+								   $this->ihost,
+								   $this->port,
+								   $return);
+
+		return $return;
+	}
+
+	/**
+	 * Set the iuserinfo.
+	 *
+	 * @param string $iuserinfo
+	 * @return bool
+	 */
+	protected function set_userinfo($iuserinfo) {
+		if ($iuserinfo === null) {
+			$this->iuserinfo = null;
+		}
+		else {
+			$this->iuserinfo = $this->replace_invalid_with_pct_encoding($iuserinfo, '!$&\'()*+,;=:');
+			$this->scheme_normalization();
+		}
+
+		return true;
+	}
+
+	/**
+	 * Set the ihost. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $ihost
+	 * @return bool
+	 */
+	protected function set_host($ihost) {
+		if ($ihost === null) {
+			$this->ihost = null;
+			return true;
+		}
+		if (substr($ihost, 0, 1) === '[' && substr($ihost, -1) === ']') {
+			if (Requests_IPv6::check_ipv6(substr($ihost, 1, -1))) {
+				$this->ihost = '[' . Requests_IPv6::compress(substr($ihost, 1, -1)) . ']';
+			}
+			else {
+				$this->ihost = null;
+				return false;
+			}
+		}
+		else {
+			$ihost = $this->replace_invalid_with_pct_encoding($ihost, '!$&\'()*+,;=');
+
+			// Lowercase, but ignore pct-encoded sections (as they should
+			// remain uppercase). This must be done after the previous step
+			// as that can add unescaped characters.
+			$position = 0;
+			$strlen = strlen($ihost);
+			while (($position += strcspn($ihost, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ%', $position)) < $strlen) {
+				if ($ihost[$position] === '%') {
+					$position += 3;
+				}
+				else {
+					$ihost[$position] = strtolower($ihost[$position]);
+					$position++;
+				}
+			}
+
+			$this->ihost = $ihost;
+		}
+
+		$this->scheme_normalization();
+
+		return true;
+	}
+
+	/**
+	 * Set the port. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $port
+	 * @return bool
+	 */
+	protected function set_port($port) {
+		if ($port === null) {
+			$this->port = null;
+			return true;
+		}
+
+		if (strspn($port, '0123456789') === strlen($port)) {
+			$this->port = (int) $port;
+			$this->scheme_normalization();
+			return true;
+		}
+
+		$this->port = null;
+		return false;
+	}
+
+	/**
+	 * Set the ipath.
+	 *
+	 * @param string $ipath
+	 * @return bool
+	 */
+	protected function set_path($ipath) {
+		static $cache;
+		if (!$cache) {
+			$cache = array();
+		}
+
+		$ipath = (string) $ipath;
+
+		if (isset($cache[$ipath])) {
+			$this->ipath = $cache[$ipath][(int) ($this->scheme !== null)];
+		}
+		else {
+			$valid = $this->replace_invalid_with_pct_encoding($ipath, '!$&\'()*+,;=@:/');
+			$removed = $this->remove_dot_segments($valid);
+
+			$cache[$ipath] = array($valid, $removed);
+			$this->ipath = ($this->scheme !== null) ? $removed : $valid;
+		}
+		$this->scheme_normalization();
+		return true;
+	}
+
+	/**
+	 * Set the iquery.
+	 *
+	 * @param string $iquery
+	 * @return bool
+	 */
+	protected function set_query($iquery) {
+		if ($iquery === null) {
+			$this->iquery = null;
+		}
+		else {
+			$this->iquery = $this->replace_invalid_with_pct_encoding($iquery, '!$&\'()*+,;=:@/?', true);
+			$this->scheme_normalization();
+		}
+		return true;
+	}
+
+	/**
+	 * Set the ifragment.
+	 *
+	 * @param string $ifragment
+	 * @return bool
+	 */
+	protected function set_fragment($ifragment) {
+		if ($ifragment === null) {
+			$this->ifragment = null;
+		}
+		else {
+			$this->ifragment = $this->replace_invalid_with_pct_encoding($ifragment, '!$&\'()*+,;=:@/?');
+			$this->scheme_normalization();
+		}
+		return true;
+	}
+
+	/**
+	 * Convert an IRI to a URI (or parts thereof)
+	 *
+	 * @param string|bool IRI to convert (or false from {@see get_iri})
+	 * @return string|false URI if IRI is valid, false otherwise.
+	 */
+	protected function to_uri($string) {
+		if (!is_string($string)) {
+			return false;
+		}
+
+		static $non_ascii;
+		if (!$non_ascii) {
+			$non_ascii = implode('', range("\x80", "\xFF"));
+		}
+
+		$position = 0;
+		$strlen = strlen($string);
+		while (($position += strcspn($string, $non_ascii, $position)) < $strlen) {
+			$string = substr_replace($string, sprintf('%%%02X', ord($string[$position])), $position, 1);
+			$position += 3;
+			$strlen += 2;
+		}
+
+		return $string;
+	}
+
+	/**
+	 * Get the complete IRI
+	 *
+	 * @return string
+	 */
+	protected function get_iri() {
+		if (!$this->is_valid()) {
+			return false;
+		}
+
+		$iri = '';
+		if ($this->scheme !== null) {
+			$iri .= $this->scheme . ':';
+		}
+		if (($iauthority = $this->get_iauthority()) !== null) {
+			$iri .= '//' . $iauthority;
+		}
+		$iri .= $this->ipath;
+		if ($this->iquery !== null) {
+			$iri .= '?' . $this->iquery;
+		}
+		if ($this->ifragment !== null) {
+			$iri .= '#' . $this->ifragment;
+		}
+
+		return $iri;
+	}
+
+	/**
+	 * Get the complete URI
+	 *
+	 * @return string
+	 */
+	protected function get_uri() {
+		return $this->to_uri($this->get_iri());
+	}
+
+	/**
+	 * Get the complete iauthority
+	 *
+	 * @return string
+	 */
+	protected function get_iauthority() {
+		if ($this->iuserinfo === null && $this->ihost === null && $this->port === null) {
+			return null;
+		}
+
+		$iauthority = '';
+		if ($this->iuserinfo !== null) {
+			$iauthority .= $this->iuserinfo . '@';
+		}
+		if ($this->ihost !== null) {
+			$iauthority .= $this->ihost;
+		}
+		if ($this->port !== null) {
+			$iauthority .= ':' . $this->port;
+		}
+		return $iauthority;
+	}
+
+	/**
+	 * Get the complete authority
+	 *
+	 * @return string
+	 */
+	protected function get_authority() {
+		$iauthority = $this->get_iauthority();
+		if (is_string($iauthority)) {
+			return $this->to_uri($iauthority);
+		}
+		else {
+			return $iauthority;
+		}
+	}
+}
+
+The file my-directory-list.txt contains:
+The file Auth.php contains:
+<?php
+/**
+ * Authentication provider interface
+ *
+ * @package Requests
+ * @subpackage Authentication
+ */
+
+/**
+ * Authentication provider interface
+ *
+ * Implement this interface to act as an authentication provider.
+ *
+ * Parameters should be passed via the constructor where possible, as this
+ * makes it much easier for users to use your provider.
+ *
+ * @see Requests_Hooks
+ * @package Requests
+ * @subpackage Authentication
+ */
+interface Requests_Auth {
+	/**
+	 * Register hooks as needed
+	 *
+	 * This method is called in {@see Requests::request} when the user has set
+	 * an instance as the 'auth' option. Use this callback to register all the
+	 * hooks you'll need.
+	 *
+	 * @see Requests_Hooks::register
+	 * @param Requests_Hooks $hooks Hook system
+	 */
+	public function register(Requests_Hooks &$hooks);
+}
+The file Cookie.php contains:
+<?php
+/**
+ * Cookie storage object
+ *
+ * @package Requests
+ * @subpackage Cookies
+ */
+
+/**
+ * Cookie storage object
+ *
+ * @package Requests
+ * @subpackage Cookies
+ */
+class Requests_Cookie {
+	/**
+	 * Cookie name.
+	 *
+	 * @var string
+	 */
+	public $name;
+
+	/**
+	 * Cookie value.
+	 *
+	 * @var string
+	 */
+	public $value;
+
+	/**
+	 * Cookie attributes
+	 *
+	 * Valid keys are (currently) path, domain, expires, max-age, secure and
+	 * httponly.
+	 *
+	 * @var Requests_Utility_CaseInsensitiveDictionary|array Array-like object
+	 */
+	public $attributes = array();
+
+	/**
+	 * Cookie flags
+	 *
+	 * Valid keys are (currently) creation, last-access, persistent and
+	 * host-only.
+	 *
+	 * @var array
+	 */
+	public $flags = array();
+
+	/**
+	 * Reference time for relative calculations
+	 *
+	 * This is used in place of `time()` when calculating Max-Age expiration and
+	 * checking time validity.
+	 *
+	 * @var int
+	 */
+	public $reference_time = 0;
+
+	/**
+	 * Create a new cookie object
+	 *
+	 * @param string $name
+	 * @param string $value
+	 * @param array|Requests_Utility_CaseInsensitiveDictionary $attributes Associative array of attribute data
+	 */
+	public function __construct($name, $value, $attributes = array(), $flags = array(), $reference_time = null) {
+		$this->name = $name;
+		$this->value = $value;
+		$this->attributes = $attributes;
+		$default_flags = array(
+			'creation' => time(),
+			'last-access' => time(),
+			'persistent' => false,
+			'host-only' => true,
+		);
+		$this->flags = array_merge($default_flags, $flags);
+
+		$this->reference_time = time();
+		if ($reference_time !== null) {
+			$this->reference_time = $reference_time;
+		}
+
+		$this->normalize();
+	}
+
+	/**
+	 * Check if a cookie is expired.
+	 *
+	 * Checks the age against $this->reference_time to determine if the cookie
+	 * is expired.
+	 *
+	 * @return boolean True if expired, false if time is valid.
+	 */
+	public function is_expired() {
+		// RFC6265, s. 4.1.2.2:
+		// If a cookie has both the Max-Age and the Expires attribute, the Max-
+		// Age attribute has precedence and controls the expiration date of the
+		// cookie.
+		if (isset($this->attributes['max-age'])) {
+			$max_age = $this->attributes['max-age'];
+			return $max_age < $this->reference_time;
+		}
+
+		if (isset($this->attributes['expires'])) {
+			$expires = $this->attributes['expires'];
+			return $expires < $this->reference_time;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check if a cookie is valid for a given URI
+	 *
+	 * @param Requests_IRI $uri URI to check
+	 * @return boolean Whether the cookie is valid for the given URI
+	 */
+	public function uri_matches(Requests_IRI $uri) {
+		if (!$this->domain_matches($uri->host)) {
+			return false;
+		}
+
+		if (!$this->path_matches($uri->path)) {
+			return false;
+		}
+
+		return empty($this->attributes['secure']) || $uri->scheme === 'https';
+	}
+
+	/**
+	 * Check if a cookie is valid for a given domain
+	 *
+	 * @param string $string Domain to check
+	 * @return boolean Whether the cookie is valid for the given domain
+	 */
+	public function domain_matches($string) {
+		if (!isset($this->attributes['domain'])) {
+			// Cookies created manually; cookies created by Requests will set
+			// the domain to the requested domain
+			return true;
+		}
+
+		$domain_string = $this->attributes['domain'];
+		if ($domain_string === $string) {
+			// The domain string and the string are identical.
+			return true;
+		}
+
+		// If the cookie is marked as host-only and we don't have an exact
+		// match, reject the cookie
+		if ($this->flags['host-only'] === true) {
+			return false;
+		}
+
+		if (strlen($string) <= strlen($domain_string)) {
+			// For obvious reasons, the string cannot be a suffix if the domain
+			// is shorter than the domain string
+			return false;
+		}
+
+		if (substr($string, -1 * strlen($domain_string)) !== $domain_string) {
+			// The domain string should be a suffix of the string.
+			return false;
+		}
+
+		$prefix = substr($string, 0, strlen($string) - strlen($domain_string));
+		if (substr($prefix, -1) !== '.') {
+			// The last character of the string that is not included in the
+			// domain string should be a %x2E (".") character.
+			return false;
+		}
+
+		// The string should be a host name (i.e., not an IP address).
+		return !preg_match('#^(.+\.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$#', $string);
+	}
+
+	/**
+	 * Check if a cookie is valid for a given path
+	 *
+	 * From the path-match check in RFC 6265 section 5.1.4
+	 *
+	 * @param string $request_path Path to check
+	 * @return boolean Whether the cookie is valid for the given path
+	 */
+	public function path_matches($request_path) {
+		if (empty($request_path)) {
+			// Normalize empty path to root
+			$request_path = '/';
+		}
+
+		if (!isset($this->attributes['path'])) {
+			// Cookies created manually; cookies created by Requests will set
+			// the path to the requested path
+			return true;
+		}
+
+		$cookie_path = $this->attributes['path'];
+
+		if ($cookie_path === $request_path) {
+			// The cookie-path and the request-path are identical.
+			return true;
+		}
+
+		if (strlen($request_path) > strlen($cookie_path) && substr($request_path, 0, strlen($cookie_path)) === $cookie_path) {
+			if (substr($cookie_path, -1) === '/') {
+				// The cookie-path is a prefix of the request-path, and the last
+				// character of the cookie-path is %x2F ("/").
+				return true;
+			}
+
+			if (substr($request_path, strlen($cookie_path), 1) === '/') {
+				// The cookie-path is a prefix of the request-path, and the
+				// first character of the request-path that is not included in
+				// the cookie-path is a %x2F ("/") character.
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Normalize cookie and attributes
+	 *
+	 * @return boolean Whether the cookie was successfully normalized
+	 */
+	public function normalize() {
+		foreach ($this->attributes as $key => $value) {
+			$orig_value = $value;
+			$value = $this->normalize_attribute($key, $value);
+			if ($value === null) {
+				unset($this->attributes[$key]);
+				continue;
+			}
+
+			if ($value !== $orig_value) {
+				$this->attributes[$key] = $value;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Parse an individual cookie attribute
+	 *
+	 * Handles parsing individual attributes from the cookie values.
+	 *
+	 * @param string $name Attribute name
+	 * @param string|boolean $value Attribute value (string value, or true if empty/flag)
+	 * @return mixed Value if available, or null if the attribute value is invalid (and should be skipped)
+	 */
+	protected function normalize_attribute($name, $value) {
+		switch (strtolower($name)) {
+			case 'expires':
+				// Expiration parsing, as per RFC 6265 section 5.2.1
+				if (is_int($value)) {
+					return $value;
+				}
+
+				$expiry_time = strtotime($value);
+				if ($expiry_time === false) {
+					return null;
+				}
+
+				return $expiry_time;
+
+			case 'max-age':
+				// Expiration parsing, as per RFC 6265 section 5.2.2
+				if (is_int($value)) {
+					return $value;
+				}
+
+				// Check that we have a valid age
+				if (!preg_match('/^-?\d+$/', $value)) {
+					return null;
+				}
+
+				$delta_seconds = (int) $value;
+				if ($delta_seconds <= 0) {
+					$expiry_time = 0;
+				}
+				else {
+					$expiry_time = $this->reference_time + $delta_seconds;
+				}
+
+				return $expiry_time;
+
+			case 'domain':
+				// Domains are not required as per RFC 6265 section 5.2.3
+				if (empty($value)) {
+					return null;
+				}
+
+				// Domain normalization, as per RFC 6265 section 5.2.3
+				if ($value[0] === '.') {
+					$value = substr($value, 1);
+				}
+
+				return $value;
+
+			default:
+				return $value;
+		}
+	}
+
+	/**
+	 * Format a cookie for a Cookie header
+	 *
+	 * This is used when sending cookies to a server.
+	 *
+	 * @return string Cookie formatted for Cookie header
+	 */
+	public function format_for_header() {
+		return sprintf('%s=%s', $this->name, $this->value);
+	}
+
+	/**
+	 * Format a cookie for a Cookie header
+	 *
+	 * @codeCoverageIgnore
+	 * @deprecated Use {@see Requests_Cookie::format_for_header}
+	 * @return string
+	 */
+	public function formatForHeader() {
+		return $this->format_for_header();
+	}
+
+	/**
+	 * Format a cookie for a Set-Cookie header
+	 *
+	 * This is used when sending cookies to clients. This isn't really
+	 * applicable to client-side usage, but might be handy for debugging.
+	 *
+	 * @return string Cookie formatted for Set-Cookie header
+	 */
+	public function format_for_set_cookie() {
+		$header_value = $this->format_for_header();
+		if (!empty($this->attributes)) {
+			$parts = array();
+			foreach ($this->attributes as $key => $value) {
+				// Ignore non-associative attributes
+				if (is_numeric($key)) {
+					$parts[] = $value;
+				}
+				else {
+					$parts[] = sprintf('%s=%s', $key, $value);
+				}
+			}
+
+			$header_value .= '; ' . implode('; ', $parts);
+		}
+		return $header_value;
+	}
+
+	/**
+	 * Format a cookie for a Set-Cookie header
+	 *
+	 * @codeCoverageIgnore
+	 * @deprecated Use {@see Requests_Cookie::format_for_set_cookie}
+	 * @return string
+	 */
+	public function formatForSetCookie() {
+		return $this->format_for_set_cookie();
+	}
+
+	/**
+	 * Get the cookie value
+	 *
+	 * Attributes and other data can be accessed via methods.
+	 */
+	public function __toString() {
+		return $this->value;
+	}
+
+	/**
+	 * Parse a cookie string into a cookie object
+	 *
+	 * Based on Mozilla's parsing code in Firefox and related projects, which
+	 * is an intentional deviation from RFC 2109 and RFC 2616. RFC 6265
+	 * specifies some of this handling, but not in a thorough manner.
+	 *
+	 * @param string Cookie header value (from a Set-Cookie header)
+	 * @return Requests_Cookie Parsed cookie object
+	 */
+	public static function parse($string, $name = '', $reference_time = null) {
+		$parts = explode(';', $string);
+		$kvparts = array_shift($parts);
+
+		if (!empty($name)) {
+			$value = $string;
+		}
+		elseif (strpos($kvparts, '=') === false) {
+			// Some sites might only have a value without the equals separator.
+			// Deviate from RFC 6265 and pretend it was actually a blank name
+			// (`=foo`)
+			//
+			// https://bugzilla.mozilla.org/show_bug.cgi?id=169091
+			$name = '';
+			$value = $kvparts;
+		}
+		else {
+			list($name, $value) = explode('=', $kvparts, 2);
+		}
+		$name = trim($name);
+		$value = trim($value);
+
+		// Attribute key are handled case-insensitively
+		$attributes = new Requests_Utility_CaseInsensitiveDictionary();
+
+		if (!empty($parts)) {
+			foreach ($parts as $part) {
+				if (strpos($part, '=') === false) {
+					$part_key = $part;
+					$part_value = true;
+				}
+				else {
+					list($part_key, $part_value) = explode('=', $part, 2);
+					$part_value = trim($part_value);
+				}
+
+				$part_key = trim($part_key);
+				$attributes[$part_key] = $part_value;
+			}
+		}
+
+		return new Requests_Cookie($name, $value, $attributes, array(), $reference_time);
+	}
+
+	/**
+	 * Parse all Set-Cookie headers from request headers
+	 *
+	 * @param Requests_Response_Headers $headers Headers to parse from
+	 * @param Requests_IRI|null $origin URI for comparing cookie origins
+	 * @param int|null $time Reference time for expiration calculation
+	 * @return array
+	 */
+	public static function parse_from_headers(Requests_Response_Headers $headers, Requests_IRI $origin = null, $time = null) {
+		$cookie_headers = $headers->getValues('Set-Cookie');
+		if (empty($cookie_headers)) {
+			return array();
+		}
+
+		$cookies = array();
+		foreach ($cookie_headers as $header) {
+			$parsed = self::parse($header, '', $time);
+
+			// Default domain/path attributes
+			if (empty($parsed->attributes['domain']) && !empty($origin)) {
+				$parsed->attributes['domain'] = $origin->host;
+				$parsed->flags['host-only'] = true;
+			}
+			else {
+				$parsed->flags['host-only'] = false;
+			}
+
+			$path_is_valid = (!empty($parsed->attributes['path']) && $parsed->attributes['path'][0] === '/');
+			if (!$path_is_valid && !empty($origin)) {
+				$path = $origin->path;
+
+				// Default path normalization as per RFC 6265 section 5.1.4
+				if (substr($path, 0, 1) !== '/') {
+					// If the uri-path is empty or if the first character of
+					// the uri-path is not a %x2F ("/") character, output
+					// %x2F ("/") and skip the remaining steps.
+					$path = '/';
+				}
+				elseif (substr_count($path, '/') === 1) {
+					// If the uri-path contains no more than one %x2F ("/")
+					// character, output %x2F ("/") and skip the remaining
+					// step.
+					$path = '/';
+				}
+				else {
+					// Output the characters of the uri-path from the first
+					// character up to, but not including, the right-most
+					// %x2F ("/").
+					$path = substr($path, 0, strrpos($path, '/'));
+				}
+				$parsed->attributes['path'] = $path;
+			}
+
+			// Reject invalid cookie domains
+			if (!empty($origin) && !$parsed->domain_matches($origin->host)) {
+				continue;
+			}
+
+			$cookies[$parsed->name] = $parsed;
+		}
+
+		return $cookies;
+	}
+
+	/**
+	 * Parse all Set-Cookie headers from request headers
+	 *
+	 * @codeCoverageIgnore
+	 * @deprecated Use {@see Requests_Cookie::parse_from_headers}
+	 * @return string
+	 */
+	public static function parseFromHeaders(Requests_Response_Headers $headers) {
+		return self::parse_from_headers($headers);
+	}
+}
+
+The file Exception.php contains:
+<?php
+/**
+ * Exception for HTTP requests
+ *
+ * @package Requests
+ */
+
+/**
+ * Exception for HTTP requests
+ *
+ * @package Requests
+ */
+class Requests_Exception extends Exception {
+	/**
+	 * Type of exception
+	 *
+	 * @var string
+	 */
+	protected $type;
+
+	/**
+	 * Data associated with the exception
+	 *
+	 * @var mixed
+	 */
+	protected $data;
+
+	/**
+	 * Create a new exception
+	 *
+	 * @param string $message Exception message
+	 * @param string $type Exception type
+	 * @param mixed $data Associated data
+	 * @param integer $code Exception numerical code, if applicable
+	 */
+	public function __construct($message, $type, $data = null, $code = 0) {
+		parent::__construct($message, $code);
+
+		$this->type = $type;
+		$this->data = $data;
+	}
+
+	/**
+	 * Like {@see getCode()}, but a string code.
+	 *
+	 * @codeCoverageIgnore
+	 * @return string
+	 */
+	public function getType() {
+		return $this->type;
+	}
+
+	/**
+	 * Gives any relevant data
+	 *
+	 * @codeCoverageIgnore
+	 * @return mixed
+	 */
+	public function getData() {
+		return $this->data;
+	}
+}
+The file Hooker.php contains:
+<?php
+/**
+ * Event dispatcher
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * Event dispatcher
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+interface Requests_Hooker {
+	/**
+	 * Register a callback for a hook
+	 *
+	 * @param string $hook Hook name
+	 * @param callback $callback Function/method to call on event
+	 * @param int $priority Priority number. <0 is executed earlier, >0 is executed later
+	 */
+	public function register($hook, $callback, $priority = 0);
+
+	/**
+	 * Dispatch a message
+	 *
+	 * @param string $hook Hook name
+	 * @param array $parameters Parameters to pass to callbacks
+	 * @return boolean Successfulness
+	 */
+	public function dispatch($hook, $parameters = array());
+}
+The file Hooks.php contains:
+<?php
+/**
+ * Handles adding and dispatching events
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * Handles adding and dispatching events
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+class Requests_Hooks implements Requests_Hooker {
+	/**
+	 * Registered callbacks for each hook
+	 *
+	 * @var array
+	 */
+	protected $hooks = array();
+
+	/**
+	 * Constructor
+	 */
+	public function __construct() {
+		// pass
+	}
+
+	/**
+	 * Register a callback for a hook
+	 *
+	 * @param string $hook Hook name
+	 * @param callback $callback Function/method to call on event
+	 * @param int $priority Priority number. <0 is executed earlier, >0 is executed later
+	 */
+	public function register($hook, $callback, $priority = 0) {
+		if (!isset($this->hooks[$hook])) {
+			$this->hooks[$hook] = array();
+		}
+		if (!isset($this->hooks[$hook][$priority])) {
+			$this->hooks[$hook][$priority] = array();
+		}
+
+		$this->hooks[$hook][$priority][] = $callback;
+	}
+
+	/**
+	 * Dispatch a message
+	 *
+	 * @param string $hook Hook name
+	 * @param array $parameters Parameters to pass to callbacks
+	 * @return boolean Successfulness
+	 */
+	public function dispatch($hook, $parameters = array()) {
+		if (empty($this->hooks[$hook])) {
+			return false;
+		}
+
+		foreach ($this->hooks[$hook] as $priority => $hooked) {
+			foreach ($hooked as $callback) {
+				call_user_func_array($callback, $parameters);
+			}
+		}
+
+		return true;
+	}
+}
+The file IDNAEncoder.php contains:
+<?php
+
+/**
+ * IDNA URL encoder
+ *
+ * Note: Not fully compliant, as nameprep does nothing yet.
+ *
+ * @package Requests
+ * @subpackage Utilities
+ * @see https://tools.ietf.org/html/rfc3490 IDNA specification
+ * @see https://tools.ietf.org/html/rfc3492 Punycode/Bootstrap specification
+ */
+class Requests_IDNAEncoder {
+	/**
+	 * ACE prefix used for IDNA
+	 *
+	 * @see https://tools.ietf.org/html/rfc3490#section-5
+	 * @var string
+	 */
+	const ACE_PREFIX = 'xn--';
+
+	/**#@+
+	 * Bootstrap constant for Punycode
+	 *
+	 * @see https://tools.ietf.org/html/rfc3492#section-5
+	 * @var int
+	 */
+	const BOOTSTRAP_BASE         = 36;
+	const BOOTSTRAP_TMIN         = 1;
+	const BOOTSTRAP_TMAX         = 26;
+	const BOOTSTRAP_SKEW         = 38;
+	const BOOTSTRAP_DAMP         = 700;
+	const BOOTSTRAP_INITIAL_BIAS = 72;
+	const BOOTSTRAP_INITIAL_N    = 128;
+	/**#@-*/
+
+	/**
+	 * Encode a hostname using Punycode
+	 *
+	 * @param string $string Hostname
+	 * @return string Punycode-encoded hostname
+	 */
+	public static function encode($string) {
+		$parts = explode('.', $string);
+		foreach ($parts as &$part) {
+			$part = self::to_ascii($part);
+		}
+		return implode('.', $parts);
+	}
+
+	/**
+	 * Convert a UTF-8 string to an ASCII string using Punycode
+	 *
+	 * @throws Requests_Exception Provided string longer than 64 ASCII characters (`idna.provided_too_long`)
+	 * @throws Requests_Exception Prepared string longer than 64 ASCII characters (`idna.prepared_too_long`)
+	 * @throws Requests_Exception Provided string already begins with xn-- (`idna.provided_is_prefixed`)
+	 * @throws Requests_Exception Encoded string longer than 64 ASCII characters (`idna.encoded_too_long`)
+	 *
+	 * @param string $string ASCII or UTF-8 string (max length 64 characters)
+	 * @return string ASCII string
+	 */
+	public static function to_ascii($string) {
+		// Step 1: Check if the string is already ASCII
+		if (self::is_ascii($string)) {
+			// Skip to step 7
+			if (strlen($string) < 64) {
+				return $string;
+			}
+
+			throw new Requests_Exception('Provided string is too long', 'idna.provided_too_long', $string);
+		}
+
+		// Step 2: nameprep
+		$string = self::nameprep($string);
+
+		// Step 3: UseSTD3ASCIIRules is false, continue
+		// Step 4: Check if it's ASCII now
+		if (self::is_ascii($string)) {
+			// Skip to step 7
+			if (strlen($string) < 64) {
+				return $string;
+			}
+
+			throw new Requests_Exception('Prepared string is too long', 'idna.prepared_too_long', $string);
+		}
+
+		// Step 5: Check ACE prefix
+		if (strpos($string, self::ACE_PREFIX) === 0) {
+			throw new Requests_Exception('Provided string begins with ACE prefix', 'idna.provided_is_prefixed', $string);
+		}
+
+		// Step 6: Encode with Punycode
+		$string = self::punycode_encode($string);
+
+		// Step 7: Prepend ACE prefix
+		$string = self::ACE_PREFIX . $string;
+
+		// Step 8: Check size
+		if (strlen($string) < 64) {
+			return $string;
+		}
+
+		throw new Requests_Exception('Encoded string is too long', 'idna.encoded_too_long', $string);
+	}
+
+	/**
+	 * Check whether a given string contains only ASCII characters
+	 *
+	 * @internal (Testing found regex was the fastest implementation)
+	 *
+	 * @param string $string
+	 * @return bool Is the string ASCII-only?
+	 */
+	protected static function is_ascii($string) {
+		return (preg_match('/(?:[^\x00-\x7F])/', $string) !== 1);
+	}
+
+	/**
+	 * Prepare a string for use as an IDNA name
+	 *
+	 * @todo Implement this based on RFC 3491 and the newer 5891
+	 * @param string $string
+	 * @return string Prepared string
+	 */
+	protected static function nameprep($string) {
+		return $string;
+	}
+
+	/**
+	 * Convert a UTF-8 string to a UCS-4 codepoint array
+	 *
+	 * Based on Requests_IRI::replace_invalid_with_pct_encoding()
+	 *
+	 * @throws Requests_Exception Invalid UTF-8 codepoint (`idna.invalidcodepoint`)
+	 * @param string $input
+	 * @return array Unicode code points
+	 */
+	protected static function utf8_to_codepoints($input) {
+		$codepoints = array();
+
+		// Get number of bytes
+		$strlen = strlen($input);
+
+		for ($position = 0; $position < $strlen; $position++) {
+			$value = ord($input[$position]);
+
+			// One byte sequence:
+			if ((~$value & 0x80) === 0x80) {
+				$character = $value;
+				$length = 1;
+				$remaining = 0;
+			}
+			// Two byte sequence:
+			elseif (($value & 0xE0) === 0xC0) {
+				$character = ($value & 0x1F) << 6;
+				$length = 2;
+				$remaining = 1;
+			}
+			// Three byte sequence:
+			elseif (($value & 0xF0) === 0xE0) {
+				$character = ($value & 0x0F) << 12;
+				$length = 3;
+				$remaining = 2;
+			}
+			// Four byte sequence:
+			elseif (($value & 0xF8) === 0xF0) {
+				$character = ($value & 0x07) << 18;
+				$length = 4;
+				$remaining = 3;
+			}
+			// Invalid byte:
+			else {
+				throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $value);
+			}
+
+			if ($remaining > 0) {
+				if ($position + $length > $strlen) {
+					throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $character);
+				}
+				for ($position++; $remaining > 0; $position++) {
+					$value = ord($input[$position]);
+
+					// If it is invalid, count the sequence as invalid and reprocess the current byte:
+					if (($value & 0xC0) !== 0x80) {
+						throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $character);
+					}
+
+					$character |= ($value & 0x3F) << (--$remaining * 6);
+				}
+				$position--;
+			}
+
+			if (
+				// Non-shortest form sequences are invalid
+				   $length > 1 && $character <= 0x7F
+				|| $length > 2 && $character <= 0x7FF
+				|| $length > 3 && $character <= 0xFFFF
+				// Outside of range of ucschar codepoints
+				// Noncharacters
+				|| ($character & 0xFFFE) === 0xFFFE
+				|| $character >= 0xFDD0 && $character <= 0xFDEF
+				|| (
+					// Everything else not in ucschar
+					   $character > 0xD7FF && $character < 0xF900
+					|| $character < 0x20
+					|| $character > 0x7E && $character < 0xA0
+					|| $character > 0xEFFFD
+				)
+			) {
+				throw new Requests_Exception('Invalid Unicode codepoint', 'idna.invalidcodepoint', $character);
+			}
+
+			$codepoints[] = $character;
+		}
+
+		return $codepoints;
+	}
+
+	/**
+	 * RFC3492-compliant encoder
+	 *
+	 * @internal Pseudo-code from Section 6.3 is commented with "#" next to relevant code
+	 * @throws Requests_Exception On character outside of the domain (never happens with Punycode) (`idna.character_outside_domain`)
+	 *
+	 * @param string $input UTF-8 encoded string to encode
+	 * @return string Punycode-encoded string
+	 */
+	public static function punycode_encode($input) {
+		$output = '';
+#		let n = initial_n
+		$n = self::BOOTSTRAP_INITIAL_N;
+#		let delta = 0
+		$delta = 0;
+#		let bias = initial_bias
+		$bias = self::BOOTSTRAP_INITIAL_BIAS;
+#		let h = b = the number of basic code points in the input
+		$h = $b = 0; // see loop
+#		copy them to the output in order
+		$codepoints = self::utf8_to_codepoints($input);
+		$extended = array();
+
+		foreach ($codepoints as $char) {
+			if ($char < 128) {
+				// Character is valid ASCII
+				// TODO: this should also check if it's valid for a URL
+				$output .= chr($char);
+				$h++;
+			}
+			// Check if the character is non-ASCII, but below initial n
+			// This never occurs for Punycode, so ignore in coverage
+			// @codeCoverageIgnoreStart
+			elseif ($char < $n) {
+				throw new Requests_Exception('Invalid character', 'idna.character_outside_domain', $char);
+			}
+			// @codeCoverageIgnoreEnd
+			else {
+				$extended[$char] = true;
+			}
+		}
+		$extended = array_keys($extended);
+		sort($extended);
+		$b = $h;
+#		[copy them] followed by a delimiter if b > 0
+		if (strlen($output) > 0) {
+			$output .= '-';
+		}
+#		{if the input contains a non-basic code point < n then fail}
+#		while h < length(input) do begin
+		while ($h < count($codepoints)) {
+#			let m = the minimum code point >= n in the input
+			$m = array_shift($extended);
+			//printf('next code point to insert is %s' . PHP_EOL, dechex($m));
+#			let delta = delta + (m - n) * (h + 1), fail on overflow
+			$delta += ($m - $n) * ($h + 1);
+#			let n = m
+			$n = $m;
+#			for each code point c in the input (in order) do begin
+			for ($num = 0; $num < count($codepoints); $num++) {
+				$c = $codepoints[$num];
+#				if c < n then increment delta, fail on overflow
+				if ($c < $n) {
+					$delta++;
+				}
+#				if c == n then begin
+				elseif ($c === $n) {
+#					let q = delta
+					$q = $delta;
+#					for k = base to infinity in steps of base do begin
+					for ($k = self::BOOTSTRAP_BASE; ; $k += self::BOOTSTRAP_BASE) {
+#						let t = tmin if k <= bias {+ tmin}, or
+#								tmax if k >= bias + tmax, or k - bias otherwise
+						if ($k <= ($bias + self::BOOTSTRAP_TMIN)) {
+							$t = self::BOOTSTRAP_TMIN;
+						}
+						elseif ($k >= ($bias + self::BOOTSTRAP_TMAX)) {
+							$t = self::BOOTSTRAP_TMAX;
+						}
+						else {
+							$t = $k - $bias;
+						}
+#						if q < t then break
+						if ($q < $t) {
+							break;
+						}
+#						output the code point for digit t + ((q - t) mod (base - t))
+						$digit = $t + (($q - $t) % (self::BOOTSTRAP_BASE - $t));
+						$output .= self::digit_to_char($digit);
+#						let q = (q - t) div (base - t)
+						$q = floor(($q - $t) / (self::BOOTSTRAP_BASE - $t));
+#					end
+					}
+#					output the code point for digit q
+					$output .= self::digit_to_char($q);
+#					let bias = adapt(delta, h + 1, test h equals b?)
+					$bias = self::adapt($delta, $h + 1, $h === $b);
+#					let delta = 0
+					$delta = 0;
+#					increment h
+					$h++;
+#				end
+				}
+#			end
+			}
+#			increment delta and n
+			$delta++;
+			$n++;
+#		end
+		}
+
+		return $output;
+	}
+
+	/**
+	 * Convert a digit to its respective character
+	 *
+	 * @see https://tools.ietf.org/html/rfc3492#section-5
+	 * @throws Requests_Exception On invalid digit (`idna.invalid_digit`)
+	 *
+	 * @param int $digit Digit in the range 0-35
+	 * @return string Single character corresponding to digit
+	 */
+	protected static function digit_to_char($digit) {
+		// @codeCoverageIgnoreStart
+		// As far as I know, this never happens, but still good to be sure.
+		if ($digit < 0 || $digit > 35) {
+			throw new Requests_Exception(sprintf('Invalid digit %d', $digit), 'idna.invalid_digit', $digit);
+		}
+		// @codeCoverageIgnoreEnd
+		$digits = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		return substr($digits, $digit, 1);
+	}
+
+	/**
+	 * Adapt the bias
+	 *
+	 * @see https://tools.ietf.org/html/rfc3492#section-6.1
+	 * @param int $delta
+	 * @param int $numpoints
+	 * @param bool $firsttime
+	 * @return int New bias
+	 */
+	protected static function adapt($delta, $numpoints, $firsttime) {
+#	function adapt(delta,numpoints,firsttime):
+#		if firsttime then let delta = delta div damp
+		if ($firsttime) {
+			$delta = floor($delta / self::BOOTSTRAP_DAMP);
+		}
+#		else let delta = delta div 2
+		else {
+			$delta = floor($delta / 2);
+		}
+#		let delta = delta + (delta div numpoints)
+		$delta += floor($delta / $numpoints);
+#		let k = 0
+		$k = 0;
+#		while delta > ((base - tmin) * tmax) div 2 do begin
+		$max = floor(((self::BOOTSTRAP_BASE - self::BOOTSTRAP_TMIN) * self::BOOTSTRAP_TMAX) / 2);
+		while ($delta > $max) {
+#			let delta = delta div (base - tmin)
+			$delta = floor($delta / (self::BOOTSTRAP_BASE - self::BOOTSTRAP_TMIN));
+#			let k = k + base
+			$k += self::BOOTSTRAP_BASE;
+#		end
+		}
+#		return k + (((base - tmin + 1) * delta) div (delta + skew))
+		return $k + floor(((self::BOOTSTRAP_BASE - self::BOOTSTRAP_TMIN + 1) * $delta) / ($delta + self::BOOTSTRAP_SKEW));
+	}
+}
+The file IPv6.php contains:
+<?php
+/**
+ * Class to validate and to work with IPv6 addresses
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * Class to validate and to work with IPv6 addresses
+ *
+ * This was originally based on the PEAR class of the same name, but has been
+ * entirely rewritten.
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+class Requests_IPv6 {
+	/**
+	 * Uncompresses an IPv6 address
+	 *
+	 * RFC 4291 allows you to compress consecutive zero pieces in an address to
+	 * '::'. This method expects a valid IPv6 address and expands the '::' to
+	 * the required number of zero pieces.
+	 *
+	 * Example:  FF01::101   ->  FF01:0:0:0:0:0:0:101
+	 *           ::1         ->  0:0:0:0:0:0:0:1
+	 *
+	 * @author Alexander Merz <alexander.merz@web.de>
+	 * @author elfrink at introweb dot nl
+	 * @author Josh Peck <jmp at joshpeck dot org>
+	 * @copyright 2003-2005 The PHP Group
+	 * @license http://www.opensource.org/licenses/bsd-license.php
+	 * @param string $ip An IPv6 address
+	 * @return string The uncompressed IPv6 address
+	 */
+	public static function uncompress($ip) {
+		if (substr_count($ip, '::') !== 1) {
+			return $ip;
+		}
+
+		list($ip1, $ip2) = explode('::', $ip);
+		$c1 = ($ip1 === '') ? -1 : substr_count($ip1, ':');
+		$c2 = ($ip2 === '') ? -1 : substr_count($ip2, ':');
+
+		if (strpos($ip2, '.') !== false) {
+			$c2++;
+		}
+		// ::
+		if ($c1 === -1 && $c2 === -1) {
+			$ip = '0:0:0:0:0:0:0:0';
+		}
+		// ::xxx
+		else if ($c1 === -1) {
+			$fill = str_repeat('0:', 7 - $c2);
+			$ip = str_replace('::', $fill, $ip);
+		}
+		// xxx::
+		else if ($c2 === -1) {
+			$fill = str_repeat(':0', 7 - $c1);
+			$ip = str_replace('::', $fill, $ip);
+		}
+		// xxx::xxx
+		else {
+			$fill = ':' . str_repeat('0:', 6 - $c2 - $c1);
+			$ip = str_replace('::', $fill, $ip);
+		}
+		return $ip;
+	}
+
+	/**
+	 * Compresses an IPv6 address
+	 *
+	 * RFC 4291 allows you to compress consecutive zero pieces in an address to
+	 * '::'. This method expects a valid IPv6 address and compresses consecutive
+	 * zero pieces to '::'.
+	 *
+	 * Example:  FF01:0:0:0:0:0:0:101   ->  FF01::101
+	 *           0:0:0:0:0:0:0:1        ->  ::1
+	 *
+	 * @see uncompress()
+	 * @param string $ip An IPv6 address
+	 * @return string The compressed IPv6 address
+	 */
+	public static function compress($ip) {
+		// Prepare the IP to be compressed
+		$ip = self::uncompress($ip);
+		$ip_parts = self::split_v6_v4($ip);
+
+		// Replace all leading zeros
+		$ip_parts[0] = preg_replace('/(^|:)0+([0-9])/', '\1\2', $ip_parts[0]);
+
+		// Find bunches of zeros
+		if (preg_match_all('/(?:^|:)(?:0(?::|$))+/', $ip_parts[0], $matches, PREG_OFFSET_CAPTURE)) {
+			$max = 0;
+			$pos = null;
+			foreach ($matches[0] as $match) {
+				if (strlen($match[0]) > $max) {
+					$max = strlen($match[0]);
+					$pos = $match[1];
+				}
+			}
+
+			$ip_parts[0] = substr_replace($ip_parts[0], '::', $pos, $max);
+		}
+
+		if ($ip_parts[1] !== '') {
+			return implode(':', $ip_parts);
+		}
+		else {
+			return $ip_parts[0];
+		}
+	}
+
+	/**
+	 * Splits an IPv6 address into the IPv6 and IPv4 representation parts
+	 *
+	 * RFC 4291 allows you to represent the last two parts of an IPv6 address
+	 * using the standard IPv4 representation
+	 *
+	 * Example:  0:0:0:0:0:0:13.1.68.3
+	 *           0:0:0:0:0:FFFF:129.144.52.38
+	 *
+	 * @param string $ip An IPv6 address
+	 * @return string[] [0] contains the IPv6 represented part, and [1] the IPv4 represented part
+	 */
+	protected static function split_v6_v4($ip) {
+		if (strpos($ip, '.') !== false) {
+			$pos = strrpos($ip, ':');
+			$ipv6_part = substr($ip, 0, $pos);
+			$ipv4_part = substr($ip, $pos + 1);
+			return array($ipv6_part, $ipv4_part);
+		}
+		else {
+			return array($ip, '');
+		}
+	}
+
+	/**
+	 * Checks an IPv6 address
+	 *
+	 * Checks if the given IP is a valid IPv6 address
+	 *
+	 * @param string $ip An IPv6 address
+	 * @return bool true if $ip is a valid IPv6 address
+	 */
+	public static function check_ipv6($ip) {
+		$ip = self::uncompress($ip);
+		list($ipv6, $ipv4) = self::split_v6_v4($ip);
+		$ipv6 = explode(':', $ipv6);
+		$ipv4 = explode('.', $ipv4);
+		if (count($ipv6) === 8 && count($ipv4) === 1 || count($ipv6) === 6 && count($ipv4) === 4) {
+			foreach ($ipv6 as $ipv6_part) {
+				// The section can't be empty
+				if ($ipv6_part === '') {
+					return false;
+				}
+
+				// Nor can it be over four characters
+				if (strlen($ipv6_part) > 4) {
+					return false;
+				}
+
+				// Remove leading zeros (this is safe because of the above)
+				$ipv6_part = ltrim($ipv6_part, '0');
+				if ($ipv6_part === '') {
+					$ipv6_part = '0';
+				}
+
+				// Check the value is valid
+				$value = hexdec($ipv6_part);
+				if (dechex($value) !== strtolower($ipv6_part) || $value < 0 || $value > 0xFFFF) {
+					return false;
+				}
+			}
+			if (count($ipv4) === 4) {
+				foreach ($ipv4 as $ipv4_part) {
+					$value = (int) $ipv4_part;
+					if ((string) $value !== $ipv4_part || $value < 0 || $value > 0xFF) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+}
+
+The file IRI.php contains:
+<?php
+/**
+ * IRI parser/serialiser/normaliser
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * IRI parser/serialiser/normaliser
+ *
+ * Copyright (c) 2007-2010, Geoffrey Sneddon and Steve Minutillo.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimer.
+ *
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *       this list of conditions and the following disclaimer in the documentation
+ *       and/or other materials provided with the distribution.
+ *
+ *  * Neither the name of the SimplePie Team nor the names of its contributors
+ *       may be used to endorse or promote products derived from this software
+ *       without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @package Requests
+ * @subpackage Utilities
+ * @author Geoffrey Sneddon
+ * @author Steve Minutillo
+ * @copyright 2007-2009 Geoffrey Sneddon and Steve Minutillo
+ * @license http://www.opensource.org/licenses/bsd-license.php
+ * @link http://hg.gsnedders.com/iri/
+ *
+ * @property string $iri IRI we're working with
+ * @property-read string $uri IRI in URI form, {@see to_uri}
+ * @property string $scheme Scheme part of the IRI
+ * @property string $authority Authority part, formatted for a URI (userinfo + host + port)
+ * @property string $iauthority Authority part of the IRI (userinfo + host + port)
+ * @property string $userinfo Userinfo part, formatted for a URI (after '://' and before '@')
+ * @property string $iuserinfo Userinfo part of the IRI (after '://' and before '@')
+ * @property string $host Host part, formatted for a URI
+ * @property string $ihost Host part of the IRI
+ * @property string $port Port part of the IRI (after ':')
+ * @property string $path Path part, formatted for a URI (after first '/')
+ * @property string $ipath Path part of the IRI (after first '/')
+ * @property string $query Query part, formatted for a URI (after '?')
+ * @property string $iquery Query part of the IRI (after '?')
+ * @property string $fragment Fragment, formatted for a URI (after '#')
+ * @property string $ifragment Fragment part of the IRI (after '#')
+ */
+class Requests_IRI {
+	/**
+	 * Scheme
+	 *
+	 * @var string
+	 */
+	protected $scheme = null;
+
+	/**
+	 * User Information
+	 *
+	 * @var string
+	 */
+	protected $iuserinfo = null;
+
+	/**
+	 * ihost
+	 *
+	 * @var string
+	 */
+	protected $ihost = null;
+
+	/**
+	 * Port
+	 *
+	 * @var string
+	 */
+	protected $port = null;
+
+	/**
+	 * ipath
+	 *
+	 * @var string
+	 */
+	protected $ipath = '';
+
+	/**
+	 * iquery
+	 *
+	 * @var string
+	 */
+	protected $iquery = null;
+
+	/**
+	 * ifragment
+	 *
+	 * @var string
+	 */
+	protected $ifragment = null;
+
+	/**
+	 * Normalization database
+	 *
+	 * Each key is the scheme, each value is an array with each key as the IRI
+	 * part and value as the default value for that part.
+	 */
+	protected $normalization = array(
+		'acap' => array(
+			'port' => 674
+		),
+		'dict' => array(
+			'port' => 2628
+		),
+		'file' => array(
+			'ihost' => 'localhost'
+		),
+		'http' => array(
+			'port' => 80,
+		),
+		'https' => array(
+			'port' => 443,
+		),
+	);
+
+	/**
+	 * Return the entire IRI when you try and read the object as a string
+	 *
+	 * @return string
+	 */
+	public function __toString() {
+		return $this->get_iri();
+	}
+
+	/**
+	 * Overload __set() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 * @param mixed $value Property value
+	 */
+	public function __set($name, $value) {
+		if (method_exists($this, 'set_' . $name)) {
+			call_user_func(array($this, 'set_' . $name), $value);
+		}
+		elseif (
+			   $name === 'iauthority'
+			|| $name === 'iuserinfo'
+			|| $name === 'ihost'
+			|| $name === 'ipath'
+			|| $name === 'iquery'
+			|| $name === 'ifragment'
+		) {
+			call_user_func(array($this, 'set_' . substr($name, 1)), $value);
+		}
+	}
+
+	/**
+	 * Overload __get() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 * @return mixed
+	 */
+	public function __get($name) {
+		// isset() returns false for null, we don't want to do that
+		// Also why we use array_key_exists below instead of isset()
+		$props = get_object_vars($this);
+
+		if (
+			$name === 'iri' ||
+			$name === 'uri' ||
+			$name === 'iauthority' ||
+			$name === 'authority'
+		) {
+			$method = 'get_' . $name;
+			$return = $this->$method();
+		}
+		elseif (array_key_exists($name, $props)) {
+			$return = $this->$name;
+		}
+		// host -> ihost
+		elseif (($prop = 'i' . $name) && array_key_exists($prop, $props)) {
+			$name = $prop;
+			$return = $this->$prop;
+		}
+		// ischeme -> scheme
+		elseif (($prop = substr($name, 1)) && array_key_exists($prop, $props)) {
+			$name = $prop;
+			$return = $this->$prop;
+		}
+		else {
+			trigger_error('Undefined property: ' . get_class($this) . '::' . $name, E_USER_NOTICE);
+			$return = null;
+		}
+
+		if ($return === null && isset($this->normalization[$this->scheme][$name])) {
+			return $this->normalization[$this->scheme][$name];
+		}
+		else {
+			return $return;
+		}
+	}
+
+	/**
+	 * Overload __isset() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 * @return bool
+	 */
+	public function __isset($name) {
+		return (method_exists($this, 'get_' . $name) || isset($this->$name));
+	}
+
+	/**
+	 * Overload __unset() to provide access via properties
+	 *
+	 * @param string $name Property name
+	 */
+	public function __unset($name) {
+		if (method_exists($this, 'set_' . $name)) {
+			call_user_func(array($this, 'set_' . $name), '');
+		}
+	}
+
+	/**
+	 * Create a new IRI object, from a specified string
+	 *
+	 * @param string|null $iri
+	 */
+	public function __construct($iri = null) {
+		$this->set_iri($iri);
+	}
+
+	/**
+	 * Create a new IRI object by resolving a relative IRI
+	 *
+	 * Returns false if $base is not absolute, otherwise an IRI.
+	 *
+	 * @param IRI|string $base (Absolute) Base IRI
+	 * @param IRI|string $relative Relative IRI
+	 * @return IRI|false
+	 */
+	public static function absolutize($base, $relative) {
+		if (!($relative instanceof Requests_IRI)) {
+			$relative = new Requests_IRI($relative);
+		}
+		if (!$relative->is_valid()) {
+			return false;
+		}
+		elseif ($relative->scheme !== null) {
+			return clone $relative;
+		}
+
+		if (!($base instanceof Requests_IRI)) {
+			$base = new Requests_IRI($base);
+		}
+		if ($base->scheme === null || !$base->is_valid()) {
+			return false;
+		}
+
+		if ($relative->get_iri() !== '') {
+			if ($relative->iuserinfo !== null || $relative->ihost !== null || $relative->port !== null) {
+				$target = clone $relative;
+				$target->scheme = $base->scheme;
+			}
+			else {
+				$target = new Requests_IRI;
+				$target->scheme = $base->scheme;
+				$target->iuserinfo = $base->iuserinfo;
+				$target->ihost = $base->ihost;
+				$target->port = $base->port;
+				if ($relative->ipath !== '') {
+					if ($relative->ipath[0] === '/') {
+						$target->ipath = $relative->ipath;
+					}
+					elseif (($base->iuserinfo !== null || $base->ihost !== null || $base->port !== null) && $base->ipath === '') {
+						$target->ipath = '/' . $relative->ipath;
+					}
+					elseif (($last_segment = strrpos($base->ipath, '/')) !== false) {
+						$target->ipath = substr($base->ipath, 0, $last_segment + 1) . $relative->ipath;
+					}
+					else {
+						$target->ipath = $relative->ipath;
+					}
+					$target->ipath = $target->remove_dot_segments($target->ipath);
+					$target->iquery = $relative->iquery;
+				}
+				else {
+					$target->ipath = $base->ipath;
+					if ($relative->iquery !== null) {
+						$target->iquery = $relative->iquery;
+					}
+					elseif ($base->iquery !== null) {
+						$target->iquery = $base->iquery;
+					}
+				}
+				$target->ifragment = $relative->ifragment;
+			}
+		}
+		else {
+			$target = clone $base;
+			$target->ifragment = null;
+		}
+		$target->scheme_normalization();
+		return $target;
+	}
+
+	/**
+	 * Parse an IRI into scheme/authority/path/query/fragment segments
+	 *
+	 * @param string $iri
+	 * @return array
+	 */
+	protected function parse_iri($iri) {
+		$iri = trim($iri, "\x20\x09\x0A\x0C\x0D");
+		$has_match = preg_match('/^((?P<scheme>[^:\/?#]+):)?(\/\/(?P<authority>[^\/?#]*))?(?P<path>[^?#]*)(\?(?P<query>[^#]*))?(#(?P<fragment>.*))?$/', $iri, $match);
+		if (!$has_match) {
+			throw new Requests_Exception('Cannot parse supplied IRI', 'iri.cannot_parse', $iri);
+		}
+
+		if ($match[1] === '') {
+			$match['scheme'] = null;
+		}
+		if (!isset($match[3]) || $match[3] === '') {
+			$match['authority'] = null;
+		}
+		if (!isset($match[5])) {
+			$match['path'] = '';
+		}
+		if (!isset($match[6]) || $match[6] === '') {
+			$match['query'] = null;
+		}
+		if (!isset($match[8]) || $match[8] === '') {
+			$match['fragment'] = null;
+		}
+		return $match;
+	}
+
+	/**
+	 * Remove dot segments from a path
+	 *
+	 * @param string $input
+	 * @return string
+	 */
+	protected function remove_dot_segments($input) {
+		$output = '';
+		while (strpos($input, './') !== false || strpos($input, '/.') !== false || $input === '.' || $input === '..') {
+			// A: If the input buffer begins with a prefix of "../" or "./",
+			// then remove that prefix from the input buffer; otherwise,
+			if (strpos($input, '../') === 0) {
+				$input = substr($input, 3);
+			}
+			elseif (strpos($input, './') === 0) {
+				$input = substr($input, 2);
+			}
+			// B: if the input buffer begins with a prefix of "/./" or "/.",
+			// where "." is a complete path segment, then replace that prefix
+			// with "/" in the input buffer; otherwise,
+			elseif (strpos($input, '/./') === 0) {
+				$input = substr($input, 2);
+			}
+			elseif ($input === '/.') {
+				$input = '/';
+			}
+			// C: if the input buffer begins with a prefix of "/../" or "/..",
+			// where ".." is a complete path segment, then replace that prefix
+			// with "/" in the input buffer and remove the last segment and its
+			// preceding "/" (if any) from the output buffer; otherwise,
+			elseif (strpos($input, '/../') === 0) {
+				$input = substr($input, 3);
+				$output = substr_replace($output, '', strrpos($output, '/'));
+			}
+			elseif ($input === '/..') {
+				$input = '/';
+				$output = substr_replace($output, '', strrpos($output, '/'));
+			}
+			// D: if the input buffer consists only of "." or "..", then remove
+			// that from the input buffer; otherwise,
+			elseif ($input === '.' || $input === '..') {
+				$input = '';
+			}
+			// E: move the first path segment in the input buffer to the end of
+			// the output buffer, including the initial "/" character (if any)
+			// and any subsequent characters up to, but not including, the next
+			// "/" character or the end of the input buffer
+			elseif (($pos = strpos($input, '/', 1)) !== false) {
+				$output .= substr($input, 0, $pos);
+				$input = substr_replace($input, '', 0, $pos);
+			}
+			else {
+				$output .= $input;
+				$input = '';
+			}
+		}
+		return $output . $input;
+	}
+
+	/**
+	 * Replace invalid character with percent encoding
+	 *
+	 * @param string $string Input string
+	 * @param string $extra_chars Valid characters not in iunreserved or
+	 *                            iprivate (this is ASCII-only)
+	 * @param bool $iprivate Allow iprivate
+	 * @return string
+	 */
+	protected function replace_invalid_with_pct_encoding($string, $extra_chars, $iprivate = false) {
+		// Normalize as many pct-encoded sections as possible
+		$string = preg_replace_callback('/(?:%[A-Fa-f0-9]{2})+/', array(&$this, 'remove_iunreserved_percent_encoded'), $string);
+
+		// Replace invalid percent characters
+		$string = preg_replace('/%(?![A-Fa-f0-9]{2})/', '%25', $string);
+
+		// Add unreserved and % to $extra_chars (the latter is safe because all
+		// pct-encoded sections are now valid).
+		$extra_chars .= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~%';
+
+		// Now replace any bytes that aren't allowed with their pct-encoded versions
+		$position = 0;
+		$strlen = strlen($string);
+		while (($position += strspn($string, $extra_chars, $position)) < $strlen) {
+			$value = ord($string[$position]);
+
+			// Start position
+			$start = $position;
+
+			// By default we are valid
+			$valid = true;
+
+			// No one byte sequences are valid due to the while.
+			// Two byte sequence:
+			if (($value & 0xE0) === 0xC0) {
+				$character = ($value & 0x1F) << 6;
+				$length = 2;
+				$remaining = 1;
+			}
+			// Three byte sequence:
+			elseif (($value & 0xF0) === 0xE0) {
+				$character = ($value & 0x0F) << 12;
+				$length = 3;
+				$remaining = 2;
+			}
+			// Four byte sequence:
+			elseif (($value & 0xF8) === 0xF0) {
+				$character = ($value & 0x07) << 18;
+				$length = 4;
+				$remaining = 3;
+			}
+			// Invalid byte:
+			else {
+				$valid = false;
+				$length = 1;
+				$remaining = 0;
+			}
+
+			if ($remaining) {
+				if ($position + $length <= $strlen) {
+					for ($position++; $remaining; $position++) {
+						$value = ord($string[$position]);
+
+						// Check that the byte is valid, then add it to the character:
+						if (($value & 0xC0) === 0x80) {
+							$character |= ($value & 0x3F) << (--$remaining * 6);
+						}
+						// If it is invalid, count the sequence as invalid and reprocess the current byte:
+						else {
+							$valid = false;
+							$position--;
+							break;
+						}
+					}
+				}
+				else {
+					$position = $strlen - 1;
+					$valid = false;
+				}
+			}
+
+			// Percent encode anything invalid or not in ucschar
+			if (
+				// Invalid sequences
+				!$valid
+				// Non-shortest form sequences are invalid
+				|| $length > 1 && $character <= 0x7F
+				|| $length > 2 && $character <= 0x7FF
+				|| $length > 3 && $character <= 0xFFFF
+				// Outside of range of ucschar codepoints
+				// Noncharacters
+				|| ($character & 0xFFFE) === 0xFFFE
+				|| $character >= 0xFDD0 && $character <= 0xFDEF
+				|| (
+					// Everything else not in ucschar
+					   $character > 0xD7FF && $character < 0xF900
+					|| $character < 0xA0
+					|| $character > 0xEFFFD
+				)
+				&& (
+					// Everything not in iprivate, if it applies
+					   !$iprivate
+					|| $character < 0xE000
+					|| $character > 0x10FFFD
+				)
+			) {
+				// If we were a character, pretend we weren't, but rather an error.
+				if ($valid) {
+					$position--;
+				}
+
+				for ($j = $start; $j <= $position; $j++) {
+					$string = substr_replace($string, sprintf('%%%02X', ord($string[$j])), $j, 1);
+					$j += 2;
+					$position += 2;
+					$strlen += 2;
+				}
+			}
+		}
+
+		return $string;
+	}
+
+	/**
+	 * Callback function for preg_replace_callback.
+	 *
+	 * Removes sequences of percent encoded bytes that represent UTF-8
+	 * encoded characters in iunreserved
+	 *
+	 * @param array $match PCRE match
+	 * @return string Replacement
+	 */
+	protected function remove_iunreserved_percent_encoded($match) {
+		// As we just have valid percent encoded sequences we can just explode
+		// and ignore the first member of the returned array (an empty string).
+		$bytes = explode('%', $match[0]);
+
+		// Initialize the new string (this is what will be returned) and that
+		// there are no bytes remaining in the current sequence (unsurprising
+		// at the first byte!).
+		$string = '';
+		$remaining = 0;
+
+		// Loop over each and every byte, and set $value to its value
+		for ($i = 1, $len = count($bytes); $i < $len; $i++) {
+			$value = hexdec($bytes[$i]);
+
+			// If we're the first byte of sequence:
+			if (!$remaining) {
+				// Start position
+				$start = $i;
+
+				// By default we are valid
+				$valid = true;
+
+				// One byte sequence:
+				if ($value <= 0x7F) {
+					$character = $value;
+					$length = 1;
+				}
+				// Two byte sequence:
+				elseif (($value & 0xE0) === 0xC0) {
+					$character = ($value & 0x1F) << 6;
+					$length = 2;
+					$remaining = 1;
+				}
+				// Three byte sequence:
+				elseif (($value & 0xF0) === 0xE0) {
+					$character = ($value & 0x0F) << 12;
+					$length = 3;
+					$remaining = 2;
+				}
+				// Four byte sequence:
+				elseif (($value & 0xF8) === 0xF0) {
+					$character = ($value & 0x07) << 18;
+					$length = 4;
+					$remaining = 3;
+				}
+				// Invalid byte:
+				else {
+					$valid = false;
+					$remaining = 0;
+				}
+			}
+			// Continuation byte:
+			else {
+				// Check that the byte is valid, then add it to the character:
+				if (($value & 0xC0) === 0x80) {
+					$remaining--;
+					$character |= ($value & 0x3F) << ($remaining * 6);
+				}
+				// If it is invalid, count the sequence as invalid and reprocess the current byte as the start of a sequence:
+				else {
+					$valid = false;
+					$remaining = 0;
+					$i--;
+				}
+			}
+
+			// If we've reached the end of the current byte sequence, append it to Unicode::$data
+			if (!$remaining) {
+				// Percent encode anything invalid or not in iunreserved
+				if (
+					// Invalid sequences
+					!$valid
+					// Non-shortest form sequences are invalid
+					|| $length > 1 && $character <= 0x7F
+					|| $length > 2 && $character <= 0x7FF
+					|| $length > 3 && $character <= 0xFFFF
+					// Outside of range of iunreserved codepoints
+					|| $character < 0x2D
+					|| $character > 0xEFFFD
+					// Noncharacters
+					|| ($character & 0xFFFE) === 0xFFFE
+					|| $character >= 0xFDD0 && $character <= 0xFDEF
+					// Everything else not in iunreserved (this is all BMP)
+					|| $character === 0x2F
+					|| $character > 0x39 && $character < 0x41
+					|| $character > 0x5A && $character < 0x61
+					|| $character > 0x7A && $character < 0x7E
+					|| $character > 0x7E && $character < 0xA0
+					|| $character > 0xD7FF && $character < 0xF900
+				) {
+					for ($j = $start; $j <= $i; $j++) {
+						$string .= '%' . strtoupper($bytes[$j]);
+					}
+				}
+				else {
+					for ($j = $start; $j <= $i; $j++) {
+						$string .= chr(hexdec($bytes[$j]));
+					}
+				}
+			}
+		}
+
+		// If we have any bytes left over they are invalid (i.e., we are
+		// mid-way through a multi-byte sequence)
+		if ($remaining) {
+			for ($j = $start; $j < $len; $j++) {
+				$string .= '%' . strtoupper($bytes[$j]);
+			}
+		}
+
+		return $string;
+	}
+
+	protected function scheme_normalization() {
+		if (isset($this->normalization[$this->scheme]['iuserinfo']) && $this->iuserinfo === $this->normalization[$this->scheme]['iuserinfo']) {
+			$this->iuserinfo = null;
+		}
+		if (isset($this->normalization[$this->scheme]['ihost']) && $this->ihost === $this->normalization[$this->scheme]['ihost']) {
+			$this->ihost = null;
+		}
+		if (isset($this->normalization[$this->scheme]['port']) && $this->port === $this->normalization[$this->scheme]['port']) {
+			$this->port = null;
+		}
+		if (isset($this->normalization[$this->scheme]['ipath']) && $this->ipath === $this->normalization[$this->scheme]['ipath']) {
+			$this->ipath = '';
+		}
+		if (isset($this->ihost) && empty($this->ipath)) {
+			$this->ipath = '/';
+		}
+		if (isset($this->normalization[$this->scheme]['iquery']) && $this->iquery === $this->normalization[$this->scheme]['iquery']) {
+			$this->iquery = null;
+		}
+		if (isset($this->normalization[$this->scheme]['ifragment']) && $this->ifragment === $this->normalization[$this->scheme]['ifragment']) {
+			$this->ifragment = null;
+		}
+	}
+
+	/**
+	 * Check if the object represents a valid IRI. This needs to be done on each
+	 * call as some things change depending on another part of the IRI.
+	 *
+	 * @return bool
+	 */
+	public function is_valid() {
+		$isauthority = $this->iuserinfo !== null || $this->ihost !== null || $this->port !== null;
+		if ($this->ipath !== '' &&
+			(
+				$isauthority && $this->ipath[0] !== '/' ||
+				(
+					$this->scheme === null &&
+					!$isauthority &&
+					strpos($this->ipath, ':') !== false &&
+					(strpos($this->ipath, '/') === false ? true : strpos($this->ipath, ':') < strpos($this->ipath, '/'))
+				)
+			)
+		) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Set the entire IRI. Returns true on success, false on failure (if there
+	 * are any invalid characters).
+	 *
+	 * @param string $iri
+	 * @return bool
+	 */
+	protected function set_iri($iri) {
+		static $cache;
+		if (!$cache) {
+			$cache = array();
+		}
+
+		if ($iri === null) {
+			return true;
+		}
+		if (isset($cache[$iri])) {
+			list($this->scheme,
+				 $this->iuserinfo,
+				 $this->ihost,
+				 $this->port,
+				 $this->ipath,
+				 $this->iquery,
+				 $this->ifragment,
+				 $return) = $cache[$iri];
+			return $return;
+		}
+
+		$parsed = $this->parse_iri((string) $iri);
+
+		$return = $this->set_scheme($parsed['scheme'])
+			&& $this->set_authority($parsed['authority'])
+			&& $this->set_path($parsed['path'])
+			&& $this->set_query($parsed['query'])
+			&& $this->set_fragment($parsed['fragment']);
+
+		$cache[$iri] = array($this->scheme,
+							 $this->iuserinfo,
+							 $this->ihost,
+							 $this->port,
+							 $this->ipath,
+							 $this->iquery,
+							 $this->ifragment,
+							 $return);
+		return $return;
+	}
+
+	/**
+	 * Set the scheme. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $scheme
+	 * @return bool
+	 */
+	protected function set_scheme($scheme) {
+		if ($scheme === null) {
+			$this->scheme = null;
+		}
+		elseif (!preg_match('/^[A-Za-z][0-9A-Za-z+\-.]*$/', $scheme)) {
+			$this->scheme = null;
+			return false;
+		}
+		else {
+			$this->scheme = strtolower($scheme);
+		}
+		return true;
+	}
+
+	/**
+	 * Set the authority. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $authority
+	 * @return bool
+	 */
+	protected function set_authority($authority) {
+		static $cache;
+		if (!$cache) {
+			$cache = array();
+		}
+
+		if ($authority === null) {
+			$this->iuserinfo = null;
+			$this->ihost = null;
+			$this->port = null;
+			return true;
+		}
+		if (isset($cache[$authority])) {
+			list($this->iuserinfo,
+				 $this->ihost,
+				 $this->port,
+				 $return) = $cache[$authority];
+
+			return $return;
+		}
+
+		$remaining = $authority;
+		if (($iuserinfo_end = strrpos($remaining, '@')) !== false) {
+			$iuserinfo = substr($remaining, 0, $iuserinfo_end);
+			$remaining = substr($remaining, $iuserinfo_end + 1);
+		}
+		else {
+			$iuserinfo = null;
+		}
+		if (($port_start = strpos($remaining, ':', strpos($remaining, ']'))) !== false) {
+			$port = substr($remaining, $port_start + 1);
+			if ($port === false || $port === '') {
+				$port = null;
+			}
+			$remaining = substr($remaining, 0, $port_start);
+		}
+		else {
+			$port = null;
+		}
+
+		$return = $this->set_userinfo($iuserinfo) &&
+				  $this->set_host($remaining) &&
+				  $this->set_port($port);
+
+		$cache[$authority] = array($this->iuserinfo,
+								   $this->ihost,
+								   $this->port,
+								   $return);
+
+		return $return;
+	}
+
+	/**
+	 * Set the iuserinfo.
+	 *
+	 * @param string $iuserinfo
+	 * @return bool
+	 */
+	protected function set_userinfo($iuserinfo) {
+		if ($iuserinfo === null) {
+			$this->iuserinfo = null;
+		}
+		else {
+			$this->iuserinfo = $this->replace_invalid_with_pct_encoding($iuserinfo, '!$&\'()*+,;=:');
+			$this->scheme_normalization();
+		}
+
+		return true;
+	}
+
+	/**
+	 * Set the ihost. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $ihost
+	 * @return bool
+	 */
+	protected function set_host($ihost) {
+		if ($ihost === null) {
+			$this->ihost = null;
+			return true;
+		}
+		if (substr($ihost, 0, 1) === '[' && substr($ihost, -1) === ']') {
+			if (Requests_IPv6::check_ipv6(substr($ihost, 1, -1))) {
+				$this->ihost = '[' . Requests_IPv6::compress(substr($ihost, 1, -1)) . ']';
+			}
+			else {
+				$this->ihost = null;
+				return false;
+			}
+		}
+		else {
+			$ihost = $this->replace_invalid_with_pct_encoding($ihost, '!$&\'()*+,;=');
+
+			// Lowercase, but ignore pct-encoded sections (as they should
+			// remain uppercase). This must be done after the previous step
+			// as that can add unescaped characters.
+			$position = 0;
+			$strlen = strlen($ihost);
+			while (($position += strcspn($ihost, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ%', $position)) < $strlen) {
+				if ($ihost[$position] === '%') {
+					$position += 3;
+				}
+				else {
+					$ihost[$position] = strtolower($ihost[$position]);
+					$position++;
+				}
+			}
+
+			$this->ihost = $ihost;
+		}
+
+		$this->scheme_normalization();
+
+		return true;
+	}
+
+	/**
+	 * Set the port. Returns true on success, false on failure (if there are
+	 * any invalid characters).
+	 *
+	 * @param string $port
+	 * @return bool
+	 */
+	protected function set_port($port) {
+		if ($port === null) {
+			$this->port = null;
+			return true;
+		}
+
+		if (strspn($port, '0123456789') === strlen($port)) {
+			$this->port = (int) $port;
+			$this->scheme_normalization();
+			return true;
+		}
+
+		$this->port = null;
+		return false;
+	}
+
+	/**
+	 * Set the ipath.
+	 *
+	 * @param string $ipath
+	 * @return bool
+	 */
+	protected function set_path($ipath) {
+		static $cache;
+		if (!$cache) {
+			$cache = array();
+		}
+
+		$ipath = (string) $ipath;
+
+		if (isset($cache[$ipath])) {
+			$this->ipath = $cache[$ipath][(int) ($this->scheme !== null)];
+		}
+		else {
+			$valid = $this->replace_invalid_with_pct_encoding($ipath, '!$&\'()*+,;=@:/');
+			$removed = $this->remove_dot_segments($valid);
+
+			$cache[$ipath] = array($valid, $removed);
+			$this->ipath = ($this->scheme !== null) ? $removed : $valid;
+		}
+		$this->scheme_normalization();
+		return true;
+	}
+
+	/**
+	 * Set the iquery.
+	 *
+	 * @param string $iquery
+	 * @return bool
+	 */
+	protected function set_query($iquery) {
+		if ($iquery === null) {
+			$this->iquery = null;
+		}
+		else {
+			$this->iquery = $this->replace_invalid_with_pct_encoding($iquery, '!$&\'()*+,;=:@/?', true);
+			$this->scheme_normalization();
+		}
+		return true;
+	}
+
+	/**
+	 * Set the ifragment.
+	 *
+	 * @param string $ifragment
+	 * @return bool
+	 */
+	protected function set_fragment($ifragment) {
+		if ($ifragment === null) {
+			$this->ifragment = null;
+		}
+		else {
+			$this->ifragment = $this->replace_invalid_with_pct_encoding($ifragment, '!$&\'()*+,;=:@/?');
+			$this->scheme_normalization();
+		}
+		return true;
+	}
+
+	/**
+	 * Convert an IRI to a URI (or parts thereof)
+	 *
+	 * @param string|bool IRI to convert (or false from {@see get_iri})
+	 * @return string|false URI if IRI is valid, false otherwise.
+	 */
+	protected function to_uri($string) {
+		if (!is_string($string)) {
+			return false;
+		}
+
+		static $non_ascii;
+		if (!$non_ascii) {
+			$non_ascii = implode('', range("\x80", "\xFF"));
+		}
+
+		$position = 0;
+		$strlen = strlen($string);
+		while (($position += strcspn($string, $non_ascii, $position)) < $strlen) {
+			$string = substr_replace($string, sprintf('%%%02X', ord($string[$position])), $position, 1);
+			$position += 3;
+			$strlen += 2;
+		}
+
+		return $string;
+	}
+
+	/**
+	 * Get the complete IRI
+	 *
+	 * @return string
+	 */
+	protected function get_iri() {
+		if (!$this->is_valid()) {
+			return false;
+		}
+
+		$iri = '';
+		if ($this->scheme !== null) {
+			$iri .= $this->scheme . ':';
+		}
+		if (($iauthority = $this->get_iauthority()) !== null) {
+			$iri .= '//' . $iauthority;
+		}
+		$iri .= $this->ipath;
+		if ($this->iquery !== null) {
+			$iri .= '?' . $this->iquery;
+		}
+		if ($this->ifragment !== null) {
+			$iri .= '#' . $this->ifragment;
+		}
+
+		return $iri;
+	}
+
+	/**
+	 * Get the complete URI
+	 *
+	 * @return string
+	 */
+	protected function get_uri() {
+		return $this->to_uri($this->get_iri());
+	}
+
+	/**
+	 * Get the complete iauthority
+	 *
+	 * @return string
+	 */
+	protected function get_iauthority() {
+		if ($this->iuserinfo === null && $this->ihost === null && $this->port === null) {
+			return null;
+		}
+
+		$iauthority = '';
+		if ($this->iuserinfo !== null) {
+			$iauthority .= $this->iuserinfo . '@';
+		}
+		if ($this->ihost !== null) {
+			$iauthority .= $this->ihost;
+		}
+		if ($this->port !== null) {
+			$iauthority .= ':' . $this->port;
+		}
+		return $iauthority;
+	}
+
+	/**
+	 * Get the complete authority
+	 *
+	 * @return string
+	 */
+	protected function get_authority() {
+		$iauthority = $this->get_iauthority();
+		if (is_string($iauthority)) {
+			return $this->to_uri($iauthority);
+		}
+		else {
+			return $iauthority;
+		}
+	}
+}
+
+The file Proxy.php contains:
+<?php
+/**
+ * Proxy connection interface
+ *
+ * @package Requests
+ * @subpackage Proxy
+ * @since 1.6
+ */
+
+/**
+ * Proxy connection interface
+ *
+ * Implement this interface to handle proxy settings and authentication
+ *
+ * Parameters should be passed via the constructor where possible, as this
+ * makes it much easier for users to use your provider.
+ *
+ * @see Requests_Hooks
+ * @package Requests
+ * @subpackage Proxy
+ * @since 1.6
+ */
+interface Requests_Proxy {
+	/**
+	 * Register hooks as needed
+	 *
+	 * This method is called in {@see Requests::request} when the user has set
+	 * an instance as the 'auth' option. Use this callback to register all the
+	 * hooks you'll need.
+	 *
+	 * @see Requests_Hooks::register
+	 * @param Requests_Hooks $hooks Hook system
+	 */
+	public function register(Requests_Hooks &$hooks);
+}
+The file Response.php contains:
+<?php
+/**
+ * HTTP response class
+ *
+ * Contains a response from Requests::request()
+ * @package Requests
+ */
+
+/**
+ * HTTP response class
+ *
+ * Contains a response from Requests::request()
+ * @package Requests
+ */
+class Requests_Response {
+	/**
+	 * Constructor
+	 */
+	public function __construct() {
+		$this->headers = new Requests_Response_Headers();
+		$this->cookies = new Requests_Cookie_Jar();
+	}
+
+	/**
+	 * Response body
+	 *
+	 * @var string
+	 */
+	public $body = '';
+
+	/**
+	 * Raw HTTP data from the transport
+	 *
+	 * @var string
+	 */
+	public $raw = '';
+
+	/**
+	 * Headers, as an associative array
+	 *
+	 * @var Requests_Response_Headers Array-like object representing headers
+	 */
+	public $headers = array();
+
+	/**
+	 * Status code, false if non-blocking
+	 *
+	 * @var integer|boolean
+	 */
+	public $status_code = false;
+
+	/**
+	 * Protocol version, false if non-blocking
+	 * @var float|boolean
+	 */
+	public $protocol_version = false;
+
+	/**
+	 * Whether the request succeeded or not
+	 *
+	 * @var boolean
+	 */
+	public $success = false;
+
+	/**
+	 * Number of redirects the request used
+	 *
+	 * @var integer
+	 */
+	public $redirects = 0;
+
+	/**
+	 * URL requested
+	 *
+	 * @var string
+	 */
+	public $url = '';
+
+	/**
+	 * Previous requests (from redirects)
+	 *
+	 * @var array Array of Requests_Response objects
+	 */
+	public $history = array();
+
+	/**
+	 * Cookies from the request
+	 *
+	 * @var Requests_Cookie_Jar Array-like object representing a cookie jar
+	 */
+	public $cookies = array();
+
+	/**
+	 * Is the response a redirect?
+	 *
+	 * @return boolean True if redirect (3xx status), false if not.
+	 */
+	public function is_redirect() {
+		$code = $this->status_code;
+		return in_array($code, array(300, 301, 302, 303, 307)) || $code > 307 && $code < 400;
+	}
+
+	/**
+	 * Throws an exception if the request was not successful
+	 *
+	 * @throws Requests_Exception If `$allow_redirects` is false, and code is 3xx (`response.no_redirects`)
+	 * @throws Requests_Exception_HTTP On non-successful status code. Exception class corresponds to code (e.g. {@see Requests_Exception_HTTP_404})
+	 * @param boolean $allow_redirects Set to false to throw on a 3xx as well
+	 */
+	public function throw_for_status($allow_redirects = true) {
+		if ($this->is_redirect()) {
+			if (!$allow_redirects) {
+				throw new Requests_Exception('Redirection not allowed', 'response.no_redirects', $this);
+			}
+		}
+		elseif (!$this->success) {
+			$exception = Requests_Exception_HTTP::get_class($this->status_code);
+			throw new $exception(null, $this);
+		}
+	}
+}
+
+The file Session.php contains:
+<?php
+/**
+ * Session handler for persistent requests and default parameters
+ *
+ * @package Requests
+ * @subpackage Session Handler
+ */
+
+/**
+ * Session handler for persistent requests and default parameters
+ *
+ * Allows various options to be set as default values, and merges both the
+ * options and URL properties together. A base URL can be set for all requests,
+ * with all subrequests resolved from this. Base options can be set (including
+ * a shared cookie jar), then overridden for individual requests.
+ *
+ * @package Requests
+ * @subpackage Session Handler
+ */
+class Requests_Session {
+	/**
+	 * Base URL for requests
+	 *
+	 * URLs will be made absolute using this as the base
+	 * @var string|null
+	 */
+	public $url = null;
+
+	/**
+	 * Base headers for requests
+	 * @var array
+	 */
+	public $headers = array();
+
+	/**
+	 * Base data for requests
+	 *
+	 * If both the base data and the per-request data are arrays, the data will
+	 * be merged before sending the request.
+	 *
+	 * @var array
+	 */
+	public $data = array();
+
+	/**
+	 * Base options for requests
+	 *
+	 * The base options are merged with the per-request data for each request.
+	 * The only default option is a shared cookie jar between requests.
+	 *
+	 * Values here can also be set directly via properties on the Session
+	 * object, e.g. `$session->useragent = 'X';`
+	 *
+	 * @var array
+	 */
+	public $options = array();
+
+	/**
+	 * Create a new session
+	 *
+	 * @param string|null $url Base URL for requests
+	 * @param array $headers Default headers for requests
+	 * @param array $data Default data for requests
+	 * @param array $options Default options for requests
+	 */
+	public function __construct($url = null, $headers = array(), $data = array(), $options = array()) {
+		$this->url = $url;
+		$this->headers = $headers;
+		$this->data = $data;
+		$this->options = $options;
+
+		if (empty($this->options['cookies'])) {
+			$this->options['cookies'] = new Requests_Cookie_Jar();
+		}
+	}
+
+	/**
+	 * Get a property's value
+	 *
+	 * @param string $key Property key
+	 * @return mixed|null Property value, null if none found
+	 */
+	public function __get($key) {
+		if (isset($this->options[$key])) {
+			return $this->options[$key];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Set a property's value
+	 *
+	 * @param string $key Property key
+	 * @param mixed $value Property value
+	 */
+	public function __set($key, $value) {
+		$this->options[$key] = $value;
+	}
+
+	/**
+	 * Remove a property's value
+	 *
+	 * @param string $key Property key
+	 */
+	public function __isset($key) {
+		return isset($this->options[$key]);
+	}
+
+	/**
+	 * Remove a property's value
+	 *
+	 * @param string $key Property key
+	 */
+	public function __unset($key) {
+		if (isset($this->options[$key])) {
+			unset($this->options[$key]);
+		}
+	}
+
+	/**#@+
+	 * @see request()
+	 * @param string $url
+	 * @param array $headers
+	 * @param array $options
+	 * @return Requests_Response
+	 */
+	/**
+	 * Send a GET request
+	 */
+	public function get($url, $headers = array(), $options = array()) {
+		return $this->request($url, $headers, null, Requests::GET, $options);
+	}
+
+	/**
+	 * Send a HEAD request
+	 */
+	public function head($url, $headers = array(), $options = array()) {
+		return $this->request($url, $headers, null, Requests::HEAD, $options);
+	}
+
+	/**
+	 * Send a DELETE request
+	 */
+	public function delete($url, $headers = array(), $options = array()) {
+		return $this->request($url, $headers, null, Requests::DELETE, $options);
+	}
+	/**#@-*/
+
+	/**#@+
+	 * @see request()
+	 * @param string $url
+	 * @param array $headers
+	 * @param array $data
+	 * @param array $options
+	 * @return Requests_Response
+	 */
+	/**
+	 * Send a POST request
+	 */
+	public function post($url, $headers = array(), $data = array(), $options = array()) {
+		return $this->request($url, $headers, $data, Requests::POST, $options);
+	}
+
+	/**
+	 * Send a PUT request
+	 */
+	public function put($url, $headers = array(), $data = array(), $options = array()) {
+		return $this->request($url, $headers, $data, Requests::PUT, $options);
+	}
+
+	/**
+	 * Send a PATCH request
+	 *
+	 * Note: Unlike {@see post} and {@see put}, `$headers` is required, as the
+	 * specification recommends that should send an ETag
+	 *
+	 * @link https://tools.ietf.org/html/rfc5789
+	 */
+	public function patch($url, $headers, $data = array(), $options = array()) {
+		return $this->request($url, $headers, $data, Requests::PATCH, $options);
+	}
+	/**#@-*/
+
+	/**
+	 * Main interface for HTTP requests
+	 *
+	 * This method initiates a request and sends it via a transport before
+	 * parsing.
+	 *
+	 * @see Requests::request()
+	 *
+	 * @throws Requests_Exception On invalid URLs (`nonhttp`)
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Extra headers to send with the request
+	 * @param array|null $data Data to send either as a query string for GET/HEAD requests, or in the body for POST requests
+	 * @param string $type HTTP request type (use Requests constants)
+	 * @param array $options Options for the request (see {@see Requests::request})
+	 * @return Requests_Response
+	 */
+	public function request($url, $headers = array(), $data = array(), $type = Requests::GET, $options = array()) {
+		$request = $this->merge_request(compact('url', 'headers', 'data', 'options'));
+
+		return Requests::request($request['url'], $request['headers'], $request['data'], $type, $request['options']);
+	}
+
+	/**
+	 * Send multiple HTTP requests simultaneously
+	 *
+	 * @see Requests::request_multiple()
+	 *
+	 * @param array $requests Requests data (see {@see Requests::request_multiple})
+	 * @param array $options Global and default options (see {@see Requests::request})
+	 * @return array Responses (either Requests_Response or a Requests_Exception object)
+	 */
+	public function request_multiple($requests, $options = array()) {
+		foreach ($requests as $key => $request) {
+			$requests[$key] = $this->merge_request($request, false);
+		}
+
+		$options = array_merge($this->options, $options);
+
+		// Disallow forcing the type, as that's a per request setting
+		unset($options['type']);
+
+		return Requests::request_multiple($requests, $options);
+	}
+
+	/**
+	 * Merge a request's data with the default data
+	 *
+	 * @param array $request Request data (same form as {@see request_multiple})
+	 * @param boolean $merge_options Should we merge options as well?
+	 * @return array Request data
+	 */
+	protected function merge_request($request, $merge_options = true) {
+		if ($this->url !== null) {
+			$request['url'] = Requests_IRI::absolutize($this->url, $request['url']);
+			$request['url'] = $request['url']->uri;
+		}
+
+		if (empty($request['headers'])) {
+			$request['headers'] = array();
+		}
+		$request['headers'] = array_merge($this->headers, $request['headers']);
+
+		if (empty($request['data'])) {
+			if (is_array($this->data)) {
+				$request['data'] = $this->data;
+			}
+		}
+		elseif (is_array($request['data']) && is_array($this->data)) {
+			$request['data'] = array_merge($this->data, $request['data']);
+		}
+
+		if ($merge_options !== false) {
+			$request['options'] = array_merge($this->options, $request['options']);
+
+			// Disallow forcing the type, as that's a per request setting
+			unset($request['options']['type']);
+		}
+
+		return $request;
+	}
+}
+
+The file SSL.php contains:
+<?php
+/**
+ * SSL utilities for Requests
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+
+/**
+ * SSL utilities for Requests
+ *
+ * Collection of utilities for working with and verifying SSL certificates.
+ *
+ * @package Requests
+ * @subpackage Utilities
+ */
+class Requests_SSL {
+	/**
+	 * Verify the certificate against common name and subject alternative names
+	 *
+	 * Unfortunately, PHP doesn't check the certificate against the alternative
+	 * names, leading things like 'https://www.github.com/' to be invalid.
+	 * Instead
+	 *
+	 * @see https://tools.ietf.org/html/rfc2818#section-3.1 RFC2818, Section 3.1
+	 *
+	 * @throws Requests_Exception On not obtaining a match for the host (`fsockopen.ssl.no_match`)
+	 * @param string $host Host name to verify against
+	 * @param array $cert Certificate data from openssl_x509_parse()
+	 * @return bool
+	 */
+	public static function verify_certificate($host, $cert) {
+		// Calculate the valid wildcard match if the host is not an IP address
+		$parts = explode('.', $host);
+		if (ip2long($host) === false) {
+			$parts[0] = '*';
+		}
+		$wildcard = implode('.', $parts);
+
+		$has_dns_alt = false;
+
+		// Check the subjectAltName
+		if (!empty($cert['extensions']) && !empty($cert['extensions']['subjectAltName'])) {
+			$altnames = explode(',', $cert['extensions']['subjectAltName']);
+			foreach ($altnames as $altname) {
+				$altname = trim($altname);
+				if (strpos($altname, 'DNS:') !== 0) {
+					continue;
+				}
+
+				$has_dns_alt = true;
+
+				// Strip the 'DNS:' prefix and trim whitespace
+				$altname = trim(substr($altname, 4));
+
+				// Check for a match
+				if (self::match_domain($host, $altname) === true) {
+					return true;
+				}
+			}
+		}
+
+		// Fall back to checking the common name if we didn't get any dNSName
+		// alt names, as per RFC2818
+		if (!$has_dns_alt && !empty($cert['subject']['CN'])) {
+			// Check for a match
+			if (self::match_domain($host, $cert['subject']['CN']) === true) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Verify that a reference name is valid
+	 *
+	 * Verifies a dNSName for HTTPS usage, (almost) as per Firefox's rules:
+	 * - Wildcards can only occur in a name with more than 3 components
+	 * - Wildcards can only occur as the last character in the first
+	 *   component
+	 * - Wildcards may be preceded by additional characters
+	 *
+	 * We modify these rules to be a bit stricter and only allow the wildcard
+	 * character to be the full first component; that is, with the exclusion of
+	 * the third rule.
+	 *
+	 * @param string $reference Reference dNSName
+	 * @return boolean Is the name valid?
+	 */
+	public static function verify_reference_name($reference) {
+		$parts = explode('.', $reference);
+
+		// Check the first part of the name
+		$first = array_shift($parts);
+
+		if (strpos($first, '*') !== false) {
+			// Check that the wildcard is the full part
+			if ($first !== '*') {
+				return false;
+			}
+
+			// Check that we have at least 3 components (including first)
+			if (count($parts) < 2) {
+				return false;
+			}
+		}
+
+		// Check the remaining parts
+		foreach ($parts as $part) {
+			if (strpos($part, '*') !== false) {
+				return false;
+			}
+		}
+
+		// Nothing found, verified!
+		return true;
+	}
+
+	/**
+	 * Match a hostname against a dNSName reference
+	 *
+	 * @param string $host Requested host
+	 * @param string $reference dNSName to match against
+	 * @return boolean Does the domain match?
+	 */
+	public static function match_domain($host, $reference) {
+		// Check if the reference is blocklisted first
+		if (self::verify_reference_name($reference) !== true) {
+			return false;
+		}
+
+		// Check for a direct match
+		if ($host === $reference) {
+			return true;
+		}
+
+		// Calculate the valid wildcard match if the host is not an IP address
+		// Also validates that the host has 3 parts or more, as per Firefox's
+		// ruleset.
+		if (ip2long($host) === false) {
+			$parts = explode('.', $host);
+			$parts[0] = '*';
+			$wildcard = implode('.', $parts);
+			if ($wildcard === $reference) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+The file Transport.php contains:
+<?php
+/**
+ * Base HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+
+/**
+ * Base HTTP transport
+ *
+ * @package Requests
+ * @subpackage Transport
+ */
+interface Requests_Transport {
+	/**
+	 * Perform a request
+	 *
+	 * @param string $url URL to request
+	 * @param array $headers Associative array of request headers
+	 * @param string|array $data Data to send either as the POST body, or as parameters in the URL for a GET/HEAD
+	 * @param array $options Request options, see {@see Requests::response()} for documentation
+	 * @return string Raw HTTP result
+	 */
+	public function request($url, $headers = array(), $data = array(), $options = array());
+
+	/**
+	 * Send multiple requests simultaneously
+	 *
+	 * @param array $requests Request data (array of 'url', 'headers', 'data', 'options') as per {@see Requests_Transport::request}
+	 * @param array $options Global options, see {@see Requests::response()} for documentation
+	 * @return array Array of Requests_Response objects (may contain Requests_Exception or string responses as well)
+	 */
+	public function request_multiple($requests, $options);
+
+	/**
+	 * Self-test whether the transport can be used
+	 * @return bool
+	 */
+	public static function test();
+}

@@ -1,0 +1,29 @@
+The file Compat.php contains:
+<?php
+namespace ParagonIE\Sodium;
+
+class Compat extends \ParagonIE_Sodium_Compat
+{
+
+}
+
+The file Crypto.php contains:
+<?php
+namespace ParagonIE\Sodium;
+
+class Crypto extends \ParagonIE_Sodium_Crypto
+{
+
+}
+
+The file File.php contains:
+<?php
+namespace ParagonIE\Sodium;
+
+class File extends \ParagonIE_Sodium_File
+{
+
+}
+
+The file my-directory-list.txt contains:
+

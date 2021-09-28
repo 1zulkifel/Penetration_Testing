@@ -1,0 +1,11 @@
+The file my-directory-list.txt contains:
+
+The file _style.scss contains:
+.wp-block-audio {
+
+	audio:focus {
+		outline-offset: 5px;
+		outline: 2px solid var(--global--color-primary);
+	}
+}
+

@@ -1,0 +1,882 @@
+The file comments.php contains:
+<?php
+/**
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @deprecated 3.0.0
+ *
+ * This file is here for backward compatibility with old themes and will be removed in a future version
+ */
+_deprecated_file(
+	/* translators: %s: Template name. */
+	sprintf( __( 'Theme without %s' ), basename( __FILE__ ) ),
+	'3.0.0',
+	null,
+	/* translators: %s: Template name. */
+	sprintf( __( 'Please include a %s template in your theme.' ), basename( __FILE__ ) )
+);
+
+// Do not delete these lines.
+if ( ! empty( $_SERVER['SCRIPT_FILENAME'] ) && 'comments.php' === basename( $_SERVER['SCRIPT_FILENAME'] ) ) {
+	die( 'Please do not load this page directly. Thanks!' );
+}
+
+if ( post_password_required() ) { ?>
+		<p class="nocomments"><?php _e( 'This post is password protected. Enter the password to view comments.' ); ?></p>
+	<?php
+	return;
+}
+?>
+
+<!-- You can start editing here. -->
+
+<?php if ( have_comments() ) : ?>
+	<h3 id="comments">
+		<?php
+		if ( 1 == get_comments_number() ) {
+			printf(
+				/* translators: %s: Post title. */
+				__( 'One response to %s' ),
+				'&#8220;' . get_the_title() . '&#8221;'
+			);
+		} else {
+			printf(
+				/* translators: 1: Number of comments, 2: Post title. */
+				_n( '%1$s response to %2$s', '%1$s responses to %2$s', get_comments_number() ),
+				number_format_i18n( get_comments_number() ),
+				'&#8220;' . get_the_title() . '&#8221;'
+			);
+		}
+		?>
+	</h3>
+
+	<div class="navigation">
+		<div class="alignleft"><?php previous_comments_link(); ?></div>
+		<div class="alignright"><?php next_comments_link(); ?></div>
+	</div>
+
+	<ol class="commentlist">
+	<?php wp_list_comments(); ?>
+	</ol>
+
+	<div class="navigation">
+		<div class="alignleft"><?php previous_comments_link(); ?></div>
+		<div class="alignright"><?php next_comments_link(); ?></div>
+	</div>
+<?php else : // This is displayed if there are no comments so far. ?>
+
+	<?php if ( comments_open() ) : ?>
+		<!-- If comments are open, but there are no comments. -->
+
+	<?php else : // Comments are closed. ?>
+		<!-- If comments are closed. -->
+		<p class="nocomments"><?php _e( 'Comments are closed.' ); ?></p>
+
+	<?php endif; ?>
+<?php endif; ?>
+
+<?php comment_form(); ?>
+
+The file embed-404.php contains:
+<?php
+/**
+ * Contains the post embed content template part
+ *
+ * When a post is embedded in an iframe, this file is used to create the content template part
+ * output if the active theme does not include an embed-404.php template.
+ *
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @since 4.5.0
+ */
+?>
+<div class="wp-embed">
+	<p class="wp-embed-heading"><?php _e( 'Oops! That embed can&#8217;t be found.' ); ?></p>
+
+	<div class="wp-embed-excerpt">
+		<p>
+			<?php
+			printf(
+				/* translators: %s: A link to the embedded site. */
+				__( 'It looks like nothing was found at this location. Maybe try visiting %s directly?' ),
+				'<strong><a href="' . esc_url( home_url() ) . '">' . esc_html( get_bloginfo( 'name' ) ) . '</a></strong>'
+			);
+			?>
+		</p>
+	</div>
+
+	<?php
+	/** This filter is documented in wp-includes/theme-compat/embed-content.php */
+	do_action( 'embed_content' );
+	?>
+
+	<div class="wp-embed-footer">
+		<?php the_embed_site_title(); ?>
+	</div>
+</div>
+
+The file embed-content.php contains:
+<?php
+/**
+ * Contains the post embed content template part
+ *
+ * When a post is embedded in an iframe, this file is used to create the content template part
+ * output if the active theme does not include an embed-content.php template.
+ *
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @since 4.5.0
+ */
+?>
+	<div <?php post_class( 'wp-embed' ); ?>>
+		<?php
+		$thumbnail_id = 0;
+
+		if ( has_post_thumbnail() ) {
+			$thumbnail_id = get_post_thumbnail_id();
+		}
+
+		if ( 'attachment' === get_post_type() && wp_attachment_is_image() ) {
+			$thumbnail_id = get_the_ID();
+		}
+
+		/**
+		 * Filters the thumbnail image ID for use in the embed template.
+		 *
+		 * @since 4.9.0
+		 *
+		 * @param int $thumbnail_id Attachment ID.
+		 */
+		$thumbnail_id = apply_filters( 'embed_thumbnail_id', $thumbnail_id );
+
+		if ( $thumbnail_id ) {
+			$aspect_ratio = 1;
+			$measurements = array( 1, 1 );
+			$image_size   = 'full'; // Fallback.
+
+			$meta = wp_get_attachment_metadata( $thumbnail_id );
+			if ( ! empty( $meta['sizes'] ) ) {
+				foreach ( $meta['sizes'] as $size => $data ) {
+					if ( $data['height'] > 0 && $data['width'] / $data['height'] > $aspect_ratio ) {
+						$aspect_ratio = $data['width'] / $data['height'];
+						$measurements = array( $data['width'], $data['height'] );
+						$image_size   = $size;
+					}
+				}
+			}
+
+			/**
+			 * Filters the thumbnail image size for use in the embed template.
+			 *
+			 * @since 4.4.0
+			 * @since 4.5.0 Added `$thumbnail_id` parameter.
+			 *
+			 * @param string $image_size   Thumbnail image size.
+			 * @param int    $thumbnail_id Attachment ID.
+			 */
+			$image_size = apply_filters( 'embed_thumbnail_image_size', $image_size, $thumbnail_id );
+
+			$shape = $measurements[0] / $measurements[1] >= 1.75 ? 'rectangular' : 'square';
+
+			/**
+			 * Filters the thumbnail shape for use in the embed template.
+			 *
+			 * Rectangular images are shown above the title while square images
+			 * are shown next to the content.
+			 *
+			 * @since 4.4.0
+			 * @since 4.5.0 Added `$thumbnail_id` parameter.
+			 *
+			 * @param string $shape        Thumbnail image shape. Either 'rectangular' or 'square'.
+			 * @param int    $thumbnail_id Attachment ID.
+			 */
+			$shape = apply_filters( 'embed_thumbnail_image_shape', $shape, $thumbnail_id );
+		}
+
+		if ( $thumbnail_id && 'rectangular' === $shape ) :
+			?>
+			<div class="wp-embed-featured-image rectangular">
+				<a href="<?php the_permalink(); ?>" target="_top">
+					<?php echo wp_get_attachment_image( $thumbnail_id, $image_size ); ?>
+				</a>
+			</div>
+		<?php endif; ?>
+
+		<p class="wp-embed-heading">
+			<a href="<?php the_permalink(); ?>" target="_top">
+				<?php the_title(); ?>
+			</a>
+		</p>
+
+		<?php if ( $thumbnail_id && 'square' === $shape ) : ?>
+			<div class="wp-embed-featured-image square">
+				<a href="<?php the_permalink(); ?>" target="_top">
+					<?php echo wp_get_attachment_image( $thumbnail_id, $image_size ); ?>
+				</a>
+			</div>
+		<?php endif; ?>
+
+		<div class="wp-embed-excerpt"><?php the_excerpt_embed(); ?></div>
+
+		<?php
+		/**
+		 * Prints additional content after the embed excerpt.
+		 *
+		 * @since 4.4.0
+		 */
+		do_action( 'embed_content' );
+		?>
+
+		<div class="wp-embed-footer">
+			<?php the_embed_site_title(); ?>
+
+			<div class="wp-embed-meta">
+				<?php
+				/**
+				 * Prints additional meta content in the embed template.
+				 *
+				 * @since 4.4.0
+				 */
+				do_action( 'embed_content_meta' );
+				?>
+			</div>
+		</div>
+	</div>
+<?php
+
+The file embed.php contains:
+<?php
+/**
+ * Contains the post embed base template
+ *
+ * When a post is embedded in an iframe, this file is used to create the output
+ * if the active theme does not include an embed.php template.
+ *
+ * @package WordPress
+ * @subpackage oEmbed
+ * @since 4.4.0
+ */
+
+get_header( 'embed' );
+
+if ( have_posts() ) :
+	while ( have_posts() ) :
+		the_post();
+		get_template_part( 'embed', 'content' );
+	endwhile;
+else :
+	get_template_part( 'embed', '404' );
+endif;
+
+get_footer( 'embed' );
+
+The file footer-embed.php contains:
+<?php
+/**
+ * Contains the post embed footer template
+ *
+ * When a post is embedded in an iframe, this file is used to create the footer output
+ * if the active theme does not include a footer-embed.php template.
+ *
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @since 4.5.0
+ */
+
+/**
+ * Prints scripts or data before the closing body tag in the embed template.
+ *
+ * @since 4.4.0
+ */
+do_action( 'embed_footer' );
+?>
+</body>
+</html>
+
+The file footer.php contains:
+<?php
+/**
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @deprecated 3.0.0
+ *
+ * This file is here for backward compatibility with old themes and will be removed in a future version
+ */
+_deprecated_file(
+	/* translators: %s: Template name. */
+	sprintf( __( 'Theme without %s' ), basename( __FILE__ ) ),
+	'3.0.0',
+	null,
+	/* translators: %s: Template name. */
+	sprintf( __( 'Please include a %s template in your theme.' ), basename( __FILE__ ) )
+);
+?>
+
+<hr />
+<div id="footer" role="contentinfo">
+<!-- If you'd like to support WordPress, having the "powered by" link somewhere on your blog is the best way; it's our only promotion or advertising. -->
+	<p>
+		<?php
+		printf(
+			/* translators: 1: Blog name, 2: WordPress */
+			__( '%1$s is proudly powered by %2$s' ),
+			get_bloginfo( 'name' ),
+			'<a href="https://wordpress.org/">WordPress</a>'
+		);
+		?>
+	</p>
+</div>
+</div>
+
+<!-- Gorgeous design by Michael Heilemann - http://binarybonsai.com/ -->
+<?php /* "Just what do you think you're doing Dave?" */ ?>
+
+		<?php wp_footer(); ?>
+</body>
+</html>
+
+The file header-embed.php contains:
+<?php
+/**
+ * Contains the post embed header template
+ *
+ * When a post is embedded in an iframe, this file is used to create the header output
+ * if the active theme does not include a header-embed.php template.
+ *
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @since 4.5.0
+ */
+
+if ( ! headers_sent() ) {
+	header( 'X-WP-embed: true' );
+}
+
+?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?> class="no-js">
+<head>
+	<title><?php echo wp_get_document_title(); ?></title>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<?php
+	/**
+	 * Prints scripts or data in the embed template head tag.
+	 *
+	 * @since 4.4.0
+	 */
+	do_action( 'embed_head' );
+	?>
+</head>
+<body <?php body_class(); ?>>
+
+The file header.php contains:
+<?php
+/**
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @deprecated 3.0.0
+ *
+ * This file is here for backward compatibility with old themes and will be removed in a future version.
+ */
+_deprecated_file(
+	/* translators: %s: Template name. */
+	sprintf( __( 'Theme without %s' ), basename( __FILE__ ) ),
+	'3.0.0',
+	null,
+	/* translators: %s: Template name. */
+	sprintf( __( 'Please include a %s template in your theme.' ), basename( __FILE__ ) )
+);
+?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+<link rel="profile" href="https://gmpg.org/xfn/11" />
+<meta http-equiv="Content-Type" content="<?php bloginfo( 'html_type' ); ?>; charset=<?php bloginfo( 'charset' ); ?>" />
+
+<title><?php echo wp_get_document_title(); ?></title>
+
+<link rel="stylesheet" href="<?php bloginfo( 'stylesheet_url' ); ?>" type="text/css" media="screen" />
+<link rel="pingback" href="<?php bloginfo( 'pingback_url' ); ?>" />
+
+<?php if ( file_exists( get_stylesheet_directory() . '/images/kubrickbgwide.jpg' ) ) { ?>
+<style type="text/css" media="screen">
+
+	<?php
+	// Checks to see whether it needs a sidebar.
+	if ( empty( $withcomments ) && ! is_single() ) {
+		?>
+	#page { background: url("<?php bloginfo( 'stylesheet_directory' ); ?>/images/kubrickbg-<?php bloginfo( 'text_direction' ); ?>.jpg") repeat-y top; border: none; }
+<?php } else { // No sidebar. ?>
+	#page { background: url("<?php bloginfo( 'stylesheet_directory' ); ?>/images/kubrickbgwide.jpg") repeat-y top; border: none; }
+<?php } ?>
+
+</style>
+<?php } ?>
+
+<?php
+if ( is_singular() ) {
+	wp_enqueue_script( 'comment-reply' );}
+?>
+
+<?php wp_head(); ?>
+</head>
+<body <?php body_class(); ?>>
+<div id="page">
+
+<div id="header" role="banner">
+	<div id="headerimg">
+		<h1><a href="<?php echo home_url(); ?>/"><?php bloginfo( 'name' ); ?></a></h1>
+		<div class="description"><?php bloginfo( 'description' ); ?></div>
+	</div>
+</div>
+<hr />
+
+The file my-directory-list.txt contains:
+The file comments.php contains:
+<?php
+/**
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @deprecated 3.0.0
+ *
+ * This file is here for backward compatibility with old themes and will be removed in a future version
+ */
+_deprecated_file(
+	/* translators: %s: Template name. */
+	sprintf( __( 'Theme without %s' ), basename( __FILE__ ) ),
+	'3.0.0',
+	null,
+	/* translators: %s: Template name. */
+	sprintf( __( 'Please include a %s template in your theme.' ), basename( __FILE__ ) )
+);
+
+// Do not delete these lines.
+if ( ! empty( $_SERVER['SCRIPT_FILENAME'] ) && 'comments.php' === basename( $_SERVER['SCRIPT_FILENAME'] ) ) {
+	die( 'Please do not load this page directly. Thanks!' );
+}
+
+if ( post_password_required() ) { ?>
+		<p class="nocomments"><?php _e( 'This post is password protected. Enter the password to view comments.' ); ?></p>
+	<?php
+	return;
+}
+?>
+
+<!-- You can start editing here. -->
+
+<?php if ( have_comments() ) : ?>
+	<h3 id="comments">
+		<?php
+		if ( 1 == get_comments_number() ) {
+			printf(
+				/* translators: %s: Post title. */
+				__( 'One response to %s' ),
+				'&#8220;' . get_the_title() . '&#8221;'
+			);
+		} else {
+			printf(
+				/* translators: 1: Number of comments, 2: Post title. */
+				_n( '%1$s response to %2$s', '%1$s responses to %2$s', get_comments_number() ),
+				number_format_i18n( get_comments_number() ),
+				'&#8220;' . get_the_title() . '&#8221;'
+			);
+		}
+		?>
+	</h3>
+
+	<div class="navigation">
+		<div class="alignleft"><?php previous_comments_link(); ?></div>
+		<div class="alignright"><?php next_comments_link(); ?></div>
+	</div>
+
+	<ol class="commentlist">
+	<?php wp_list_comments(); ?>
+	</ol>
+
+	<div class="navigation">
+		<div class="alignleft"><?php previous_comments_link(); ?></div>
+		<div class="alignright"><?php next_comments_link(); ?></div>
+	</div>
+<?php else : // This is displayed if there are no comments so far. ?>
+
+	<?php if ( comments_open() ) : ?>
+		<!-- If comments are open, but there are no comments. -->
+
+	<?php else : // Comments are closed. ?>
+		<!-- If comments are closed. -->
+		<p class="nocomments"><?php _e( 'Comments are closed.' ); ?></p>
+
+	<?php endif; ?>
+<?php endif; ?>
+
+<?php comment_form(); ?>
+
+The file embed-404.php contains:
+<?php
+/**
+ * Contains the post embed content template part
+ *
+ * When a post is embedded in an iframe, this file is used to create the content template part
+ * output if the active theme does not include an embed-404.php template.
+ *
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @since 4.5.0
+ */
+?>
+<div class="wp-embed">
+	<p class="wp-embed-heading"><?php _e( 'Oops! That embed can&#8217;t be found.' ); ?></p>
+
+	<div class="wp-embed-excerpt">
+		<p>
+			<?php
+			printf(
+				/* translators: %s: A link to the embedded site. */
+				__( 'It looks like nothing was found at this location. Maybe try visiting %s directly?' ),
+				'<strong><a href="' . esc_url( home_url() ) . '">' . esc_html( get_bloginfo( 'name' ) ) . '</a></strong>'
+			);
+			?>
+		</p>
+	</div>
+
+	<?php
+	/** This filter is documented in wp-includes/theme-compat/embed-content.php */
+	do_action( 'embed_content' );
+	?>
+
+	<div class="wp-embed-footer">
+		<?php the_embed_site_title(); ?>
+	</div>
+</div>
+
+The file embed-content.php contains:
+<?php
+/**
+ * Contains the post embed content template part
+ *
+ * When a post is embedded in an iframe, this file is used to create the content template part
+ * output if the active theme does not include an embed-content.php template.
+ *
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @since 4.5.0
+ */
+?>
+	<div <?php post_class( 'wp-embed' ); ?>>
+		<?php
+		$thumbnail_id = 0;
+
+		if ( has_post_thumbnail() ) {
+			$thumbnail_id = get_post_thumbnail_id();
+		}
+
+		if ( 'attachment' === get_post_type() && wp_attachment_is_image() ) {
+			$thumbnail_id = get_the_ID();
+		}
+
+		/**
+		 * Filters the thumbnail image ID for use in the embed template.
+		 *
+		 * @since 4.9.0
+		 *
+		 * @param int $thumbnail_id Attachment ID.
+		 */
+		$thumbnail_id = apply_filters( 'embed_thumbnail_id', $thumbnail_id );
+
+		if ( $thumbnail_id ) {
+			$aspect_ratio = 1;
+			$measurements = array( 1, 1 );
+			$image_size   = 'full'; // Fallback.
+
+			$meta = wp_get_attachment_metadata( $thumbnail_id );
+			if ( ! empty( $meta['sizes'] ) ) {
+				foreach ( $meta['sizes'] as $size => $data ) {
+					if ( $data['height'] > 0 && $data['width'] / $data['height'] > $aspect_ratio ) {
+						$aspect_ratio = $data['width'] / $data['height'];
+						$measurements = array( $data['width'], $data['height'] );
+						$image_size   = $size;
+					}
+				}
+			}
+
+			/**
+			 * Filters the thumbnail image size for use in the embed template.
+			 *
+			 * @since 4.4.0
+			 * @since 4.5.0 Added `$thumbnail_id` parameter.
+			 *
+			 * @param string $image_size   Thumbnail image size.
+			 * @param int    $thumbnail_id Attachment ID.
+			 */
+			$image_size = apply_filters( 'embed_thumbnail_image_size', $image_size, $thumbnail_id );
+
+			$shape = $measurements[0] / $measurements[1] >= 1.75 ? 'rectangular' : 'square';
+
+			/**
+			 * Filters the thumbnail shape for use in the embed template.
+			 *
+			 * Rectangular images are shown above the title while square images
+			 * are shown next to the content.
+			 *
+			 * @since 4.4.0
+			 * @since 4.5.0 Added `$thumbnail_id` parameter.
+			 *
+			 * @param string $shape        Thumbnail image shape. Either 'rectangular' or 'square'.
+			 * @param int    $thumbnail_id Attachment ID.
+			 */
+			$shape = apply_filters( 'embed_thumbnail_image_shape', $shape, $thumbnail_id );
+		}
+
+		if ( $thumbnail_id && 'rectangular' === $shape ) :
+			?>
+			<div class="wp-embed-featured-image rectangular">
+				<a href="<?php the_permalink(); ?>" target="_top">
+					<?php echo wp_get_attachment_image( $thumbnail_id, $image_size ); ?>
+				</a>
+			</div>
+		<?php endif; ?>
+
+		<p class="wp-embed-heading">
+			<a href="<?php the_permalink(); ?>" target="_top">
+				<?php the_title(); ?>
+			</a>
+		</p>
+
+		<?php if ( $thumbnail_id && 'square' === $shape ) : ?>
+			<div class="wp-embed-featured-image square">
+				<a href="<?php the_permalink(); ?>" target="_top">
+					<?php echo wp_get_attachment_image( $thumbnail_id, $image_size ); ?>
+				</a>
+			</div>
+		<?php endif; ?>
+
+		<div class="wp-embed-excerpt"><?php the_excerpt_embed(); ?></div>
+
+		<?php
+		/**
+		 * Prints additional content after the embed excerpt.
+		 *
+		 * @since 4.4.0
+		 */
+		do_action( 'embed_content' );
+		?>
+
+		<div class="wp-embed-footer">
+			<?php the_embed_site_title(); ?>
+
+			<div class="wp-embed-meta">
+				<?php
+				/**
+				 * Prints additional meta content in the embed template.
+				 *
+				 * @since 4.4.0
+				 */
+				do_action( 'embed_content_meta' );
+				?>
+			</div>
+		</div>
+	</div>
+<?php
+
+The file embed.php contains:
+<?php
+/**
+ * Contains the post embed base template
+ *
+ * When a post is embedded in an iframe, this file is used to create the output
+ * if the active theme does not include an embed.php template.
+ *
+ * @package WordPress
+ * @subpackage oEmbed
+ * @since 4.4.0
+ */
+
+get_header( 'embed' );
+
+if ( have_posts() ) :
+	while ( have_posts() ) :
+		the_post();
+		get_template_part( 'embed', 'content' );
+	endwhile;
+else :
+	get_template_part( 'embed', '404' );
+endif;
+
+get_footer( 'embed' );
+
+The file footer-embed.php contains:
+<?php
+/**
+ * Contains the post embed footer template
+ *
+ * When a post is embedded in an iframe, this file is used to create the footer output
+ * if the active theme does not include a footer-embed.php template.
+ *
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @since 4.5.0
+ */
+
+/**
+ * Prints scripts or data before the closing body tag in the embed template.
+ *
+ * @since 4.4.0
+ */
+do_action( 'embed_footer' );
+?>
+</body>
+</html>
+
+The file footer.php contains:
+
+The file sidebar.php contains:
+<?php
+/**
+ * @package WordPress
+ * @subpackage Theme_Compat
+ * @deprecated 3.0.0
+ *
+ * This file is here for backward compatibility with old themes and will be removed in a future version.
+ */
+_deprecated_file(
+	/* translators: %s: Template name. */
+	sprintf( __( 'Theme without %s' ), basename( __FILE__ ) ),
+	'3.0.0',
+	null,
+	/* translators: %s: Template name. */
+	sprintf( __( 'Please include a %s template in your theme.' ), basename( __FILE__ ) )
+);
+?>
+	<div id="sidebar" role="complementary">
+		<ul>
+			<?php
+			/* Widgetized sidebar, if you have the plugin installed. */
+			if ( ! function_exists( 'dynamic_sidebar' ) || ! dynamic_sidebar() ) :
+				?>
+			<li>
+				<?php get_search_form(); ?>
+			</li>
+
+			<!-- Author information is disabled per default. Uncomment and fill in your details if you want to use it.
+			<li><h2><?php _e( 'Author' ); ?></h2>
+			<p>A little something about you, the author. Nothing lengthy, just an overview.</p>
+			</li>
+			-->
+
+				<?php
+				if ( is_404() || is_category() || is_day() || is_month() ||
+				is_year() || is_search() || is_paged() ) :
+					?>
+			<li>
+
+					<?php if ( is_404() ) : /* If this is a 404 page */ ?>
+			<?php elseif ( is_category() ) : /* If this is a category archive */ ?>
+				<p>
+				<?php
+					printf(
+						/* translators: %s: Category name. */
+						__( 'You are currently browsing the archives for the %s category.' ),
+						single_cat_title( '', false )
+					);
+				?>
+				</p>
+
+			<?php elseif ( is_day() ) : /* If this is a daily archive */ ?>
+				<p>
+				<?php
+					printf(
+						/* translators: 1: Site link, 2: Archive date. */
+						__( 'You are currently browsing the %1$s blog archives for the day %2$s.' ),
+						sprintf( '<a href="%1$s/">%2$s</a>', get_bloginfo( 'url' ), get_bloginfo( 'name' ) ),
+						get_the_time( __( 'l, F jS, Y' ) )
+					);
+				?>
+				</p>
+
+			<?php elseif ( is_month() ) : /* If this is a monthly archive */ ?>
+				<p>
+				<?php
+					printf(
+						/* translators: 1: Site link, 2: Archive month. */
+						__( 'You are currently browsing the %1$s blog archives for %2$s.' ),
+						sprintf( '<a href="%1$s/">%2$s</a>', get_bloginfo( 'url' ), get_bloginfo( 'name' ) ),
+						get_the_time( __( 'F, Y' ) )
+					);
+				?>
+				</p>
+
+			<?php elseif ( is_year() ) : /* If this is a yearly archive */ ?>
+				<p>
+				<?php
+					printf(
+						/* translators: 1: Site link, 2: Archive year. */
+						__( 'You are currently browsing the %1$s blog archives for the year %2$s.' ),
+						sprintf( '<a href="%1$s/">%2$s</a>', get_bloginfo( 'url' ), get_bloginfo( 'name' ) ),
+						get_the_time( 'Y' )
+					);
+				?>
+				</p>
+
+			<?php elseif ( is_search() ) : /* If this is a search result */ ?>
+				<p>
+				<?php
+					printf(
+						/* translators: 1: Site link, 2: Search query. */
+						__( 'You have searched the %1$s blog archives for <strong>&#8216;%2$s&#8217;</strong>. If you are unable to find anything in these search results, you can try one of these links.' ),
+						sprintf( '<a href="%1$s/">%2$s</a>', get_bloginfo( 'url' ), get_bloginfo( 'name' ) ),
+						esc_html( get_search_query() )
+					);
+				?>
+				</p>
+
+			<?php elseif ( isset( $_GET['paged'] ) && ! empty( $_GET['paged'] ) ) : /* If this set is paginated */ ?>
+				<p>
+				<?php
+					printf(
+						/* translators: %s: Site link. */
+						__( 'You are currently browsing the %s blog archives.' ),
+						sprintf( '<a href="%1$s/">%2$s</a>', get_bloginfo( 'url' ), get_bloginfo( 'name' ) )
+					);
+				?>
+				</p>
+
+			<?php endif; ?>
+
+			</li>
+			<?php endif; ?>
+		</ul>
+		<ul role="navigation">
+				<?php wp_list_pages( 'title_li=<h2>' . __( 'Pages' ) . '</h2>' ); ?>
+
+			<li><h2><?php _e( 'Archives' ); ?></h2>
+				<ul>
+				<?php wp_get_archives( array( 'type' => 'monthly' ) ); ?>
+				</ul>
+			</li>
+
+				<?php
+				wp_list_categories(
+					array(
+						'show_count' => 1,
+						'title_li'   => '<h2>' . __( 'Categories' ) . '</h2>',
+					)
+				);
+				?>
+		</ul>
+		<ul>
+				<?php if ( is_home() || is_page() ) { /* If this is the frontpage */ ?>
+					<?php wp_list_bookmarks(); ?>
+
+				<li><h2><?php _e( 'Meta' ); ?></h2>
+				<ul>
+					<?php wp_register(); ?>
+					<li><?php wp_loginout(); ?></li>
+					<?php wp_meta(); ?>
+				</ul>
+				</li>
+			<?php } ?>
+
+			<?php endif; /* ! dynamic_sidebar() */ ?>
+		</ul>
+	</div>
+

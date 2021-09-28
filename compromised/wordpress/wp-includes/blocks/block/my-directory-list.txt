@@ -1,0 +1,20 @@
+The file block.json contains:
+{
+	"apiVersion": 2,
+	"name": "core/block",
+	"category": "reusable",
+	"attributes": {
+		"ref": {
+			"type": "number"
+		}
+	},
+	"supports": {
+		"customClassName": false,
+		"html": false,
+		"inserter": false
+	},
+	"editorStyle": "wp-block-editor"
+}
+
+The file my-directory-list.txt contains:
+

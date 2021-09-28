@@ -1,0 +1,132 @@
+The file my-directory-list.txt contains:
+
+The file plugin.js contains:
+(function () {
+var colorpicker = (function () {
+    'use strict';
+
+    var global = tinymce.util.Tools.resolve('tinymce.PluginManager');
+
+    var global$1 = tinymce.util.Tools.resolve('tinymce.util.Color');
+
+    var showPreview = function (win, hexColor) {
+      win.find('#preview')[0].getEl().style.background = hexColor;
+    };
+    var setColor = function (win, value) {
+      var color = global$1(value), rgb = color.toRgb();
+      win.fromJSON({
+        r: rgb.r,
+        g: rgb.g,
+        b: rgb.b,
+        hex: color.toHex().substr(1)
+      });
+      showPreview(win, color.toHex());
+    };
+    var open = function (editor, callback, value) {
+      var win = editor.windowManager.open({
+        title: 'Color',
+        items: {
+          type: 'container',
+          layout: 'flex',
+          direction: 'row',
+          align: 'stretch',
+          padding: 5,
+          spacing: 10,
+          items: [
+            {
+              type: 'colorpicker',
+              value: value,
+              onchange: function () {
+                var rgb = this.rgb();
+                if (win) {
+                  win.find('#r').value(rgb.r);
+                  win.find('#g').value(rgb.g);
+                  win.find('#b').value(rgb.b);
+                  win.find('#hex').value(this.value().substr(1));
+                  showPreview(win, this.value());
+                }
+              }
+            },
+            {
+              type: 'form',
+              padding: 0,
+              labelGap: 5,
+              defaults: {
+                type: 'textbox',
+                size: 7,
+                value: '0',
+                flex: 1,
+                spellcheck: false,
+                onchange: function () {
+                  var colorPickerCtrl = win.find('colorpicker')[0];
+                  var name, value;
+                  name = this.name();
+                  value = this.value();
+                  if (name === 'hex') {
+                    value = '#' + value;
+                    setColor(win, value);
+                    colorPickerCtrl.value(value);
+                    return;
+                  }
+                  value = {
+                    r: win.find('#r').value(),
+                    g: win.find('#g').value(),
+                    b: win.find('#b').value()
+                  };
+                  colorPickerCtrl.value(value);
+                  setColor(win, value);
+                }
+              },
+              items: [
+                {
+                  name: 'r',
+                  label: 'R',
+                  autofocus: 1
+                },
+                {
+                  name: 'g',
+                  label: 'G'
+                },
+                {
+                  name: 'b',
+                  label: 'B'
+                },
+                {
+                  name: 'hex',
+                  label: '#',
+                  value: '000000'
+                },
+                {
+                  name: 'preview',
+                  type: 'container',
+                  border: 1
+                }
+              ]
+            }
+          ]
+        },
+        onSubmit: function () {
+          callback('#' + win.toJSON().hex);
+        }
+      });
+      setColor(win, value);
+    };
+    var Dialog = { open: open };
+
+    global.add('colorpicker', function (editor) {
+      if (!editor.settings.color_picker_callback) {
+        editor.settings.color_picker_callback = function (callback, value) {
+          Dialog.open(editor, callback, value);
+        };
+      }
+    });
+    function Plugin () {
+    }
+
+    return Plugin;
+
+}());
+})();
+
+The file plugin.min.js contains:
+!function(){"use strict";var e=tinymce.util.Tools.resolve("tinymce.PluginManager"),l=tinymce.util.Tools.resolve("tinymce.util.Color"),a=function(e,n){e.find("#preview")[0].getEl().style.background=n},o=function(e,n){var i=l(n),t=i.toRgb();e.fromJSON({r:t.r,g:t.g,b:t.b,hex:i.toHex().substr(1)}),a(e,i.toHex())},t=function(e,n,i){var t=e.windowManager.open({title:"Color",items:{type:"container",layout:"flex",direction:"row",align:"stretch",padding:5,spacing:10,items:[{type:"colorpicker",value:i,onchange:function(){var e=this.rgb();t&&(t.find("#r").value(e.r),t.find("#g").value(e.g),t.find("#b").value(e.b),t.find("#hex").value(this.value().substr(1)),a(t,this.value()))}},{type:"form",padding:0,labelGap:5,defaults:{type:"textbox",size:7,value:"0",flex:1,spellcheck:!1,onchange:function(){var e,n,i=t.find("colorpicker")[0];if(e=this.name(),n=this.value(),"hex"===e)return o(t,n="#"+n),void i.value(n);n={r:t.find("#r").value(),g:t.find("#g").value(),b:t.find("#b").value()},i.value(n),o(t,n)}},items:[{name:"r",label:"R",autofocus:1},{name:"g",label:"G"},{name:"b",label:"B"},{name:"hex",label:"#",value:"000000"},{name:"preview",type:"container",border:1}]}]},onSubmit:function(){n("#"+t.toJSON().hex)}});o(t,i)};e.add("colorpicker",function(i){i.settings.color_picker_callback||(i.settings.color_picker_callback=function(e,n){t(i,e,n)})})}();

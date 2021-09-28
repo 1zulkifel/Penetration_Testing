@@ -1,0 +1,20 @@
+The file Fe.php contains:
+<?php
+namespace ParagonIE\Sodium\Core\Curve25519;
+
+class Fe extends \ParagonIE_Sodium_Core_Curve25519_Fe
+{
+
+}
+
+The file H.php contains:
+<?php
+namespace ParagonIE\Sodium\Core\Curve25519;
+
+class H extends \ParagonIE_Sodium_Core_Curve25519_H
+{
+
+}
+
+The file my-directory-list.txt contains:
+

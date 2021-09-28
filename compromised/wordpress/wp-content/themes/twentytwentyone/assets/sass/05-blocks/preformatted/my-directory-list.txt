@@ -1,0 +1,16 @@
+The file my-directory-list.txt contains:
+
+The file _editor.scss contains:
+pre.wp-block-preformatted {
+	overflow-x: auto;
+	white-space: pre !important;
+	font-size: var(--global--font-size-xs);
+
+}
+
+The file _style.scss contains:
+pre.wp-block-preformatted {
+	overflow-x: auto;
+	white-space: pre;
+}
+

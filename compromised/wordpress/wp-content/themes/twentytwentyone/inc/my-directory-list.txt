@@ -1,0 +1,1590 @@
+The file back-compat.php contains:
+<?php
+/**
+ * Back compat functionality
+ *
+ * Prevents the theme from running on WordPress versions prior to 5.3,
+ * since this theme is not meant to be backward compatible beyond that and
+ * relies on many newer functions and markup changes introduced in 5.3.
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Display upgrade notice on theme switch.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return void
+ */
+function twenty_twenty_one_switch_theme() {
+	add_action( 'admin_notices', 'twenty_twenty_one_upgrade_notice' );
+}
+add_action( 'after_switch_theme', 'twenty_twenty_one_switch_theme' );
+
+/**
+ * Adds a message for unsuccessful theme switch.
+ *
+ * Prints an update nag after an unsuccessful attempt to switch to
+ * the theme on WordPress versions prior to 5.3.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @global string $wp_version WordPress version.
+ *
+ * @return void
+ */
+function twenty_twenty_one_upgrade_notice() {
+	echo '<div class="error"><p>';
+	printf(
+		/* translators: %s: WordPress Version. */
+		esc_html__( 'This theme requires WordPress 5.3 or newer. You are running version %s. Please upgrade.', 'twentytwentyone' ),
+		esc_html( $GLOBALS['wp_version'] )
+	);
+	echo '</p></div>';
+}
+
+/**
+ * Prevents the Customizer from being loaded on WordPress versions prior to 5.3.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @global string $wp_version WordPress version.
+ *
+ * @return void
+ */
+function twenty_twenty_one_customize() {
+	wp_die(
+		sprintf(
+			/* translators: %s: WordPress Version. */
+			esc_html__( 'This theme requires WordPress 5.3 or newer. You are running version %s. Please upgrade.', 'twentytwentyone' ),
+			esc_html( $GLOBALS['wp_version'] )
+		),
+		'',
+		array(
+			'back_link' => true,
+		)
+	);
+}
+add_action( 'load-customize.php', 'twenty_twenty_one_customize' );
+
+/**
+ * Prevents the Theme Preview from being loaded on WordPress versions prior to 5.3.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @global string $wp_version WordPress version.
+ *
+ * @return void
+ */
+function twenty_twenty_one_preview() {
+	if ( isset( $_GET['preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		wp_die(
+			sprintf(
+				/* translators: %s: WordPress Version. */
+				esc_html__( 'This theme requires WordPress 5.3 or newer. You are running version %s. Please upgrade.', 'twentytwentyone' ),
+				esc_html( $GLOBALS['wp_version'] )
+			)
+		);
+	}
+}
+add_action( 'template_redirect', 'twenty_twenty_one_preview' );
+
+The file block-patterns.php contains:
+<?php
+/**
+ * Block Patterns
+ *
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern/
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern_category/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Register Block Pattern Category.
+ */
+if ( function_exists( 'register_block_pattern_category' ) ) {
+
+	register_block_pattern_category(
+		'twentytwentyone',
+		array( 'label' => esc_html__( 'Twenty Twenty-One', 'twentytwentyone' ) )
+	);
+}
+
+/**
+ * Register Block Patterns.
+ */
+if ( function_exists( 'register_block_pattern' ) ) {
+
+	// Large Text.
+	register_block_pattern(
+		'twentytwentyone/large-text',
+		array(
+			'title'         => esc_html__( 'Large text', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'content'       => '<!-- wp:heading {"align":"wide","fontSize":"gigantic","style":{"typography":{"lineHeight":"1.1"}}} --><h2 class="alignwide has-text-align-wide has-gigantic-font-size" style="line-height:1.1">' . esc_html__( 'A new portfolio default theme for WordPress', 'twentytwentyone' ) . '</h2><!-- /wp:heading -->',
+		)
+	);
+
+	// Links Area.
+	register_block_pattern(
+		'twentytwentyone/links-area',
+		array(
+			'title'         => esc_html__( 'Links area', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'A huge text followed by social networks and email address links.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:cover {"overlayColor":"green","contentPosition":"center center","align":"wide","className":"is-style-twentytwentyone-border"} --><div class="wp-block-cover alignwide has-green-background-color has-background-dim is-style-twentytwentyone-border"><div class="wp-block-cover__inner-container"><!-- wp:spacer {"height":20} --><div style="height:20px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:paragraph {"fontSize":"huge"} --><p class="has-huge-font-size">' . wp_kses_post( __( 'Let&#8217;s Connect.', 'twentytwentyone' ) ) . '</p><!-- /wp:paragraph --><!-- wp:spacer {"height":75} --><div style="height:75px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p><a href="#" data-type="URL">' . esc_html__( 'Twitter', 'twentytwentyone' ) . '</a> / <a href="#" data-type="URL">' . esc_html__( 'Instagram', 'twentytwentyone' ) . '</a> / <a href="#" data-type="URL">' . esc_html__( 'Dribbble', 'twentytwentyone' ) . '</a></p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p><a href="#">' . esc_html__( 'example@example.com', 'twentytwentyone' ) . '</a></p><!-- /wp:paragraph --></div><!-- /wp:column --></div><!-- /wp:columns --><!-- wp:spacer {"height":20} --><div style="height:20px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --></div></div><!-- /wp:cover --><!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
+		)
+	);
+
+	// Media & Text Article Title.
+	register_block_pattern(
+		'twentytwentyone/media-text-article-title',
+		array(
+			'title'         => esc_html__( 'Media and text article title', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'A Media & Text block with a big image on the left and a heading on the right. The heading is followed by a separator and a description paragraph.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:media-text {"mediaId":1752,"mediaLink":"' . esc_url( get_template_directory_uri() ) . '/assets/images/playing-in-the-sand.jpg","mediaType":"image","className":"is-style-twentytwentyone-border"} --><div class="wp-block-media-text alignwide is-stacked-on-mobile is-style-twentytwentyone-border"><figure class="wp-block-media-text__media"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/playing-in-the-sand.jpg" alt="' . esc_attr__( '&#8220;Playing in the Sand&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" class="wp-image-1752"/></figure><div class="wp-block-media-text__content"><!-- wp:heading {"align":"center"} --><h2 class="has-text-align-center">' . esc_html__( 'Playing in the Sand', 'twentytwentyone' ) . '</h2><!-- /wp:heading --><!-- wp:separator {"className":"is-style-dots"} --><hr class="wp-block-separator is-style-dots"/><!-- /wp:separator --><!-- wp:paragraph {"align":"center","fontSize":"small"} --><p class="has-text-align-center has-small-font-size">' . wp_kses_post( __( 'Berthe Morisot<br>(French, 1841-1895)', 'twentytwentyone' ) ) . '</p><!-- /wp:paragraph --></div></div><!-- /wp:media-text -->',
+		)
+	);
+
+	// Overlapping Images.
+	register_block_pattern(
+		'twentytwentyone/overlapping-images',
+		array(
+			'title'         => esc_html__( 'Overlapping images', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1024,
+			'description'   => esc_html_x( 'Three images inside an overlapping columns block.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:columns {"verticalAlignment":"center","align":"wide","className":"is-style-twentytwentyone-columns-overlap"} --><div class="wp-block-columns alignwide are-vertically-aligned-center is-style-twentytwentyone-columns-overlap"><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"full","sizeSlug":"full"} --><figure class="wp-block-image alignfull size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/roses-tremieres-hollyhocks-1884.jpg" alt="' . esc_attr__( '&#8220;Roses Trémières&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure><!-- /wp:image --><!-- wp:spacer --><div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:image {"align":"full","sizeSlug":"full"} --><figure class="wp-block-image alignfull size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/in-the-bois-de-boulogne.jpg" alt="' . esc_attr__( '&#8220;In the Bois de Boulogne&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure><!-- /wp:image --></div><!-- /wp:column --><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:spacer --><div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:image {"align":"full",sizeSlug":"full"} --><figure class="wp-block-image alignfull size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/young-woman-in-mauve.jpg" alt="' . esc_attr__( '&#8220;Young Woman in Mauve&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+		)
+	);
+
+	// Two Images Showcase.
+	register_block_pattern(
+		'twentytwentyone/two-images-showcase',
+		array(
+			'title'         => esc_html__( 'Two images showcase', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'A media & text block with a big image on the left and a smaller one with bordered frame on the right.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:media-text {"mediaId":1747,"mediaLink":"' . esc_url( get_template_directory_uri() ) . '/assets/images/Daffodils.jpg","mediaType":"image"} --><div class="wp-block-media-text alignwide is-stacked-on-mobile"><figure class="wp-block-media-text__media"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/Daffodils.jpg" alt="' . esc_attr__( '&#8220;Daffodils&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" size-full"/></figure><div class="wp-block-media-text__content"><!-- wp:image {"align":"center","width":400,"height":512,"sizeSlug":"large","className":"is-style-twentytwentyone-image-frame"} --><figure class="wp-block-image aligncenter size-large is-resized is-style-twentytwentyone-image-frame"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/self-portrait-1885.jpg" alt="' . esc_attr__( '&#8220;Self portrait&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="400" height="512"/></figure><!-- /wp:image --></div></div><!-- /wp:media-text -->',
+		)
+	);
+
+	// Overlapping Images and Text.
+	register_block_pattern(
+		'twentytwentyone/overlapping-images-and-text',
+		array(
+			'title'         => esc_html__( 'Overlapping images and text', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'An overlapping columns block with two images and a text description.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:columns {"verticalAlignment":null,"align":"wide","className":"is-style-twentytwentyone-columns-overlap"} --> <div class="wp-block-columns alignwide is-style-twentytwentyone-columns-overlap"><!-- wp:column --> <div class="wp-block-column"><!-- wp:image {sizeSlug":"full"} --> <figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/the-garden-at-bougival-1884.jpg" alt="' . esc_attr__( '&#8220;The Garden at Bougival&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure> <!-- /wp:image --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"bottom"} --> <div class="wp-block-column is-vertically-aligned-bottom"><!-- wp:group {"className":"is-style-twentytwentyone-border","backgroundColor":"green"} --> <div class="wp-block-group is-style-twentytwentyone-border has-green-background-color has-background"><div class="wp-block-group__inner-container"><!-- wp:paragraph {"fontSize":"extra-large","style":{"typography":{"lineHeight":"1.4"}}} --> <p class="has-extra-large-font-size" style="line-height:1.4">' . esc_html__( 'Beautiful gardens painted by Berthe Morisot in the late 1800s', 'twentytwentyone' ) . '</p> <!-- /wp:paragraph --></div></div> <!-- /wp:group --></div> <!-- /wp:column --> <!-- wp:column --> <div class="wp-block-column"><!-- wp:image {sizeSlug":"full"} --> <figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/villa-with-orange-trees-nice.jpg" alt="' . esc_attr__( '&#8220;Villa with Orange Trees, Nice&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns -->',
+		)
+	);
+
+	// Portfolio List.
+	register_block_pattern(
+		'twentytwentyone/portfolio-list',
+		array(
+			'title'       => esc_html__( 'Portfolio list', 'twentytwentyone' ),
+			'categories'  => array( 'twentytwentyone' ),
+			'description' => esc_html_x( 'A list of projects with thumbnail images.', 'Block pattern description', 'twentytwentyone' ),
+			'content'     => '<!-- wp:separator {"className":"is-style-twentytwentyone-separator-thick"} --> <hr class="wp-block-separator is-style-twentytwentyone-separator-thick"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Roses Trémières', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":85,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/roses-tremieres-hollyhocks-1884.jpg" alt="' . esc_attr__( '&#8220;Roses Trémières&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="85" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Villa with Orange Trees, Nice', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":53,"height":67,"className":"alignright size-large is-resized"} --><figure class="wp-block-image is-resized alignright size-large"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/villa-with-orange-trees-nice.jpg" alt="&#8220;Villa with Orange Trees, Nice&#8221; by Berthe Morisot" width="53" height="67"/></figure><!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'In the Bois de Boulogne', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":81,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/in-the-bois-de-boulogne.jpg" alt="' . esc_attr__( '&#8220;In the Bois de Boulogne&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="81" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'The Garden at Bougival', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":85,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/the-garden-at-bougival-1884.jpg" alt="' . esc_attr__( '&#8220;The Garden at Bougival&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="85" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Young Woman in Mauve', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":54,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/young-woman-in-mauve.jpg" alt="' . esc_attr__( '&#8220;Young Woman in Mauve&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="54" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Reading', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":84,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/Reading.jpg" alt="' . esc_attr__( '&#8220;Reading&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="84" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-twentytwentyone-separator-thick"} --> <hr class="wp-block-separator is-style-twentytwentyone-separator-thick"/> <!-- /wp:separator -->',
+		)
+	);
+
+	register_block_pattern(
+		'twentytwentyone/contact-information',
+		array(
+			'title'       => esc_html__( 'Contact information', 'twentytwentyone' ),
+			'categories'  => array( 'twentytwentyone' ),
+			'description' => esc_html_x( 'A block with 3 columns that display contact information and social media links.', 'Block pattern description', 'twentytwentyone' ),
+			'content'     => '<!-- wp:columns {"align":"wide"} --><div class="wp-block-columns alignwide"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p><a href="mailto:#">' . esc_html_x( 'example@example.com', 'Block pattern sample content', 'twentytwentyone' ) . '<br></a>' . esc_html_x( '123-456-7890', 'Block pattern sample content', 'twentytwentyone' ) . '</p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph {"align":"center"} --><p class="has-text-align-center">' . esc_html_x( '123 Main Street', 'Block pattern sample content', 'twentytwentyone' ) . '<br>' . esc_html_x( 'Cambridge, MA, 02139', 'Block pattern sample content', 'twentytwentyone' ) . '</p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:social-links {"align":"right","className":"is-style-twentytwentyone-social-icons-color"} --><ul class="wp-block-social-links alignright is-style-twentytwentyone-social-icons-color"><!-- wp:social-link {"url":"https://wordpress.org","service":"wordpress"} /--><!-- wp:social-link {"url":"https://www.facebook.com/WordPress/","service":"facebook"} /--><!-- wp:social-link {"url":"https://twitter.com/WordPress","service":"twitter"} /--><!-- wp:social-link {"url":"https://www.youtube.com/wordpress","service":"youtube"} /--></ul><!-- /wp:social-links --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+		)
+	);
+}
+
+The file block-styles.php contains:
+<?php
+/**
+ * Block Styles
+ *
+ * @link https://developer.wordpress.org/reference/functions/register_block_style/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+if ( function_exists( 'register_block_style' ) ) {
+	/**
+	 * Register block styles.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @return void
+	 */
+	function twenty_twenty_one_register_block_styles() {
+		// Columns: Overlap.
+		register_block_style(
+			'core/columns',
+			array(
+				'name'  => 'twentytwentyone-columns-overlap',
+				'label' => esc_html__( 'Overlap', 'twentytwentyone' ),
+			)
+		);
+
+		// Cover: Borders.
+		register_block_style(
+			'core/cover',
+			array(
+				'name'  => 'twentytwentyone-border',
+				'label' => esc_html__( 'Borders', 'twentytwentyone' ),
+			)
+		);
+
+		// Group: Borders.
+		register_block_style(
+			'core/group',
+			array(
+				'name'  => 'twentytwentyone-border',
+				'label' => esc_html__( 'Borders', 'twentytwentyone' ),
+			)
+		);
+
+		// Image: Borders.
+		register_block_style(
+			'core/image',
+			array(
+				'name'  => 'twentytwentyone-border',
+				'label' => esc_html__( 'Borders', 'twentytwentyone' ),
+			)
+		);
+
+		// Image: Frame.
+		register_block_style(
+			'core/image',
+			array(
+				'name'  => 'twentytwentyone-image-frame',
+				'label' => esc_html__( 'Frame', 'twentytwentyone' ),
+			)
+		);
+
+		// Latest Posts: Dividers.
+		register_block_style(
+			'core/latest-posts',
+			array(
+				'name'  => 'twentytwentyone-latest-posts-dividers',
+				'label' => esc_html__( 'Dividers', 'twentytwentyone' ),
+			)
+		);
+
+		// Latest Posts: Borders.
+		register_block_style(
+			'core/latest-posts',
+			array(
+				'name'  => 'twentytwentyone-latest-posts-borders',
+				'label' => esc_html__( 'Borders', 'twentytwentyone' ),
+			)
+		);
+
+		// Media & Text: Borders.
+		register_block_style(
+			'core/media-text',
+			array(
+				'name'  => 'twentytwentyone-border',
+				'label' => esc_html__( 'Borders', 'twentytwentyone' ),
+			)
+		);
+
+		// Separator: Thick.
+		register_block_style(
+			'core/separator',
+			array(
+				'name'  => 'twentytwentyone-separator-thick',
+				'label' => esc_html__( 'Thick', 'twentytwentyone' ),
+			)
+		);
+
+		// Social icons: Dark gray color.
+		register_block_style(
+			'core/social-links',
+			array(
+				'name'  => 'twentytwentyone-social-icons-color',
+				'label' => esc_html__( 'Dark gray', 'twentytwentyone' ),
+			)
+		);
+	}
+	add_action( 'init', 'twenty_twenty_one_register_block_styles' );
+}
+
+The file custom-css.php contains:
+<?php
+/**
+ * Custom CSS
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Generate CSS.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param string $selector The CSS selector.
+ * @param string $style The CSS style.
+ * @param string $value The CSS value.
+ * @param string $prefix The CSS prefix.
+ * @param string $suffix The CSS suffix.
+ * @param bool   $echo Echo the styles.
+ *
+ * @return string
+ */
+function twenty_twenty_one_generate_css( $selector, $style, $value, $prefix = '', $suffix = '', $echo = true ) {
+
+	// Bail early if there is no $selector elements or properties and $value.
+	if ( ! $value || ! $selector ) {
+		return '';
+	}
+
+	$css = sprintf( '%s { %s: %s; }', $selector, $style, $prefix . $value . $suffix );
+
+	if ( $echo ) {
+		/**
+		 * Note to reviewers: $css contains auto-generated CSS.
+		 * It is included inside <style> tags and can only be interpreted as CSS on the browser.
+		 * Using wp_strip_all_tags() here is sufficient escaping to avoid
+		 * malicious attempts to close </style> and open a <script>.
+		 */
+		echo wp_strip_all_tags( $css ); // phpcs:ignore WordPress.Security.EscapeOutput
+	}
+	return $css;
+}
+
+The file menu-functions.php contains:
+<?php
+/**
+ * Functions and filters related to the menus.
+ *
+ * Makes the default WordPress navigation use an HTML structure similar
+ * to the Navigation block.
+ *
+ * @link https://make.wordpress.org/themes/2020/07/06/printing-navigation-block-html-from-a-legacy-menu-in-themes/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Add a button to top-level menu items that has sub-menus.
+ * An icon is added using CSS depending on the value of aria-expanded.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param string $output Nav menu item start element.
+ * @param object $item   Nav menu item.
+ * @param int    $depth  Depth.
+ * @param object $args   Nav menu args.
+ *
+ * @return string Nav menu item start element.
+ */
+function twenty_twenty_one_add_sub_menu_toggle( $output, $item, $depth, $args ) {
+	if ( 0 === $depth && in_array( 'menu-item-has-children', $item->classes, true ) ) {
+
+		// Add toggle button.
+		$output .= '<button class="sub-menu-toggle" aria-expanded="false" onClick="twentytwentyoneExpandSubMenu(this)">';
+		$output .= '<span class="icon-plus">' . twenty_twenty_one_get_icon_svg( 'ui', 'plus', 18 ) . '</span>';
+		$output .= '<span class="icon-minus">' . twenty_twenty_one_get_icon_svg( 'ui', 'minus', 18 ) . '</span>';
+		$output .= '<span class="screen-reader-text">' . esc_html__( 'Open menu', 'twentytwentyone' ) . '</span>';
+		$output .= '</button>';
+	}
+	return $output;
+}
+add_filter( 'walker_nav_menu_start_el', 'twenty_twenty_one_add_sub_menu_toggle', 10, 4 );
+
+/**
+ * Detects the social network from a URL and returns the SVG code for its icon.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param string $uri Social link.
+ * @param int    $size The icon size in pixels.
+ *
+ * @return string
+ */
+function twenty_twenty_one_get_social_link_svg( $uri, $size = 24 ) {
+	return Twenty_Twenty_One_SVG_Icons::get_social_link_svg( $uri, $size );
+}
+
+/**
+ * Displays SVG icons in the footer navigation.
+ *
+ * @param string   $item_output The menu item's starting HTML output.
+ * @param WP_Post  $item        Menu item data object.
+ * @param int      $depth       Depth of the menu. Used for padding.
+ * @param stdClass $args        An object of wp_nav_menu() arguments.
+ * @return string The menu item output with social icon.
+ */
+function twenty_twenty_one_nav_menu_social_icons( $item_output, $item, $depth, $args ) {
+	// Change SVG icon inside social links menu if there is supported URL.
+	if ( 'footer' === $args->theme_location ) {
+		$svg = twenty_twenty_one_get_social_link_svg( $item->url, 24 );
+		if ( ! empty( $svg ) ) {
+			$item_output = str_replace( $args->link_before, $svg, $item_output );
+		}
+	}
+
+	return $item_output;
+}
+
+add_filter( 'walker_nav_menu_start_el', 'twenty_twenty_one_nav_menu_social_icons', 10, 4 );
+
+/**
+ * Filters the arguments for a single nav menu item.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param stdClass $args  An object of wp_nav_menu() arguments.
+ * @param WP_Post  $item  Menu item data object.
+ * @param int      $depth Depth of menu item. Used for padding.
+ *
+ * @return stdClass
+ */
+function twenty_twenty_one_add_menu_description_args( $args, $item, $depth ) {
+	$args->link_after = '';
+	if ( 0 === $depth && isset( $item->description ) && $item->description ) {
+		// The extra <span> element is here for styling purposes: Allows the description to not be underlined on hover.
+		$args->link_after = '<p class="menu-item-description"><span>' . $item->description . '</span></p>';
+	}
+	return $args;
+}
+add_filter( 'nav_menu_item_args', 'twenty_twenty_one_add_menu_description_args', 10, 3 );
+
+The file my-directory-list.txt contains:
+The file back-compat.php contains:
+<?php
+/**
+ * Back compat functionality
+ *
+ * Prevents the theme from running on WordPress versions prior to 5.3,
+ * since this theme is not meant to be backward compatible beyond that and
+ * relies on many newer functions and markup changes introduced in 5.3.
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Display upgrade notice on theme switch.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return void
+ */
+function twenty_twenty_one_switch_theme() {
+	add_action( 'admin_notices', 'twenty_twenty_one_upgrade_notice' );
+}
+add_action( 'after_switch_theme', 'twenty_twenty_one_switch_theme' );
+
+/**
+ * Adds a message for unsuccessful theme switch.
+ *
+ * Prints an update nag after an unsuccessful attempt to switch to
+ * the theme on WordPress versions prior to 5.3.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @global string $wp_version WordPress version.
+ *
+ * @return void
+ */
+function twenty_twenty_one_upgrade_notice() {
+	echo '<div class="error"><p>';
+	printf(
+		/* translators: %s: WordPress Version. */
+		esc_html__( 'This theme requires WordPress 5.3 or newer. You are running version %s. Please upgrade.', 'twentytwentyone' ),
+		esc_html( $GLOBALS['wp_version'] )
+	);
+	echo '</p></div>';
+}
+
+/**
+ * Prevents the Customizer from being loaded on WordPress versions prior to 5.3.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @global string $wp_version WordPress version.
+ *
+ * @return void
+ */
+function twenty_twenty_one_customize() {
+	wp_die(
+		sprintf(
+			/* translators: %s: WordPress Version. */
+			esc_html__( 'This theme requires WordPress 5.3 or newer. You are running version %s. Please upgrade.', 'twentytwentyone' ),
+			esc_html( $GLOBALS['wp_version'] )
+		),
+		'',
+		array(
+			'back_link' => true,
+		)
+	);
+}
+add_action( 'load-customize.php', 'twenty_twenty_one_customize' );
+
+/**
+ * Prevents the Theme Preview from being loaded on WordPress versions prior to 5.3.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @global string $wp_version WordPress version.
+ *
+ * @return void
+ */
+function twenty_twenty_one_preview() {
+	if ( isset( $_GET['preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+		wp_die(
+			sprintf(
+				/* translators: %s: WordPress Version. */
+				esc_html__( 'This theme requires WordPress 5.3 or newer. You are running version %s. Please upgrade.', 'twentytwentyone' ),
+				esc_html( $GLOBALS['wp_version'] )
+			)
+		);
+	}
+}
+add_action( 'template_redirect', 'twenty_twenty_one_preview' );
+
+The file block-patterns.php contains:
+<?php
+/**
+ * Block Patterns
+ *
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern/
+ * @link https://developer.wordpress.org/reference/functions/register_block_pattern_category/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Register Block Pattern Category.
+ */
+if ( function_exists( 'register_block_pattern_category' ) ) {
+
+	register_block_pattern_category(
+		'twentytwentyone',
+		array( 'label' => esc_html__( 'Twenty Twenty-One', 'twentytwentyone' ) )
+	);
+}
+
+/**
+ * Register Block Patterns.
+ */
+if ( function_exists( 'register_block_pattern' ) ) {
+
+	// Large Text.
+	register_block_pattern(
+		'twentytwentyone/large-text',
+		array(
+			'title'         => esc_html__( 'Large text', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'content'       => '<!-- wp:heading {"align":"wide","fontSize":"gigantic","style":{"typography":{"lineHeight":"1.1"}}} --><h2 class="alignwide has-text-align-wide has-gigantic-font-size" style="line-height:1.1">' . esc_html__( 'A new portfolio default theme for WordPress', 'twentytwentyone' ) . '</h2><!-- /wp:heading -->',
+		)
+	);
+
+	// Links Area.
+	register_block_pattern(
+		'twentytwentyone/links-area',
+		array(
+			'title'         => esc_html__( 'Links area', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'A huge text followed by social networks and email address links.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:cover {"overlayColor":"green","contentPosition":"center center","align":"wide","className":"is-style-twentytwentyone-border"} --><div class="wp-block-cover alignwide has-green-background-color has-background-dim is-style-twentytwentyone-border"><div class="wp-block-cover__inner-container"><!-- wp:spacer {"height":20} --><div style="height:20px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:paragraph {"fontSize":"huge"} --><p class="has-huge-font-size">' . wp_kses_post( __( 'Let&#8217;s Connect.', 'twentytwentyone' ) ) . '</p><!-- /wp:paragraph --><!-- wp:spacer {"height":75} --><div style="height:75px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p><a href="#" data-type="URL">' . esc_html__( 'Twitter', 'twentytwentyone' ) . '</a> / <a href="#" data-type="URL">' . esc_html__( 'Instagram', 'twentytwentyone' ) . '</a> / <a href="#" data-type="URL">' . esc_html__( 'Dribbble', 'twentytwentyone' ) . '</a></p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p><a href="#">' . esc_html__( 'example@example.com', 'twentytwentyone' ) . '</a></p><!-- /wp:paragraph --></div><!-- /wp:column --></div><!-- /wp:columns --><!-- wp:spacer {"height":20} --><div style="height:20px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --></div></div><!-- /wp:cover --><!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
+		)
+	);
+
+	// Media & Text Article Title.
+	register_block_pattern(
+		'twentytwentyone/media-text-article-title',
+		array(
+			'title'         => esc_html__( 'Media and text article title', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'A Media & Text block with a big image on the left and a heading on the right. The heading is followed by a separator and a description paragraph.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:media-text {"mediaId":1752,"mediaLink":"' . esc_url( get_template_directory_uri() ) . '/assets/images/playing-in-the-sand.jpg","mediaType":"image","className":"is-style-twentytwentyone-border"} --><div class="wp-block-media-text alignwide is-stacked-on-mobile is-style-twentytwentyone-border"><figure class="wp-block-media-text__media"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/playing-in-the-sand.jpg" alt="' . esc_attr__( '&#8220;Playing in the Sand&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" class="wp-image-1752"/></figure><div class="wp-block-media-text__content"><!-- wp:heading {"align":"center"} --><h2 class="has-text-align-center">' . esc_html__( 'Playing in the Sand', 'twentytwentyone' ) . '</h2><!-- /wp:heading --><!-- wp:separator {"className":"is-style-dots"} --><hr class="wp-block-separator is-style-dots"/><!-- /wp:separator --><!-- wp:paragraph {"align":"center","fontSize":"small"} --><p class="has-text-align-center has-small-font-size">' . wp_kses_post( __( 'Berthe Morisot<br>(French, 1841-1895)', 'twentytwentyone' ) ) . '</p><!-- /wp:paragraph --></div></div><!-- /wp:media-text -->',
+		)
+	);
+
+	// Overlapping Images.
+	register_block_pattern(
+		'twentytwentyone/overlapping-images',
+		array(
+			'title'         => esc_html__( 'Overlapping images', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1024,
+			'description'   => esc_html_x( 'Three images inside an overlapping columns block.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:columns {"verticalAlignment":"center","align":"wide","className":"is-style-twentytwentyone-columns-overlap"} --><div class="wp-block-columns alignwide are-vertically-aligned-center is-style-twentytwentyone-columns-overlap"><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"full","sizeSlug":"full"} --><figure class="wp-block-image alignfull size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/roses-tremieres-hollyhocks-1884.jpg" alt="' . esc_attr__( '&#8220;Roses Trémières&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure><!-- /wp:image --><!-- wp:spacer --><div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:image {"align":"full","sizeSlug":"full"} --><figure class="wp-block-image alignfull size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/in-the-bois-de-boulogne.jpg" alt="' . esc_attr__( '&#8220;In the Bois de Boulogne&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure><!-- /wp:image --></div><!-- /wp:column --><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:spacer --><div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div><!-- /wp:spacer --><!-- wp:image {"align":"full",sizeSlug":"full"} --><figure class="wp-block-image alignfull size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/young-woman-in-mauve.jpg" alt="' . esc_attr__( '&#8220;Young Woman in Mauve&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+		)
+	);
+
+	// Two Images Showcase.
+	register_block_pattern(
+		'twentytwentyone/two-images-showcase',
+		array(
+			'title'         => esc_html__( 'Two images showcase', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'A media & text block with a big image on the left and a smaller one with bordered frame on the right.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:media-text {"mediaId":1747,"mediaLink":"' . esc_url( get_template_directory_uri() ) . '/assets/images/Daffodils.jpg","mediaType":"image"} --><div class="wp-block-media-text alignwide is-stacked-on-mobile"><figure class="wp-block-media-text__media"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/Daffodils.jpg" alt="' . esc_attr__( '&#8220;Daffodils&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" size-full"/></figure><div class="wp-block-media-text__content"><!-- wp:image {"align":"center","width":400,"height":512,"sizeSlug":"large","className":"is-style-twentytwentyone-image-frame"} --><figure class="wp-block-image aligncenter size-large is-resized is-style-twentytwentyone-image-frame"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/self-portrait-1885.jpg" alt="' . esc_attr__( '&#8220;Self portrait&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="400" height="512"/></figure><!-- /wp:image --></div></div><!-- /wp:media-text -->',
+		)
+	);
+
+	// Overlapping Images and Text.
+	register_block_pattern(
+		'twentytwentyone/overlapping-images-and-text',
+		array(
+			'title'         => esc_html__( 'Overlapping images and text', 'twentytwentyone' ),
+			'categories'    => array( 'twentytwentyone' ),
+			'viewportWidth' => 1440,
+			'description'   => esc_html_x( 'An overlapping columns block with two images and a text description.', 'Block pattern description', 'twentytwentyone' ),
+			'content'       => '<!-- wp:columns {"verticalAlignment":null,"align":"wide","className":"is-style-twentytwentyone-columns-overlap"} --> <div class="wp-block-columns alignwide is-style-twentytwentyone-columns-overlap"><!-- wp:column --> <div class="wp-block-column"><!-- wp:image {sizeSlug":"full"} --> <figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/the-garden-at-bougival-1884.jpg" alt="' . esc_attr__( '&#8220;The Garden at Bougival&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure> <!-- /wp:image --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"bottom"} --> <div class="wp-block-column is-vertically-aligned-bottom"><!-- wp:group {"className":"is-style-twentytwentyone-border","backgroundColor":"green"} --> <div class="wp-block-group is-style-twentytwentyone-border has-green-background-color has-background"><div class="wp-block-group__inner-container"><!-- wp:paragraph {"fontSize":"extra-large","style":{"typography":{"lineHeight":"1.4"}}} --> <p class="has-extra-large-font-size" style="line-height:1.4">' . esc_html__( 'Beautiful gardens painted by Berthe Morisot in the late 1800s', 'twentytwentyone' ) . '</p> <!-- /wp:paragraph --></div></div> <!-- /wp:group --></div> <!-- /wp:column --> <!-- wp:column --> <div class="wp-block-column"><!-- wp:image {sizeSlug":"full"} --> <figure class="wp-block-image size-full"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/villa-with-orange-trees-nice.jpg" alt="' . esc_attr__( '&#8220;Villa with Orange Trees, Nice&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns -->',
+		)
+	);
+
+	// Portfolio List.
+	register_block_pattern(
+		'twentytwentyone/portfolio-list',
+		array(
+			'title'       => esc_html__( 'Portfolio list', 'twentytwentyone' ),
+			'categories'  => array( 'twentytwentyone' ),
+			'description' => esc_html_x( 'A list of projects with thumbnail images.', 'Block pattern description', 'twentytwentyone' ),
+			'content'     => '<!-- wp:separator {"className":"is-style-twentytwentyone-separator-thick"} --> <hr class="wp-block-separator is-style-twentytwentyone-separator-thick"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Roses Trémières', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":85,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/roses-tremieres-hollyhocks-1884.jpg" alt="' . esc_attr__( '&#8220;Roses Trémières&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="85" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Villa with Orange Trees, Nice', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":53,"height":67,"className":"alignright size-large is-resized"} --><figure class="wp-block-image is-resized alignright size-large"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/villa-with-orange-trees-nice.jpg" alt="&#8220;Villa with Orange Trees, Nice&#8221; by Berthe Morisot" width="53" height="67"/></figure><!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'In the Bois de Boulogne', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":81,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/in-the-bois-de-boulogne.jpg" alt="' . esc_attr__( '&#8220;In the Bois de Boulogne&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="81" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'The Garden at Bougival', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":85,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/the-garden-at-bougival-1884.jpg" alt="' . esc_attr__( '&#8220;The Garden at Bougival&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="85" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Young Woman in Mauve', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":54,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/young-woman-in-mauve.jpg" alt="' . esc_attr__( '&#8220;Young Woman in Mauve&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="54" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-default"} --> <hr class="wp-block-separator is-style-default"/> <!-- /wp:separator --> <!-- wp:columns --> <div class="wp-block-columns"><!-- wp:column {"verticalAlignment":"center","width":80} --> <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:80%"><!-- wp:paragraph {"fontSize":"extra-large"} --> <p class="has-extra-large-font-size"><a href="#">' . esc_html__( 'Reading', 'twentytwentyone' ) . '</a></p> <!-- /wp:paragraph --></div> <!-- /wp:column --> <!-- wp:column {"verticalAlignment":"center"} --> <div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"right","width":84,"height":67,"sizeSlug":"large"} --> <figure class="wp-block-image alignright size-large is-resized"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/Reading.jpg" alt="' . esc_attr__( '&#8220;Reading&#8221; by Berthe Morisot', 'twentytwentyone' ) . '" width="84" height="67"/></figure> <!-- /wp:image --></div> <!-- /wp:column --></div> <!-- /wp:columns --> <!-- wp:separator {"className":"is-style-twentytwentyone-separator-thick"} --> <hr class="wp-block-separator is-style-twentytwentyone-separator-thick"/> <!-- /wp:separator -->',
+		)
+	);
+
+	register_block_pattern(
+		'twentytwentyone/contact-information',
+		array(
+			'title'       => esc_html__( 'Contact information', 'twentytwentyone' ),
+			'categories'  => array( 'twentytwentyone' ),
+			'description' => esc_html_x( 'A block with 3 columns that display contact information and social media links.', 'Block pattern description', 'twentytwentyone' ),
+			'content'     => '<!-- wp:columns {"align":"wide"} --><div class="wp-block-columns alignwide"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p><a href="mailto:#">' . esc_html_x( 'example@example.com', 'Block pattern sample content', 'twentytwentyone' ) . '<br></a>' . esc_html_x( '123-456-7890', 'Block pattern sample content', 'twentytwentyone' ) . '</p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph {"align":"center"} --><p class="has-text-align-center">' . esc_html_x( '123 Main Street', 'Block pattern sample content', 'twentytwentyone' ) . '<br>' . esc_html_x( 'Cambridge, MA, 02139', 'Block pattern sample content', 'twentytwentyone' ) . '</p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:social-links {"align":"right","className":"is-style-twentytwentyone-social-icons-color"} --><ul class="wp-block-social-links alignright is-style-twentytwentyone-social-icons-color"><!-- wp:social-link {"url":"https://wordpress.org","service":"wordpress"} /--><!-- wp:social-link {"url":"https://www.facebook.com/WordPress/","service":"facebook"} /--><!-- wp:social-link {"url":"https://twitter.com/WordPress","service":"twitter"} /--><!-- wp:social-link {"url":"https://www.youtube.com/wordpress","service":"youtube"} /--></ul><!-- /wp:social-links --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+		)
+	);
+}
+
+The file starter-content.php contains:
+<?php
+/**
+ * Twenty Twenty-One Starter Content
+ *
+ * @link https://make.wordpress.org/core/2016/11/30/starter-content-for-themes-in-4-7/
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Function to return the array of starter content for the theme.
+ *
+ * Passes it through the `twenty_twenty_one_starter_content` filter before returning.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return array A filtered array of args for the starter_content.
+ */
+function twenty_twenty_one_get_starter_content() {
+
+	// Define and register starter content to showcase the theme on new sites.
+	$starter_content = array(
+
+		// Specify the core-defined pages to create and add custom thumbnails to some of them.
+		'posts'     => array(
+			'front' => array(
+				'post_type'    => 'page',
+				'post_title'   => esc_html_x( 'Create your website with blocks', 'Theme starter content', 'twentytwentyone' ),
+				'post_content' => '
+					<!-- wp:heading {"align":"wide","fontSize":"gigantic","style":{"typography":{"lineHeight":"1.1"}}} -->
+					<h2 class="alignwide has-text-align-wide has-gigantic-font-size" style="line-height:1.1">' . esc_html_x( 'Create your website with blocks', 'Theme starter content', 'twentytwentyone' ) . '</h2>
+					<!-- /wp:heading -->
+
+					<!-- wp:spacer -->
+					<div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer -->
+
+					<!-- wp:columns {"verticalAlignment":"center","align":"wide","className":"is-style-twentytwentyone-columns-overlap"} -->
+					<div class="wp-block-columns alignwide are-vertically-aligned-center is-style-twentytwentyone-columns-overlap"><!-- wp:column {"verticalAlignment":"center"} -->
+					<div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"align":"full","sizeSlug":"large"} -->
+					<figure class="wp-block-image alignfull size-large"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/roses-tremieres-hollyhocks-1884.jpg" alt="' . esc_attr__( '&#8220;Roses Trémières&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure>
+					<!-- /wp:image -->
+
+					<!-- wp:spacer -->
+					<div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer -->
+
+					<!-- wp:image {"align":"full","sizeSlug":"large","className":"is-style-twentytwentyone-image-frame"} -->
+					<figure class="wp-block-image alignfull size-large is-style-twentytwentyone-image-frame"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/in-the-bois-de-boulogne.jpg" alt="' . esc_attr__( '&#8220;In the Bois de Boulogne&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure>
+					<!-- /wp:image --></div>
+					<!-- /wp:column -->
+
+					<!-- wp:column {"verticalAlignment":"center"} -->
+					<div class="wp-block-column is-vertically-aligned-center"><!-- wp:spacer -->
+					<div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer -->
+
+					<!-- wp:image {"sizeSlug":"large","className":"alignfull size-full is-style-twentytwentyone-border"} -->
+					<figure class="wp-block-image size-large alignfull size-full is-style-twentytwentyone-border"><img src="' . esc_url( get_template_directory_uri() ) . '/assets/images/young-woman-in-mauve.jpg" alt="' . esc_attr__( '&#8220;Young Woman in Mauve&#8221; by Berthe Morisot', 'twentytwentyone' ) . '"/></figure>
+					<!-- /wp:image --></div>
+					<!-- /wp:column --></div>
+					<!-- /wp:columns -->
+
+					<!-- wp:spacer {"height":50} -->
+					<div style="height:50px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer -->
+
+					<!-- wp:columns {"verticalAlignment":"top","align":"wide"} -->
+					<div class="wp-block-columns alignwide are-vertically-aligned-top"><!-- wp:column {"verticalAlignment":"top"} -->
+					<div class="wp-block-column is-vertically-aligned-top"><!-- wp:heading {"level":3} -->
+					<h3>' . esc_html_x( 'Add block patterns', 'Theme starter content', 'twentytwentyone' ) . '</h3>
+					<!-- /wp:heading -->
+
+					<!-- wp:paragraph -->
+					<p>' . esc_html_x( 'Block patterns are pre-designed groups of blocks. To add one, select the Add Block button [+] in the toolbar at the top of the editor. Switch to the Patterns tab underneath the search bar, and choose a pattern.', 'Theme starter content', 'twentytwentyone' ) . '</p>
+					<!-- /wp:paragraph --></div>
+					<!-- /wp:column -->
+
+					<!-- wp:column {"verticalAlignment":"top"} -->
+					<div class="wp-block-column is-vertically-aligned-top"><!-- wp:heading {"level":3} -->
+					<h3>' . esc_html_x( 'Frame your images', 'Theme starter content', 'twentytwentyone' ) . '</h3>
+					<!-- /wp:heading -->
+
+					<!-- wp:paragraph -->
+					<p>' . esc_html_x( 'Twenty Twenty-One includes stylish borders for your content. With an Image block selected, open the "Styles" panel within the Editor sidebar. Select the "Frame" block style to activate it.', 'Theme starter content', 'twentytwentyone' ) . '</p>
+					<!-- /wp:paragraph --></div>
+					<!-- /wp:column -->
+
+					<!-- wp:column {"verticalAlignment":"top"} -->
+					<div class="wp-block-column is-vertically-aligned-top"><!-- wp:heading {"level":3} -->
+					<h3>' . esc_html_x( 'Overlap columns', 'Theme starter content', 'twentytwentyone' ) . '</h3>
+					<!-- /wp:heading -->
+
+					<!-- wp:paragraph -->
+					<p>' . esc_html_x( 'Twenty Twenty-One also includes an overlap style for column blocks. With a Columns block selected, open the "Styles" panel within the Editor sidebar. Choose the "Overlap" block style to try it out.', 'Theme starter content', 'twentytwentyone' ) . '</p>
+					<!-- /wp:paragraph --></div>
+					<!-- /wp:column --></div>
+					<!-- /wp:columns -->
+
+					<!-- wp:spacer -->
+					<div style="height:100px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer -->
+
+					<!-- wp:cover {"overlayColor":"green","contentPosition":"center center","align":"wide","className":"is-style-twentytwentyone-border"} -->
+					<div class="wp-block-cover alignwide has-green-background-color has-background-dim is-style-twentytwentyone-border"><div class="wp-block-cover__inner-container"><!-- wp:spacer {"height":20} -->
+					<div style="height:20px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer -->
+
+					<!-- wp:paragraph {"fontSize":"huge"} -->
+					<p class="has-huge-font-size">' . esc_html_x( 'Need help?', 'Theme starter content', 'twentytwentyone' ) . '</p>
+					<!-- /wp:paragraph -->
+
+					<!-- wp:spacer {"height":75} -->
+					<div style="height:75px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer -->
+
+					<!-- wp:columns -->
+					<div class="wp-block-columns"><!-- wp:column -->
+					<div class="wp-block-column"><!-- wp:paragraph -->
+					<p><a href="https://wordpress.org/support/article/twenty-twenty-one/">' . esc_html_x( 'Read the Theme Documentation', 'Theme starter content', 'twentytwentyone' ) . '</a></p>
+					<!-- /wp:paragraph --></div>
+					<!-- /wp:column -->
+
+					<!-- wp:column -->
+					<div class="wp-block-column"><!-- wp:paragraph -->
+					<p><a href="https://wordpress.org/support/theme/twentytwentyone/">' . esc_html_x( 'Check out the Support Forums', 'Theme starter content', 'twentytwentyone' ) . '</a></p>
+					<!-- /wp:paragraph --></div>
+					<!-- /wp:column --></div>
+					<!-- /wp:columns -->
+
+					<!-- wp:spacer {"height":20} -->
+					<div style="height:20px" aria-hidden="true" class="wp-block-spacer"></div>
+					<!-- /wp:spacer --></div></div>
+					<!-- /wp:cover -->',
+			),
+			'about',
+			'contact',
+			'blog',
+		),
+
+		// Default to a static front page and assign the front and posts pages.
+		'options'   => array(
+			'show_on_front'  => 'page',
+			'page_on_front'  => '{{front}}',
+			'page_for_posts' => '{{blog}}',
+		),
+
+		// Set up nav menus for each of the two areas registered in the theme.
+		'nav_menus' => array(
+			// Assign a menu to the "primary" location.
+			'primary' => array(
+				'name'  => esc_html__( 'Primary menu', 'twentytwentyone' ),
+				'items' => array(
+					'link_home', // Note that the core "home" page is actually a link in case a static front page is not used.
+					'page_about',
+					'page_blog',
+					'page_contact',
+				),
+			),
+
+			// Assign a menu to the "footer" location.
+			'footer'  => array(
+				'name'  => esc_html__( 'Secondary menu', 'twentytwentyone' ),
+				'items' => array(
+					'link_facebook',
+					'link_twitter',
+					'link_instagram',
+					'link_email',
+				),
+			),
+		),
+	);
+
+	/**
+	 * Filters the array of starter content.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @param array $starter_content Array of starter content.
+	 */
+	return apply_filters( 'twenty_twenty_one_starter_content', $starter_content );
+}
+
+The file template-functions.php contains:
+<?php
+/**
+ * Functions which enhance the theme by hooking into WordPress
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+/**
+ * Adds custom classes to the array of body classes.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param array $classes Classes for the body element.
+ *
+ * @return array
+ */
+function twenty_twenty_one_body_classes( $classes ) {
+
+	// Helps detect if JS is enabled or not.
+	$classes[] = 'no-js';
+
+	// Adds `singular` to singular pages, and `hfeed` to all other pages.
+	$classes[] = is_singular() ? 'singular' : 'hfeed';
+
+	// Add a body class if main navigation is active.
+	if ( has_nav_menu( 'primary' ) ) {
+		$classes[] = 'has-main-navigation';
+	}
+
+	// Add a body class if there are no footer widgets.
+	if ( ! is_active_sidebar( 'sidebar-1' ) ) {
+		$classes[] = 'no-widgets';
+	}
+
+	return $classes;
+}
+add_filter( 'body_class', 'twenty_twenty_one_body_classes' );
+
+/**
+ * Adds custom class to the array of posts classes.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param array $classes An array of CSS classes.
+ *
+ * @return array
+ */
+function twenty_twenty_one_post_classes( $classes ) {
+	$classes[] = 'entry';
+
+	return $classes;
+}
+add_filter( 'post_class', 'twenty_twenty_one_post_classes', 10, 3 );
+
+/**
+ * Add a pingback url auto-discovery header for single posts, pages, or attachments.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return void
+ */
+function twenty_twenty_one_pingback_header() {
+	if ( is_singular() && pings_open() ) {
+		echo '<link rel="pingback" href="', esc_url( get_bloginfo( 'pingback_url' ) ), '">';
+	}
+}
+add_action( 'wp_head', 'twenty_twenty_one_pingback_header' );
+
+/**
+ * Remove the `no-js` class from body if JS is supported.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return void
+ */
+function twenty_twenty_one_supports_js() {
+	echo '<script>document.body.classList.remove("no-js");</script>';
+}
+add_action( 'wp_footer', 'twenty_twenty_one_supports_js' );
+
+/**
+ * Changes comment form default fields.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param array $defaults The form defaults.
+ *
+ * @return array
+ */
+function twenty_twenty_one_comment_form_defaults( $defaults ) {
+
+	// Adjust height of comment form.
+	$defaults['comment_field'] = preg_replace( '/rows="\d+"/', 'rows="5"', $defaults['comment_field'] );
+
+	return $defaults;
+}
+add_filter( 'comment_form_defaults', 'twenty_twenty_one_comment_form_defaults' );
+
+/**
+ * Determines if post thumbnail can be displayed.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return bool
+ */
+function twenty_twenty_one_can_show_post_thumbnail() {
+	return apply_filters(
+		'twenty_twenty_one_can_show_post_thumbnail',
+		! post_password_required() && ! is_attachment() && has_post_thumbnail()
+	);
+}
+
+/**
+ * Returns the size for avatars used in the theme.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @return int
+ */
+function twenty_twenty_one_get_avatar_size() {
+	return 60;
+}
+
+/**
+ * Creates continue reading text
+ */
+function twenty_twenty_one_continue_reading_text() {
+	$continue_reading = sprintf(
+		/* translators: %s: Name of current post. */
+		esc_html__( 'Continue reading %s', 'twentytwentyone' ),
+		the_title( '<span class="screen-reader-text">', '</span>', false )
+	);
+
+	return $continue_reading;
+}
+
+/**
+ * Create the continue reading link for excerpt.
+ */
+function twenty_twenty_one_continue_reading_link_excerpt() {
+	if ( ! is_admin() ) {
+		return '&hellip; <a class="more-link" href="' . esc_url( get_permalink() ) . '">' . twenty_twenty_one_continue_reading_text() . '</a>';
+	}
+}
+
+// Filter the excerpt more link.
+add_filter( 'excerpt_more', 'twenty_twenty_one_continue_reading_link_excerpt' );
+
+/**
+ * Create the continue reading link.
+ */
+function twenty_twenty_one_continue_reading_link() {
+	if ( ! is_admin() ) {
+		return '<div class="more-link-container"><a class="more-link" href="' . esc_url( get_permalink() ) . '#more-' . esc_attr( get_the_ID() ) . '">' . twenty_twenty_one_continue_reading_text() . '</a></div>';
+	}
+}
+
+// Filter the excerpt more link.
+add_filter( 'the_content_more_link', 'twenty_twenty_one_continue_reading_link' );
+
+if ( ! function_exists( 'twenty_twenty_one_post_title' ) ) {
+	/**
+	 * Add a title to posts and pages that are missing titles.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @param string $title The title.
+	 *
+	 * @return string
+	 */
+	function twenty_twenty_one_post_title( $title ) {
+		return '' === $title ? esc_html_x( 'Untitled', 'Added to posts and pages that are missing titles', 'twentytwentyone' ) : $title;
+	}
+}
+add_filter( 'the_title', 'twenty_twenty_one_post_title' );
+
+/**
+ * Gets the SVG code for a given icon.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param string $group The icon group.
+ * @param string $icon The icon.
+ * @param int    $size The icon size in pixels.
+ *
+ * @return string
+ */
+function twenty_twenty_one_get_icon_svg( $group, $icon, $size = 24 ) {
+	return Twenty_Twenty_One_SVG_Icons::get_svg( $group, $icon, $size );
+}
+
+/**
+ * Changes the default navigation arrows to svg icons
+ *
+ * @param string $calendar_output The generated HTML of the calendar.
+ *
+ * @return string
+ */
+function twenty_twenty_one_change_calendar_nav_arrows( $calendar_output ) {
+	$calendar_output = str_replace( '&laquo; ', is_rtl() ? twenty_twenty_one_get_icon_svg( 'ui', 'arrow_right' ) : twenty_twenty_one_get_icon_svg( 'ui', 'arrow_left' ), $calendar_output );
+	$calendar_output = str_replace( ' &raquo;', is_rtl() ? twenty_twenty_one_get_icon_svg( 'ui', 'arrow_left' ) : twenty_twenty_one_get_icon_svg( 'ui', 'arrow_right' ), $calendar_output );
+	return $calendar_output;
+}
+add_filter( 'get_calendar', 'twenty_twenty_one_change_calendar_nav_arrows' );
+
+/**
+ * Get custom CSS.
+ *
+ * Return CSS for non-latin language, if available, or null
+ *
+ * @param string $type Whether to return CSS for the "front-end", "block-editor" or "classic-editor".
+ *
+ * @return string
+ */
+function twenty_twenty_one_get_non_latin_css( $type = 'front-end' ) {
+
+	// Fetch site locale.
+	$locale = get_bloginfo( 'language' );
+
+	// Define fallback fonts for non-latin languages.
+	$font_family = apply_filters(
+		'twenty_twenty_one_get_localized_font_family_types',
+		array(
+
+			// Arabic.
+			'ar'    => array( 'Tahoma', 'Arial', 'sans-serif' ),
+			'ary'   => array( 'Tahoma', 'Arial', 'sans-serif' ),
+			'azb'   => array( 'Tahoma', 'Arial', 'sans-serif' ),
+			'ckb'   => array( 'Tahoma', 'Arial', 'sans-serif' ),
+			'fa-IR' => array( 'Tahoma', 'Arial', 'sans-serif' ),
+			'haz'   => array( 'Tahoma', 'Arial', 'sans-serif' ),
+			'ps'    => array( 'Tahoma', 'Arial', 'sans-serif' ),
+
+			// Chinese Simplified (China) - Noto Sans SC.
+			'zh-CN' => array( '\'PingFang SC\'', '\'Helvetica Neue\'', '\'Microsoft YaHei New\'', '\'STHeiti Light\'', 'sans-serif' ),
+
+			// Chinese Traditional (Taiwan) - Noto Sans TC.
+			'zh-TW' => array( '\'PingFang TC\'', '\'Helvetica Neue\'', '\'Microsoft YaHei New\'', '\'STHeiti Light\'', 'sans-serif' ),
+
+			// Chinese (Hong Kong) - Noto Sans HK.
+			'zh-HK' => array( '\'PingFang HK\'', '\'Helvetica Neue\'', '\'Microsoft YaHei New\'', '\'STHeiti Light\'', 'sans-serif' ),
+
+			// Cyrillic.
+			'bel'   => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'bg-BG' => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'kk'    => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'mk-MK' => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'mn'    => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'ru-RU' => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'sah'   => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'sr-RS' => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'tt-RU' => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+			'uk'    => array( '\'Helvetica Neue\'', 'Helvetica', '\'Segoe UI\'', 'Arial', 'sans-serif' ),
+
+			// Devanagari.
+			'bn-BD' => array( 'Arial', 'sans-serif' ),
+			'hi-IN' => array( 'Arial', 'sans-serif' ),
+			'mr'    => array( 'Arial', 'sans-serif' ),
+			'ne-NP' => array( 'Arial', 'sans-serif' ),
+
+			// Greek.
+			'el'    => array( '\'Helvetica Neue\', Helvetica, Arial, sans-serif' ),
+
+			// Gujarati.
+			'gu'    => array( 'Arial', 'sans-serif' ),
+
+			// Hebrew.
+			'he-IL' => array( '\'Arial Hebrew\'', 'Arial', 'sans-serif' ),
+
+			// Japanese.
+			'ja'    => array( 'sans-serif' ),
+
+			// Korean.
+			'ko-KR' => array( '\'Apple SD Gothic Neo\'', '\'Malgun Gothic\'', '\'Nanum Gothic\'', 'Dotum', 'sans-serif' ),
+
+			// Thai.
+			'th'    => array( '\'Sukhumvit Set\'', '\'Helvetica Neue\'', 'Helvetica', 'Arial', 'sans-serif' ),
+
+			// Vietnamese.
+			'vi'    => array( '\'Libre Franklin\'', 'sans-serif' ),
+
+		)
+	);
+
+	// Return if the selected language has no fallback fonts.
+	if ( empty( $font_family[ $locale ] ) ) {
+		return '';
+	}
+
+	// Define elements to apply fallback fonts to.
+	$elements = apply_filters(
+		'twenty_twenty_one_get_localized_font_family_elements',
+		array(
+			'front-end'      => array( 'body', 'input', 'textarea', 'button', '.button', '.faux-button', '.wp-block-button__link', '.wp-block-file__button', '.has-drop-cap:not(:focus)::first-letter', '.has-drop-cap:not(:focus)::first-letter', '.entry-content .wp-block-archives', '.entry-content .wp-block-categories', '.entry-content .wp-block-cover-image', '.entry-content .wp-block-latest-comments', '.entry-content .wp-block-latest-posts', '.entry-content .wp-block-pullquote', '.entry-content .wp-block-quote.is-large', '.entry-content .wp-block-quote.is-style-large', '.entry-content .wp-block-archives *', '.entry-content .wp-block-categories *', '.entry-content .wp-block-latest-posts *', '.entry-content .wp-block-latest-comments *', '.entry-content p', '.entry-content ol', '.entry-content ul', '.entry-content dl', '.entry-content dt', '.entry-content cite', '.entry-content figcaption', '.entry-content .wp-caption-text', '.comment-content p', '.comment-content ol', '.comment-content ul', '.comment-content dl', '.comment-content dt', '.comment-content cite', '.comment-content figcaption', '.comment-content .wp-caption-text', '.widget_text p', '.widget_text ol', '.widget_text ul', '.widget_text dl', '.widget_text dt', '.widget-content .rssSummary', '.widget-content cite', '.widget-content figcaption', '.widget-content .wp-caption-text' ),
+			'block-editor'   => array( '.editor-styles-wrapper > *', '.editor-styles-wrapper p', '.editor-styles-wrapper ol', '.editor-styles-wrapper ul', '.editor-styles-wrapper dl', '.editor-styles-wrapper dt', '.editor-post-title__block .editor-post-title__input', '.editor-styles-wrapper .wp-block h1', '.editor-styles-wrapper .wp-block h2', '.editor-styles-wrapper .wp-block h3', '.editor-styles-wrapper .wp-block h4', '.editor-styles-wrapper .wp-block h5', '.editor-styles-wrapper .wp-block h6', '.editor-styles-wrapper .has-drop-cap:not(:focus)::first-letter', '.editor-styles-wrapper cite', '.editor-styles-wrapper figcaption', '.editor-styles-wrapper .wp-caption-text' ),
+			'classic-editor' => array( 'body#tinymce.wp-editor', 'body#tinymce.wp-editor p', 'body#tinymce.wp-editor ol', 'body#tinymce.wp-editor ul', 'body#tinymce.wp-editor dl', 'body#tinymce.wp-editor dt', 'body#tinymce.wp-editor figcaption', 'body#tinymce.wp-editor .wp-caption-text', 'body#tinymce.wp-editor .wp-caption-dd', 'body#tinymce.wp-editor cite', 'body#tinymce.wp-editor table' ),
+		)
+	);
+
+	// Return if the specified type doesn't exist.
+	if ( empty( $elements[ $type ] ) ) {
+		return '';
+	}
+
+	// Include file if function doesn't exist.
+	if ( ! function_exists( 'twenty_twenty_one_generate_css' ) ) {
+		require_once get_theme_file_path( 'inc/custom-css.php' ); // phpcs:ignore WPThemeReview.CoreFunctionality.FileInclude.FileIncludeFound
+	}
+
+	// Return the specified styles.
+	return twenty_twenty_one_generate_css( // @phpstan-ignore-line.
+		implode( ',', $elements[ $type ] ),
+		'font-family',
+		implode( ',', $font_family[ $locale ] ),
+		null,
+		null,
+		false
+	);
+}
+
+/**
+ * Print the first instance of a block in the content, and then break away.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param string      $block_name The full block type name, or a partial match.
+ *                                Example: `core/image`, `core-embed/*`.
+ * @param string|null $content    The content to search in. Use null for get_the_content().
+ * @param int         $instances  How many instances of the block will be printed (max). Defaults to 1.
+ *
+ * @return bool Returns true if a block was located & printed, otherwise false.
+ */
+function twenty_twenty_one_print_first_instance_of_block( $block_name, $content = null, $instances = 1 ) {
+	$instances_count = 0;
+	$blocks_content  = '';
+
+	if ( ! $content ) {
+		$content = get_the_content();
+	}
+
+	// Parse blocks in the content.
+	$blocks = parse_blocks( $content );
+
+	// Loop blocks.
+	foreach ( $blocks as $block ) {
+
+		// Sanity check.
+		if ( ! isset( $block['blockName'] ) ) {
+			continue;
+		}
+
+		// Check if this the block matches the $block_name.
+		$is_matching_block = false;
+
+		// If the block ends with *, try to match the first portion.
+		if ( '*' === $block_name[-1] ) {
+			$is_matching_block = 0 === strpos( $block['blockName'], rtrim( $block_name, '*' ) );
+		} else {
+			$is_matching_block = $block_name === $block['blockName'];
+		}
+
+		if ( $is_matching_block ) {
+			// Increment count.
+			$instances_count++;
+
+			// Add the block HTML.
+			$blocks_content .= render_block( $block );
+
+			// Break the loop if the $instances count was reached.
+			if ( $instances_count >= $instances ) {
+				break;
+			}
+		}
+	}
+
+	if ( $blocks_content ) {
+		echo apply_filters( 'the_content', $blocks_content ); // phpcs:ignore WordPress.Security.EscapeOutput
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Retrieve protected post password form content.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param int|WP_Post $post Optional. Post ID or WP_Post object. Default is global $post.
+ * @return string HTML content for password form for password protected post.
+ */
+function twenty_twenty_one_password_form( $post = 0 ) {
+	$post   = get_post( $post );
+	$label  = 'pwbox-' . ( empty( $post->ID ) ? wp_rand() : $post->ID );
+	$output = '<p class="post-password-message">' . esc_html__( 'This content is password protected. Please enter a password to view.', 'twentytwentyone' ) . '</p>
+	<form action="' . esc_url( site_url( 'wp-login.php?action=postpass', 'login_post' ) ) . '" class="post-password-form" method="post">
+	<label class="post-password-form__label" for="' . esc_attr( $label ) . '">' . esc_html_x( 'Password', 'Post password form', 'twentytwentyone' ) . '</label><input class="post-password-form__input" name="post_password" id="' . esc_attr( $label ) . '" type="password" size="20" /><input type="submit" class="post-password-form__submit" name="' . esc_attr_x( 'Submit', 'Post password form', 'twentytwentyone' ) . '" value="' . esc_attr_x( 'Enter', 'Post password form', 'twentytwentyone' ) . '" /></form>
+	';
+	return $output;
+}
+add_filter( 'the_password_form', 'twenty_twenty_one_password_form' );
+
+/**
+ * Filters the list of attachment image attributes.
+ *
+ * @since Twenty Twenty-One 1.0
+ *
+ * @param array        $attr       Array of attribute values for the image markup, keyed by attribute name.
+ *                                 See wp_get_attachment_image().
+ * @param WP_Post      $attachment Image attachment post.
+ * @param string|array $size       Requested size. Image size or array of width and height values
+ *                                 (in that order). Default 'thumbnail'.
+ *
+ * @return array
+ */
+function twenty_twenty_one_get_attachment_image_attributes( $attr, $attachment, $size ) {
+
+	if ( is_admin() ) {
+		return $attr;
+	}
+
+	if ( isset( $attr['class'] ) && false !== strpos( $attr['class'], 'custom-logo' ) ) {
+		return $attr;
+	}
+
+	$width  = false;
+	$height = false;
+
+	if ( is_array( $size ) ) {
+		$width  = (int) $size[0];
+		$height = (int) $size[1];
+	} elseif ( $attachment && is_object( $attachment ) && $attachment->ID ) {
+		$meta = wp_get_attachment_metadata( $attachment->ID );
+		if ( $meta['width'] && $meta['height'] ) {
+			$width  = (int) $meta['width'];
+			$height = (int) $meta['height'];
+		}
+	}
+
+	if ( $width && $height ) {
+
+		// Add style.
+		$attr['style'] = isset( $attr['style'] ) ? $attr['style'] : '';
+		$attr['style'] = 'width:100%;height:' . round( 100 * $height / $width, 2 ) . '%;max-width:' . $width . 'px;' . $attr['style'];
+	}
+
+	return $attr;
+}
+add_filter( 'wp_get_attachment_image_attributes', 'twenty_twenty_one_get_attachment_image_attributes', 10, 3 );
+
+The file template-tags.php contains:
+<?php
+/**
+ * Custom template tags for this theme
+ *
+ * @package WordPress
+ * @subpackage Twenty_Twenty_One
+ * @since Twenty Twenty-One 1.0
+ */
+
+if ( ! function_exists( 'twenty_twenty_one_posted_on' ) ) {
+	/**
+	 * Prints HTML with meta information for the current post-date/time.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @return void
+	 */
+	function twenty_twenty_one_posted_on() {
+		$time_string = '<time class="entry-date published updated" datetime="%1$s">%2$s</time>';
+
+		$time_string = sprintf(
+			$time_string,
+			esc_attr( get_the_date( DATE_W3C ) ),
+			esc_html( get_the_date() )
+		);
+		echo '<span class="posted-on">';
+		printf(
+			/* translators: %s: Publish date. */
+			esc_html__( 'Published %s', 'twentytwentyone' ),
+			$time_string // phpcs:ignore WordPress.Security.EscapeOutput
+		);
+		echo '</span>';
+	}
+}
+
+if ( ! function_exists( 'twenty_twenty_one_posted_by' ) ) {
+	/**
+	 * Prints HTML with meta information about theme author.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @return void
+	 */
+	function twenty_twenty_one_posted_by() {
+		if ( ! get_the_author_meta( 'description' ) && post_type_supports( get_post_type(), 'author' ) ) {
+			echo '<span class="byline">';
+			printf(
+				/* translators: %s: Author name. */
+				esc_html__( 'By %s', 'twentytwentyone' ),
+				'<a href="' . esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ) . '" rel="author">' . esc_html( get_the_author() ) . '</a>'
+			);
+			echo '</span>';
+		}
+	}
+}
+
+if ( ! function_exists( 'twenty_twenty_one_entry_meta_footer' ) ) {
+	/**
+	 * Prints HTML with meta information for the categories, tags and comments.
+	 * Footer entry meta is displayed differently in archives and single posts.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @return void
+	 */
+	function twenty_twenty_one_entry_meta_footer() {
+
+		// Early exit if not a post.
+		if ( 'post' !== get_post_type() ) {
+			return;
+		}
+
+		// Hide meta information on pages.
+		if ( ! is_single() ) {
+
+			if ( is_sticky() ) {
+				echo '<p>' . esc_html_x( 'Featured post', 'Label for sticky posts', 'twentytwentyone' ) . '</p>';
+			}
+
+			$post_format = get_post_format();
+			if ( 'aside' === $post_format || 'status' === $post_format ) {
+				echo '<p><a href="' . esc_url( get_permalink() ) . '">' . twenty_twenty_one_continue_reading_text() . '</a></p>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			}
+
+			// Posted on.
+			twenty_twenty_one_posted_on();
+
+			// Edit post link.
+			edit_post_link(
+				sprintf(
+					/* translators: %s: Name of current post. Only visible to screen readers. */
+					esc_html__( 'Edit %s', 'twentytwentyone' ),
+					'<span class="screen-reader-text">' . get_the_title() . '</span>'
+				),
+				'<span class="edit-link">',
+				'</span><br>'
+			);
+
+			if ( has_category() || has_tag() ) {
+
+				echo '<div class="post-taxonomies">';
+
+				/* translators: Used between list items, there is a space after the comma. */
+				$categories_list = get_the_category_list( __( ', ', 'twentytwentyone' ) );
+				if ( $categories_list ) {
+					printf(
+						/* translators: %s: List of categories. */
+						'<span class="cat-links">' . esc_html__( 'Categorized as %s', 'twentytwentyone' ) . ' </span>',
+						$categories_list // phpcs:ignore WordPress.Security.EscapeOutput
+					);
+				}
+
+				/* translators: Used between list items, there is a space after the comma. */
+				$tags_list = get_the_tag_list( '', __( ', ', 'twentytwentyone' ) );
+				if ( $tags_list ) {
+					printf(
+						/* translators: %s: List of tags. */
+						'<span class="tags-links">' . esc_html__( 'Tagged %s', 'twentytwentyone' ) . '</span>',
+						$tags_list // phpcs:ignore WordPress.Security.EscapeOutput
+					);
+				}
+				echo '</div>';
+			}
+		} else {
+
+			echo '<div class="posted-by">';
+			// Posted on.
+			twenty_twenty_one_posted_on();
+			// Posted by.
+			twenty_twenty_one_posted_by();
+			// Edit post link.
+			edit_post_link(
+				sprintf(
+					/* translators: %s: Name of current post. Only visible to screen readers. */
+					esc_html__( 'Edit %s', 'twentytwentyone' ),
+					'<span class="screen-reader-text">' . get_the_title() . '</span>'
+				),
+				'<span class="edit-link">',
+				'</span>'
+			);
+			echo '</div>';
+
+			if ( has_category() || has_tag() ) {
+
+				echo '<div class="post-taxonomies">';
+
+				/* translators: Used between list items, there is a space after the comma. */
+				$categories_list = get_the_category_list( __( ', ', 'twentytwentyone' ) );
+				if ( $categories_list ) {
+					printf(
+						/* translators: %s: List of categories. */
+						'<span class="cat-links">' . esc_html__( 'Categorized as %s', 'twentytwentyone' ) . ' </span>',
+						$categories_list // phpcs:ignore WordPress.Security.EscapeOutput
+					);
+				}
+
+				/* translators: Used between list items, there is a space after the comma. */
+				$tags_list = get_the_tag_list( '', __( ', ', 'twentytwentyone' ) );
+				if ( $tags_list ) {
+					printf(
+						/* translators: %s: List of tags. */
+						'<span class="tags-links">' . esc_html__( 'Tagged %s', 'twentytwentyone' ) . '</span>',
+						$tags_list // phpcs:ignore WordPress.Security.EscapeOutput
+					);
+				}
+				echo '</div>';
+			}
+		}
+	}
+}
+
+if ( ! function_exists( 'twenty_twenty_one_post_thumbnail' ) ) {
+	/**
+	 * Displays an optional post thumbnail.
+	 *
+	 * Wraps the post thumbnail in an anchor element on index views, or a div
+	 * element when on single views.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @return void
+	 */
+	function twenty_twenty_one_post_thumbnail() {
+		if ( ! twenty_twenty_one_can_show_post_thumbnail() ) {
+			return;
+		}
+		?>
+
+		<?php if ( is_singular() ) : ?>
+
+			<figure class="post-thumbnail">
+				<?php
+				// Lazy-loading attributes should be skipped for thumbnails since they are immediately in the viewport.
+				the_post_thumbnail( 'post-thumbnail', array( 'loading' => false ) );
+				?>
+				<?php if ( wp_get_attachment_caption( get_post_thumbnail_id() ) ) : ?>
+					<figcaption class="wp-caption-text"><?php echo wp_kses_post( wp_get_attachment_caption( get_post_thumbnail_id() ) ); ?></figcaption>
+				<?php endif; ?>
+			</figure><!-- .post-thumbnail -->
+
+		<?php else : ?>
+
+			<figure class="post-thumbnail">
+				<a class="post-thumbnail-inner alignwide" href="<?php the_permalink(); ?>" aria-hidden="true" tabindex="-1">
+					<?php the_post_thumbnail( 'post-thumbnail' ); ?>
+				</a>
+				<?php if ( wp_get_attachment_caption( get_post_thumbnail_id() ) ) : ?>
+					<figcaption class="wp-caption-text"><?php echo wp_kses_post( wp_get_attachment_caption( get_post_thumbnail_id() ) ); ?></figcaption>
+				<?php endif; ?>
+			</figure>
+
+		<?php endif; ?>
+		<?php
+	}
+}
+
+if ( ! function_exists( 'twenty_twenty_one_the_posts_navigation' ) ) {
+	/**
+	 * Print the next and previous posts navigation.
+	 *
+	 * @since Twenty Twenty-One 1.0
+	 *
+	 * @return void
+	 */
+	function twenty_twenty_one_the_posts_navigation() {
+		the_posts_pagination(
+			array(
+				'before_page_number' => esc_html__( 'Page', 'twentytwentyone' ) . ' ',
+				'mid_size'           => 0,
+				'prev_text'          => sprintf(
+					'%s <span class="nav-prev-text">%s</span>',
+					is_rtl() ? twenty_twenty_one_get_icon_svg( 'ui', 'arrow_right' ) : twenty_twenty_one_get_icon_svg( 'ui', 'arrow_left' ),
+					wp_kses(
+						__( 'Newer <span class="nav-short">posts</span>', 'twentytwentyone' ),
+						array(
+							'span' => array(
+								'class' => array(),
+							),
+						)
+					)
+				),
+				'next_text'          => sprintf(
+					'<span class="nav-next-text">%s</span> %s',
+					wp_kses(
+						__( 'Older <span class="nav-short">posts</span>', 'twentytwentyone' ),
+						array(
+							'span' => array(
+								'class' => array(),
+							),
+						)
+					),
+					is_rtl() ? twenty_twenty_one_get_icon_svg( 'ui', 'arrow_left' ) : twenty_twenty_one_get_icon_svg( 'ui', 'arrow_right' )
+				),
+			)
+		);
+	}
+}
+
